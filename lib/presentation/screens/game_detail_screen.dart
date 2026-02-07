@@ -354,7 +354,16 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         list.sort((a, b) => (b['Points'] ?? 0).compareTo(a['Points'] ?? 0));
         break;
       case AchievementSort.rarity:
-        list.sort((a, b) => (a['NumAwarded'] ?? 0).compareTo(b['NumAwarded'] ?? 0));
+        // Sort by TrueRatio/Points ratio (higher = rarer), then by NumAwarded as tiebreaker
+        list.sort((a, b) {
+          final aPoints = (a['Points'] ?? 1) as int;
+          final bPoints = (b['Points'] ?? 1) as int;
+          final aRatio = aPoints > 0 ? (a['TrueRatio'] ?? 0) / aPoints : 0;
+          final bRatio = bPoints > 0 ? (b['TrueRatio'] ?? 0) / bPoints : 0;
+          final ratioCompare = bRatio.compareTo(aRatio);
+          if (ratioCompare != 0) return ratioCompare;
+          return (a['NumAwarded'] ?? 0).compareTo(b['NumAwarded'] ?? 0);
+        });
         break;
       case AchievementSort.title:
         list.sort((a, b) => (a['Title'] ?? '').compareTo(b['Title'] ?? ''));
@@ -459,12 +468,13 @@ class _AchievementTile extends ConsumerWidget {
   const _AchievementTile({required this.achievement});
 
   // Get rarity info based on TrueRatio vs Points ratio
+  // TrueRatio reflects how hard an achievement is to get - higher = rarer
   Map<String, dynamic> _getRarityInfo(int points, int trueRatio) {
     if (points <= 0) return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
     final ratio = trueRatio / points;
-    if (ratio >= 10) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
-    if (ratio >= 5) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
-    if (ratio >= 2) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
+    if (ratio >= 4) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
+    if (ratio >= 2.5) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
+    if (ratio >= 1.5) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
     return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
   }
 

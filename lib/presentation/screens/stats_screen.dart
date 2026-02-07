@@ -45,6 +45,15 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   Widget build(BuildContext context) {
     final isPremium = ref.watch(isPremiumProvider);
 
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Statistics'),
+      ),
+      body: _buildBody(isPremium),
+    );
+  }
+
+  Widget _buildBody(bool isPremium) {
     if (!isPremium) {
       return _buildPremiumGate(context);
     }
