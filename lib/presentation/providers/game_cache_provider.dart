@@ -187,10 +187,23 @@ class GameCacheNotifier extends StateNotifier<GameCacheState> {
   List<CachedGame> search(String query) {
     if (query.isEmpty) return [];
 
-    final lowerQuery = query.toLowerCase();
+    final normalizedQuery = _normalizeString(query.toLowerCase());
     return state.games
-        .where((g) => g.title.toLowerCase().contains(lowerQuery))
+        .where((g) => _normalizeString(g.title.toLowerCase()).contains(normalizedQuery))
         .take(50)
         .toList();
+  }
+
+  /// Remove accents/diacritics from string for better search matching
+  /// e.g., "Pokémon" -> "pokemon", "Señor" -> "senor"
+  String _normalizeString(String input) {
+    const accents = 'àáâãäåæçèéêëìíîïðñòóôõöøùúûüýÿ';
+    const normalized = 'aaaaaaaceeeeiiiidnoooooouuuuyy';
+
+    var result = input;
+    for (var i = 0; i < accents.length; i++) {
+      result = result.replaceAll(accents[i], normalized[i]);
+    }
+    return result;
   }
 }
