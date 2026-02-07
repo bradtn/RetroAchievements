@@ -101,38 +101,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     return CustomScrollView(
       slivers: [
-        // App bar with image
+        // App bar with image - no action buttons here to avoid overlap
         SliverAppBar(
           expandedHeight: 200,
           pinned: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ShareCardScreen(
-                      type: ShareCardType.game,
-                      data: _gameData!,
-                    ),
-                  ),
-                );
-              },
-            ),
-            _FavoriteButton(
-              gameId: widget.gameId,
-              title: title,
-              imageIcon: imageIcon,
-              consoleName: console,
-              numAchievements: numAchievements,
-              earnedAchievements: numAwarded,
-            ),
-          ],
           flexibleSpace: FlexibleSpaceBar(
             title: Text(
               title,
               style: const TextStyle(
+                color: Colors.white,
                 shadows: [Shadow(blurRadius: 4, color: Colors.black)],
               ),
             ),
@@ -154,6 +131,50 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       end: Alignment.bottomCenter,
                       colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Action buttons row - separate from app bar to avoid overlap
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                // Share button
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ShareCardScreen(
+                            type: ShareCardType.game,
+                            data: _gameData!,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.share, size: 18),
+                    label: const Text('Share'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Favorite button
+                Expanded(
+                  child: _FavoriteButtonLarge(
+                    gameId: widget.gameId,
+                    title: title,
+                    imageIcon: imageIcon,
+                    consoleName: console,
+                    numAchievements: numAchievements,
+                    earnedAchievements: numAwarded,
                   ),
                 ),
               ],
@@ -712,7 +733,7 @@ class _AchievementTile extends ConsumerWidget {
   }
 }
 
-class _FavoriteButton extends ConsumerWidget {
+class _FavoriteButtonLarge extends ConsumerWidget {
   final int gameId;
   final String title;
   final String imageIcon;
@@ -720,7 +741,7 @@ class _FavoriteButton extends ConsumerWidget {
   final int numAchievements;
   final int earnedAchievements;
 
-  const _FavoriteButton({
+  const _FavoriteButtonLarge({
     required this.gameId,
     required this.title,
     required this.imageIcon,
@@ -733,30 +754,44 @@ class _FavoriteButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isFavorite = ref.watch(favoritesProvider).isFavorite(gameId);
 
-    return IconButton(
-      icon: Icon(
-        isFavorite ? Icons.star : Icons.star_border,
-        color: isFavorite ? Colors.amber : Colors.white,
-      ),
-      onPressed: () {
-        final game = FavoriteGame(
-          gameId: gameId,
-          title: title,
-          imageIcon: imageIcon,
-          consoleName: consoleName,
-          numAchievements: numAchievements,
-          earnedAchievements: earnedAchievements,
-          addedAt: DateTime.now(),
-        );
-        ref.read(favoritesProvider.notifier).toggleFavorite(game);
+    return isFavorite
+        ? FilledButton.icon(
+            onPressed: () => _toggleFavorite(context, ref, isFavorite),
+            icon: const Icon(Icons.star, size: 18),
+            label: const Text('Favorited'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          )
+        : OutlinedButton.icon(
+            onPressed: () => _toggleFavorite(context, ref, isFavorite),
+            icon: const Icon(Icons.star_border, size: 18),
+            label: const Text('Favorite'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          );
+  }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      },
+  void _toggleFavorite(BuildContext context, WidgetRef ref, bool isFavorite) {
+    final game = FavoriteGame(
+      gameId: gameId,
+      title: title,
+      imageIcon: imageIcon,
+      consoleName: consoleName,
+      numAchievements: numAchievements,
+      earnedAchievements: earnedAchievements,
+      addedAt: DateTime.now(),
+    );
+    ref.read(favoritesProvider.notifier).toggleFavorite(game);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites'),
+        duration: const Duration(seconds: 1),
+      ),
     );
   }
 }
