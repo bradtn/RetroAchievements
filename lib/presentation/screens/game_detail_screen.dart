@@ -34,10 +34,38 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   AchievementSort _sort = AchievementSort.normal;
   bool _showMissable = false;
 
+  // Scroll controller for scroll-to-top button
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollToTop = false;
+
   @override
   void initState() {
     super.initState();
     _loadGame();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Show button after scrolling down 300 pixels
+    final shouldShow = _scrollController.offset > 300;
+    if (shouldShow != _showScrollToTop) {
+      setState(() => _showScrollToTop = shouldShow);
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _loadGame() async {
@@ -60,6 +88,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _buildBody(),
+      floatingActionButton: _showScrollToTop
+          ? FloatingActionButton.small(
+              onPressed: _scrollToTop,
+              tooltip: 'Scroll to top',
+              child: const Icon(Icons.arrow_upward),
+            )
+          : null,
     );
   }
 
@@ -100,6 +135,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final progress = numAchievements > 0 ? numAwarded / numAchievements : 0.0;
 
     return CustomScrollView(
+      controller: _scrollController,
       slivers: [
         // App bar with image - no action buttons here to avoid overlap
         SliverAppBar(
