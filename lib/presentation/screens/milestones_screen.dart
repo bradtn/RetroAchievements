@@ -12,48 +12,173 @@ class MilestonesScreen extends ConsumerStatefulWidget {
 }
 
 class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
+  final _usernameController = TextEditingController();
   Map<String, dynamic>? _profile;
   List<dynamic>? _completedGames;
   bool _isLoading = true;
+  String? _viewingUsername;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Load current user's milestones by default
+    final username = ref.read(authProvider).username;
+    if (username != null) {
+      _viewingUsername = username;
+      _loadData(username);
+    }
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData(String username) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     final api = ref.read(apiDataSourceProvider);
-    final username = ref.read(authProvider).username;
 
-    if (username != null) {
+    try {
       final results = await Future.wait([
         api.getUserSummary(username, recentGames: 0, recentAchievements: 0),
         api.getCompletedGames(username),
       ]);
 
+      final profile = results[0] as Map<String, dynamic>?;
+
+      if (profile == null) {
+        setState(() {
+          _error = 'User "$username" not found';
+          _isLoading = false;
+        });
+        return;
+      }
+
       setState(() {
-        _profile = results[0] as Map<String, dynamic>?;
+        _profile = profile;
         _completedGames = results[1] as List<dynamic>?;
+        _viewingUsername = username;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load user data';
         _isLoading = false;
       });
     }
   }
 
+  void _searchUser() {
+    final username = _usernameController.text.trim();
+    if (username.isNotEmpty) {
+      _loadData(username);
+    }
+  }
+
+  void _loadMyMilestones() {
+    final username = ref.read(authProvider).username;
+    if (username != null) {
+      _usernameController.clear();
+      _loadData(username);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final myUsername = ref.read(authProvider).username;
+    final isViewingMyself = _viewingUsername == myUsername;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Milestones'),
+        title: Text(isViewingMyself ? 'My Milestones' : 'Milestones'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: _buildContent(),
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      hintText: 'View any user\'s milestones...',
+                      prefixIcon: const Icon(Icons.person_search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onSubmitted: (_) => _searchUser(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _isLoading ? null : _searchUser,
+                  child: const Text('View'),
+                ),
+              ],
             ),
+          ),
+
+          // Show who we're viewing if not ourselves
+          if (!isViewingMyself && _viewingUsername != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.person, size: 16),
+                    label: Text('Viewing: $_viewingUsername'),
+                    onDeleted: _loadMyMilestones,
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                  ),
+                ],
+              ),
+            ),
+
+          // Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? _buildErrorView()
+                    : RefreshIndicator(
+                        onRefresh: () => _loadData(_viewingUsername ?? myUsername ?? ''),
+                        child: _buildContent(),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+          const SizedBox(height: 16),
+          Text(
+            _error ?? 'An error occurred',
+            style: TextStyle(color: context.subtitleColor),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: _loadMyMilestones,
+            child: const Text('View My Milestones'),
+          ),
+        ],
+      ),
     );
   }
 
