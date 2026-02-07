@@ -95,6 +95,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final numAwarded = _gameData!['NumAwardedToUser'] ?? 0;
     final completion = _gameData!['UserCompletion'] ?? '0%';
     final achievements = _gameData!['Achievements'] as Map<String, dynamic>? ?? {};
+    final numDistinctPlayers = _gameData!['NumDistinctPlayers'] ?? _gameData!['NumDistinctPlayersCasual'] ?? 0;
 
     final progress = numAchievements > 0 ? numAwarded / numAchievements : 0.0;
 
@@ -327,7 +328,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             (context, index) {
               final filtered = _getFilteredAchievements(achievements);
               if (index >= filtered.length) return null;
-              return _AchievementTile(achievement: filtered[index]);
+              return _AchievementTile(
+                achievement: filtered[index],
+                numDistinctPlayers: numDistinctPlayers is int ? numDistinctPlayers : int.tryParse(numDistinctPlayers.toString()) ?? 0,
+              );
             },
             childCount: _getFilteredAchievements(achievements).length,
           ),
@@ -464,17 +468,26 @@ class _DetailRow extends StatelessWidget {
 
 class _AchievementTile extends ConsumerWidget {
   final Map<String, dynamic> achievement;
+  final int numDistinctPlayers;
 
-  const _AchievementTile({required this.achievement});
+  const _AchievementTile({required this.achievement, this.numDistinctPlayers = 0});
 
-  // Get rarity info based on TrueRatio vs Points ratio
-  // TrueRatio reflects how hard an achievement is to get - higher = rarer
-  Map<String, dynamic> _getRarityInfo(int points, int trueRatio) {
-    if (points <= 0) return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
-    final ratio = trueRatio / points;
-    if (ratio >= 4) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
-    if (ratio >= 2.5) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
-    if (ratio >= 1.5) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
+  // Get rarity info based on NumAwarded (how many players unlocked it)
+  // Lower number = rarer achievement
+  Map<String, dynamic> _getRarityInfo(int numAwarded, int numDistinct) {
+    // Calculate percentage of players who earned this achievement
+    // numDistinct = total distinct players for this game
+    if (numDistinct > 0) {
+      final percent = (numAwarded / numDistinct) * 100;
+      if (percent < 5) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
+      if (percent < 15) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
+      if (percent < 40) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
+      return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
+    }
+    // Fallback to absolute numbers if no player count
+    if (numAwarded < 100) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
+    if (numAwarded < 500) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
+    if (numAwarded < 2000) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
     return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
   }
 
@@ -488,7 +501,7 @@ class _AchievementTile extends ConsumerWidget {
     final numAwarded = achievement['NumAwarded'] ?? 0;
     final isPremium = ref.watch(isPremiumProvider);
 
-    final rarityInfo = _getRarityInfo(points, trueRatio);
+    final rarityInfo = _getRarityInfo(numAwarded, numDistinctPlayers);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
