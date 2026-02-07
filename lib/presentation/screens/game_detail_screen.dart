@@ -513,6 +513,11 @@ class _AchievementTile extends ConsumerWidget {
 
     final rarityInfo = _getRarityInfo(numAwarded, numDistinctPlayers);
 
+    // Calculate unlock percentage
+    final unlockPercent = numDistinctPlayers > 0
+        ? (numAwarded / numDistinctPlayers * 100)
+        : 0.0;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
@@ -550,7 +555,7 @@ class _AchievementTile extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Rarity badge (Premium feature)
+                // Rarity badge with percentage (Premium feature)
                 if (isPremium)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -564,14 +569,16 @@ class _AchievementTile extends ConsumerWidget {
                         Icon(rarityInfo['icon'] as IconData, size: 10, color: rarityInfo['color'] as Color),
                         const SizedBox(width: 3),
                         Text(
-                          rarityInfo['label'] as String,
+                          numDistinctPlayers > 0
+                              ? '${unlockPercent.toStringAsFixed(1)}%'
+                              : rarityInfo['label'] as String,
                           style: TextStyle(color: rarityInfo['color'] as Color, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                   ),
                 if (isPremium && numAwarded > 0) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Text(
                     '$numAwarded unlocks',
                     style: TextStyle(color: context.subtitleColor, fontSize: 10),
