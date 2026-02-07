@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
+import '../providers/premium_provider.dart';
 import 'share_card_screen.dart';
 
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -190,17 +192,26 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(console, style: TextStyle(color: Colors.grey[400])),
+                              Text(console, style: TextStyle(color: context.subtitleColor)),
                               const SizedBox(height: 8),
-                              LinearProgressIndicator(
-                                value: progress,
-                                backgroundColor: Colors.grey[700],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$numAwarded / $numAchievements achievements ($completion)',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
+                              if (numAchievements > 0) ...[
+                                LinearProgressIndicator(
+                                  value: progress,
+                                  backgroundColor: Colors.grey[700],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$numAwarded / $numAchievements achievements ($completion)',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ] else
+                                Text(
+                                  'No achievements yet',
+                                  style: TextStyle(
+                                    color: context.subtitleColor,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -225,91 +236,93 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           ),
         ),
 
-        // Achievements header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('Achievements', style: Theme.of(context).textTheme.titleLarge),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '$numAwarded earned',
-                        style: const TextStyle(color: Colors.green, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Filter chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+        // Achievements header (only show if game has achievements)
+        if (numAchievements > 0)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      _FilterChip(
-                        label: 'All',
-                        selected: _filter == AchievementFilter.all,
-                        onTap: () => setState(() => _filter = AchievementFilter.all),
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Earned',
-                        selected: _filter == AchievementFilter.earned,
-                        onTap: () => setState(() => _filter = AchievementFilter.earned),
-                        color: Colors.green,
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Unearned',
-                        selected: _filter == AchievementFilter.unearned,
-                        onTap: () => setState(() => _filter = AchievementFilter.unearned),
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(width: 16),
-                      // Sort dropdown
-                      PopupMenuButton<AchievementSort>(
-                        onSelected: (v) => setState(() => _sort = v),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[600]!),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.sort, size: 16),
-                              const SizedBox(width: 4),
-                              Text(_getSortLabel(_sort), style: const TextStyle(fontSize: 12)),
-                            ],
-                          ),
+                      Text('Achievements', style: Theme.of(context).textTheme.titleLarge),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        itemBuilder: (ctx) => [
-                          _buildSortItem(AchievementSort.normal, 'Default'),
-                          _buildSortItem(AchievementSort.points, 'Points'),
-                          _buildSortItem(AchievementSort.rarity, 'Rarity'),
-                          _buildSortItem(AchievementSort.title, 'Title'),
-                        ],
+                        child: Text(
+                          '$numAwarded earned',
+                          style: const TextStyle(color: Colors.green, fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  // Filter chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _FilterChip(
+                          label: 'All',
+                          selected: _filter == AchievementFilter.all,
+                          onTap: () => setState(() => _filter = AchievementFilter.all),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Earned',
+                          selected: _filter == AchievementFilter.earned,
+                          onTap: () => setState(() => _filter = AchievementFilter.earned),
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Unearned',
+                          selected: _filter == AchievementFilter.unearned,
+                          onTap: () => setState(() => _filter = AchievementFilter.unearned),
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 16),
+                        // Sort dropdown
+                        PopupMenuButton<AchievementSort>(
+                          onSelected: (v) => setState(() => _sort = v),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey[600]!),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.sort, size: 16),
+                                const SizedBox(width: 4),
+                                Text(_getSortLabel(_sort), style: const TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          itemBuilder: (ctx) => [
+                            _buildSortItem(AchievementSort.normal, 'Default'),
+                            _buildSortItem(AchievementSort.points, 'Points'),
+                            _buildSortItem(AchievementSort.rarity, 'Rarity'),
+                            _buildSortItem(AchievementSort.title, 'Title'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Achievements list
-        SliverList(
+        // Achievements list (only show if game has achievements)
+        if (numAchievements > 0)
+          SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final filtered = _getFilteredAchievements(achievements);
@@ -440,23 +453,32 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _AchievementTile extends StatelessWidget {
+class _AchievementTile extends ConsumerWidget {
   final Map<String, dynamic> achievement;
 
   const _AchievementTile({required this.achievement});
 
+  // Get rarity info based on TrueRatio vs Points ratio
+  Map<String, dynamic> _getRarityInfo(int points, int trueRatio) {
+    if (points <= 0) return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
+    final ratio = trueRatio / points;
+    if (ratio >= 10) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
+    if (ratio >= 5) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
+    if (ratio >= 2) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
+    return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final title = achievement['Title'] ?? 'Achievement';
     final description = achievement['Description'] ?? '';
     final points = achievement['Points'] ?? 0;
     final trueRatio = achievement['TrueRatio'] ?? 0;
     final badgeName = achievement['BadgeName'] ?? '';
     final numAwarded = achievement['NumAwarded'] ?? 0;
-    final numAwardedHardcore = achievement['NumAwardedHardcore'] ?? 0;
+    final isPremium = ref.watch(isPremiumProvider);
 
-    // Calculate rarity (lower = rarer)
-    final rarity = numAwarded > 0 ? 'Earned by $numAwarded players' : 'Rare';
+    final rarityInfo = _getRarityInfo(points, trueRatio);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -486,7 +508,7 @@ class _AchievementTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
+                    color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -495,18 +517,33 @@ class _AchievementTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                if (trueRatio != points)
+                // Rarity badge (Premium feature)
+                if (isPremium)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.2),
+                      color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(
-                      'RP: $trueRatio',
-                      style: TextStyle(color: Colors.purple[300], fontSize: 11),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(rarityInfo['icon'] as IconData, size: 10, color: rarityInfo['color'] as Color),
+                        const SizedBox(width: 3),
+                        Text(
+                          rarityInfo['label'] as String,
+                          style: TextStyle(color: rarityInfo['color'] as Color, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
+                if (isPremium && numAwarded > 0) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '$numAwarded unlocks',
+                    style: TextStyle(color: context.subtitleColor, fontSize: 10),
+                  ),
+                ],
               ],
             ),
           ],

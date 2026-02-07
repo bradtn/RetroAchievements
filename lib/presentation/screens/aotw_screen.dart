@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -186,7 +187,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                       // Description
                       Text(
                         achDesc,
-                        style: TextStyle(color: Colors.grey[400]),
+                        style: TextStyle(color: context.subtitleColor),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -366,7 +367,7 @@ class _StatCard extends StatelessWidget {
             ),
             Text(
               label,
-              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+              style: TextStyle(color: context.subtitleColor, fontSize: 12),
             ),
           ],
         ),
@@ -429,7 +430,7 @@ class _UnlockTile extends StatelessWidget {
         ),
         subtitle: Text(
           dateAwarded,
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+          style: TextStyle(color: context.subtitleColor, fontSize: 12),
         ),
       ),
     );

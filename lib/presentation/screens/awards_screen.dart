@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -244,7 +245,7 @@ class _AwardsScreenState extends ConsumerState<AwardsScreen> with SingleTickerPr
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[400]),
+              style: TextStyle(color: context.subtitleColor),
             ),
           ],
         ),
@@ -320,7 +321,7 @@ class _SummaryItem extends StatelessWidget {
           value,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+        Text(label, style: TextStyle(color: context.subtitleColor, fontSize: 12)),
       ],
     );
   }
@@ -383,7 +384,7 @@ class _AwardTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(consoleName, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+            Text(consoleName, style: TextStyle(color: context.subtitleColor, fontSize: 12)),
             Row(
               children: [
                 if (isHardcore)
@@ -401,7 +402,7 @@ class _AwardTile extends StatelessWidget {
                   ),
                 Text(
                   _formatDate(awardedAt),
-                  style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                  style: TextStyle(color: context.subtitleColor, fontSize: 11),
                 ),
               ],
             ),

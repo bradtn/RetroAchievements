@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -7,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../providers/auth_provider.dart';
 
 enum ShareCardType { profile, game, achievement }
 
@@ -348,7 +348,11 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
+
+        // Player info
+        _buildPlayerTag(),
+        const SizedBox(height: 16),
 
         _buildBranding(),
       ],
@@ -499,6 +503,41 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
 
         _buildBranding(),
       ],
+    );
+  }
+
+  Widget _buildPlayerTag() {
+    final authState = ref.read(authProvider);
+    final username = authState.username ?? 'Player';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundImage: CachedNetworkImageProvider(
+              'https://retroachievements.org/UserPic/$username.png',
+            ),
+            backgroundColor: Colors.grey[700],
+            onBackgroundImageError: (_, __) {},
+          ),
+          const SizedBox(width: 8),
+          Text(
+            username,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

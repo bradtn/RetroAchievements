@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'user_compare_screen.dart';
 
@@ -202,7 +203,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             Text(
               'Add friends by their RetroAchievements username to track their progress',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[400]),
+              style: TextStyle(color: context.subtitleColor),
             ),
           ],
         ),
@@ -305,7 +306,7 @@ class _FriendTile extends StatelessWidget {
                       ),
                       Text(
                         richPresence,
-                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        style: TextStyle(color: context.subtitleColor, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

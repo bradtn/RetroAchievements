@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -232,7 +233,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             const SizedBox(height: 16),
             Text(
               'No achievements on $dateStr',
-              style: TextStyle(color: Colors.grey[400]),
+              style: TextStyle(color: context.subtitleColor),
             ),
           ],
         ),
@@ -333,7 +334,7 @@ class _AchievementTile extends StatelessWidget {
               description,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+              style: TextStyle(color: context.subtitleColor, fontSize: 12),
             ),
             const SizedBox(height: 4),
             Row(
@@ -357,7 +358,7 @@ class _AchievementTile extends StatelessWidget {
                 const Spacer(),
                 Text(
                   gameTitle,
-                  style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                  style: TextStyle(color: context.subtitleColor, fontSize: 11),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

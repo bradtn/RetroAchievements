@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 
 class UserCompareScreen extends ConsumerStatefulWidget {
@@ -273,7 +274,7 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
         const SizedBox(height: 16),
         Text(
           'Enter a username above to compare stats',
-          style: TextStyle(color: Colors.grey[400]),
+          style: TextStyle(color: context.subtitleColor),
         ),
         const SizedBox(height: 32),
         // Show my stats as preview
@@ -434,7 +435,7 @@ class _ComparisonRow extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      color: Colors.grey[400],
+                      color: context.subtitleColor,
                       fontSize: 12,
                     ),
                   ),

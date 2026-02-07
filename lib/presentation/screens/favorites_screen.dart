@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/favorites_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -48,7 +49,7 @@ class FavoritesScreen extends ConsumerWidget {
             Text(
               'Star games you want to track and they\'ll appear here',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[400]),
+              style: TextStyle(color: context.subtitleColor),
             ),
           ],
         ),
@@ -97,7 +98,7 @@ class FavoritesScreen extends ConsumerWidget {
           Text(
             'TRACKING ${others.length} GAME${others.length == 1 ? '' : 'S'}',
             style: TextStyle(
-              color: Colors.grey[400],
+              color: context.subtitleColor,
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1,
@@ -215,7 +216,7 @@ class _FavoriteCard extends StatelessWidget {
                         ),
                         Text(
                           game.consoleName,
-                          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                          style: TextStyle(color: context.subtitleColor, fontSize: 12),
                         ),
                       ],
                     ),
@@ -241,7 +242,7 @@ class _FavoriteCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     '${game.earnedAchievements}/${game.numAchievements}',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    style: TextStyle(color: context.subtitleColor, fontSize: 12),
                   ),
                 ],
               ),

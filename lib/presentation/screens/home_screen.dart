@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
@@ -416,14 +417,17 @@ class _ExploreCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: Colors.grey[400],
+                        color: context.subtitleColor,
                         fontSize: 14,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey[400]),
+              Icon(
+                Icons.chevron_right,
+                color: context.secondaryIconColor,
+              ),
             ],
           ),
         ),
@@ -561,7 +565,7 @@ class _GameListTile extends StatelessWidget {
             ] else
               Text(
                 'No achievements yet',
-                style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic),
+                style: TextStyle(color: context.subtitleColor, fontStyle: FontStyle.italic),
               ),
           ],
         ),

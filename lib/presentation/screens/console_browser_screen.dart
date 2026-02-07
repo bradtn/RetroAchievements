@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -289,7 +290,7 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
                 children: [
                   Text(
                     '${_filteredGames.length} games',
-                    style: TextStyle(color: Colors.grey[400]),
+                    style: TextStyle(color: context.subtitleColor),
                   ),
                   const Spacer(),
                   FilterChip(
@@ -390,7 +391,7 @@ class _GameTile extends StatelessWidget {
               )
             : Text(
                 'No achievements yet',
-                style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic),
+                style: TextStyle(color: context.subtitleColor, fontStyle: FontStyle.italic),
               ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
