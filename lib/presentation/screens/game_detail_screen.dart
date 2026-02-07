@@ -134,6 +134,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     final progress = numAchievements > 0 ? numAwarded / numAchievements : 0.0;
 
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
+
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
@@ -141,36 +143,62 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         SliverAppBar(
           expandedHeight: 200,
           pinned: true,
-          flexibleSpace: FlexibleSpaceBar(
-            title: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black)],
-              ),
-            ),
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (imageTitle.isNotEmpty)
-                  CachedNetworkImage(
-                    imageUrl: 'https://retroachievements.org$imageTitle',
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(color: Colors.deepPurple),
-                  )
-                else
-                  Container(color: Colors.deepPurple),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
-                    ),
+          // Set colors for collapsed state based on theme
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          foregroundColor: isLightMode ? Colors.grey[900] : Colors.white,
+          flexibleSpace: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate how collapsed the app bar is (0 = expanded, 1 = collapsed)
+              final expandedHeight = 200.0;
+              final collapsedHeight = kToolbarHeight + MediaQuery.of(context).padding.top;
+              final currentHeight = constraints.maxHeight;
+              final collapseRatio = ((expandedHeight - currentHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+
+              // Transition text color: white when expanded, theme color when collapsed
+              final titleColor = isLightMode
+                  ? Color.lerp(Colors.white, Colors.grey[900], collapseRatio)!
+                  : Colors.white;
+
+              // Fade shadow as we collapse (shadow not needed on solid bg)
+              final shadowOpacity = (1.0 - collapseRatio).clamp(0.0, 1.0);
+
+              return FlexibleSpaceBar(
+                title: Text(
+                  title,
+                  style: TextStyle(
+                    color: titleColor,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 4,
+                        color: Colors.black.withOpacity(shadowOpacity),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (imageTitle.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: 'https://retroachievements.org$imageTitle',
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(color: Colors.deepPurple),
+                      )
+                    else
+                      Container(color: Colors.deepPurple),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
 
