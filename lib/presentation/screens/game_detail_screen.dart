@@ -287,6 +287,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           onTap: () => setState(() => _filter = AchievementFilter.unearned),
                           color: Colors.orange,
                         ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Missable',
+                          selected: _showMissable,
+                          onTap: () => setState(() => _showMissable = !_showMissable),
+                          color: Colors.red,
+                        ),
                         const SizedBox(width: 16),
                         // Sort dropdown
                         PopupMenuButton<AchievementSort>(
@@ -345,11 +352,22 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   List<Map<String, dynamic>> _getFilteredAchievements(Map<String, dynamic> achievements) {
     var list = achievements.values.cast<Map<String, dynamic>>().toList();
 
-    // Filter
+    // Filter by earned/unearned
     if (_filter == AchievementFilter.earned) {
       list = list.where((a) => a['DateEarned'] != null || a['DateEarnedHardcore'] != null).toList();
     } else if (_filter == AchievementFilter.unearned) {
       list = list.where((a) => a['DateEarned'] == null && a['DateEarnedHardcore'] == null).toList();
+    }
+
+    // Filter by missable (type field contains "missable" or type value indicates missable)
+    // RetroAchievements uses type values: null=normal, "missable", "progression", "win_condition"
+    if (_showMissable) {
+      list = list.where((a) {
+        final type = a['type']?.toString().toLowerCase() ?? '';
+        final flags = a['Flags'] ?? 0;
+        // Check for missable type or flags that indicate missable
+        return type.contains('missable') || type == '4' || flags == 4;
+      }).toList();
     }
 
     // Sort
@@ -358,16 +376,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         list.sort((a, b) => (b['Points'] ?? 0).compareTo(a['Points'] ?? 0));
         break;
       case AchievementSort.rarity:
-        // Sort by TrueRatio/Points ratio (higher = rarer), then by NumAwarded as tiebreaker
-        list.sort((a, b) {
-          final aPoints = (a['Points'] ?? 1) as int;
-          final bPoints = (b['Points'] ?? 1) as int;
-          final aRatio = aPoints > 0 ? (a['TrueRatio'] ?? 0) / aPoints : 0;
-          final bRatio = bPoints > 0 ? (b['TrueRatio'] ?? 0) / bPoints : 0;
-          final ratioCompare = bRatio.compareTo(aRatio);
-          if (ratioCompare != 0) return ratioCompare;
-          return (a['NumAwarded'] ?? 0).compareTo(b['NumAwarded'] ?? 0);
-        });
+        // Sort by NumAwarded (fewer unlocks = rarer, shows first)
+        list.sort((a, b) => (a['NumAwarded'] ?? 0).compareTo(b['NumAwarded'] ?? 0));
         break;
       case AchievementSort.title:
         list.sort((a, b) => (a['Title'] ?? '').compareTo(b['Title'] ?? ''));
