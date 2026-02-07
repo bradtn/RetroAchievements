@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 
-enum ShareCardType { profile, game, achievement, comparison }
+enum ShareCardType { profile, game, achievement, comparison, milestone, raAward }
 
 class ShareCardScreen extends ConsumerStatefulWidget {
   final ShareCardType type;
@@ -134,6 +134,8 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                 ShareCardType.game => _buildGameCard(),
                 ShareCardType.achievement => _buildAchievementCard(),
                 ShareCardType.comparison => _buildComparisonCard(),
+                ShareCardType.milestone => _buildMilestoneCard(),
+                ShareCardType.raAward => _buildRAAwardCard(),
               },
             ),
           ],
@@ -662,6 +664,295 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     );
   }
 
+  Widget _buildMilestoneCard() {
+    final title = widget.data['title'] ?? 'Milestone';
+    final description = widget.data['description'] ?? '';
+    final category = widget.data['category'] ?? '';
+    final username = widget.data['username'] ?? 'Player';
+    final userPic = widget.data['userPic'] ?? '';
+    final iconCode = widget.data['iconCode'] as int? ?? Icons.emoji_events.codePoint;
+    final colorValue = widget.data['colorValue'] as int? ?? Colors.amber.value;
+    final milestoneColor = Color(colorValue);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Milestone badge
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: milestoneColor.withValues(alpha: 0.2),
+            border: Border.all(color: milestoneColor, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: milestoneColor.withValues(alpha: 0.4),
+                blurRadius: 15,
+              ),
+            ],
+          ),
+          child: Icon(
+            IconData(iconCode, fontFamily: 'MaterialIcons'),
+            size: 48,
+            color: milestoneColor,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Category chip
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: milestoneColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            category,
+            style: TextStyle(
+              color: milestoneColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Title
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+
+        // Description
+        Text(
+          description,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+
+        // Earned badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 18),
+              SizedBox(width: 6),
+              Text(
+                'EARNED',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // User info
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundImage: userPic.isNotEmpty
+                    ? CachedNetworkImageProvider('https://retroachievements.org$userPic')
+                    : null,
+                backgroundColor: Colors.grey[700],
+                child: userPic.isEmpty
+                    ? Text(username[0].toUpperCase(), style: const TextStyle(fontSize: 12))
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                username,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        _buildBranding(),
+      ],
+    );
+  }
+
+  Widget _buildRAAwardCard() {
+    final title = widget.data['title'] ?? 'Award';
+    final consoleName = widget.data['consoleName'] ?? '';
+    final awardType = widget.data['awardType'] ?? 'Award';
+    final imageIcon = widget.data['imageIcon'] ?? '';
+    final awardedAt = widget.data['awardedAt'] ?? '';
+    final username = widget.data['username'] ?? 'Player';
+    final userPic = widget.data['userPic'] ?? '';
+    final colorValue = widget.data['colorValue'] as int? ?? Colors.amber.value;
+    final awardColor = Color(colorValue);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Game/Award icon
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: awardColor, width: 4),
+            boxShadow: [
+              BoxShadow(
+                color: awardColor.withValues(alpha: 0.4),
+                blurRadius: 20,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CachedNetworkImage(
+              imageUrl: 'https://retroachievements.org$imageIcon',
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => Container(
+                width: 120,
+                height: 120,
+                color: Colors.grey[800],
+                child: Icon(Icons.emoji_events, size: 56, color: awardColor),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Award type badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: awardColor.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: awardColor.withValues(alpha: 0.6)),
+          ),
+          child: Text(
+            awardType.toUpperCase(),
+            style: TextStyle(
+              color: awardColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Title
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 6),
+
+        // Console
+        Text(
+          consoleName,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 14,
+          ),
+        ),
+
+        if (awardedAt.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Awarded: ${_formatAwardDate(awardedAt)}',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 12,
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+
+        // User info
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundImage: userPic.isNotEmpty
+                    ? CachedNetworkImageProvider('https://retroachievements.org$userPic')
+                    : null,
+                backgroundColor: Colors.grey[700],
+                child: userPic.isEmpty
+                    ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 12))
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                username,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        _buildBranding(),
+      ],
+    );
+  }
+
+  String _formatAwardDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.month}/${date.day}/${date.year}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   Widget _buildPlayerTag() {
     final authState = ref.read(authProvider);
     final username = authState.username ?? 'Player';
@@ -800,6 +1091,15 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         final myName = myProfile['User'] ?? 'Me';
         final otherName = otherProfile['User'] ?? 'Opponent';
         return 'Check out my comparison vs $otherName on RetroAchievements! ⚔️ #RetroAchievements #RetroTracker';
+      case ShareCardType.milestone:
+        final goalTitle = widget.data['title'] ?? 'Goal';
+        final username = widget.data['username'] ?? 'Player';
+        return '$username completed the "$goalTitle" goal! 🏅 #RetroAchievements #RetroTracker';
+      case ShareCardType.raAward:
+        final awardTitle = widget.data['title'] ?? 'Game';
+        final awardType = widget.data['awardType'] ?? 'Award';
+        final username = widget.data['username'] ?? 'Player';
+        return '$username earned $awardType on $awardTitle! 🏆 #RetroAchievements #RetroTracker';
     }
   }
 }

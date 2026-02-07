@@ -545,7 +545,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   Widget _buildStaticRarityLegend() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.light
             ? Colors.grey.shade100
@@ -555,26 +555,40 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildLegendItem(Icons.diamond, Colors.red, '<5%'),
-          _buildLegendItem(Icons.star, Colors.purple, '<15%'),
-          _buildLegendItem(Icons.hexagon, Colors.blue, '<40%'),
-          _buildLegendItem(Icons.circle, Colors.grey, '40%+'),
+          _buildLegendItem(Icons.diamond, Colors.red, 'Ultra Rare', '<5%'),
+          _buildLegendItem(Icons.star, Colors.purple, 'Rare', '<15%'),
+          _buildLegendItem(Icons.hexagon, Colors.blue, 'Uncommon', '<40%'),
+          _buildLegendItem(Icons.circle, Colors.grey, 'Common', '40%+'),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem(IconData icon, Color color, String label) {
-    return Row(
+  Widget _buildLegendItem(IconData icon, Color color, String name, String percent) {
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              percent,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
         Text(
-          label,
+          name,
           style: TextStyle(
             color: color,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: FontWeight.w500,
           ),
         ),

@@ -15,6 +15,7 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
   final _usernameController = TextEditingController();
   Map<String, dynamic>? _profile;
   List<dynamic>? _completedGames;
+  Map<String, dynamic>? _userAwards;
   bool _isLoading = true;
   String? _viewingUsername;
   String? _error;
@@ -48,6 +49,7 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
       final results = await Future.wait([
         api.getUserSummary(username, recentGames: 0, recentAchievements: 0),
         api.getCompletedGames(username),
+        api.getUserAwards(username),
       ]);
 
       final profile = results[0] as Map<String, dynamic>?;
@@ -63,6 +65,7 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
       setState(() {
         _profile = profile;
         _completedGames = results[1] as List<dynamic>?;
+        _userAwards = results[2] as Map<String, dynamic>?;
         _viewingUsername = username;
         _isLoading = false;
       });
@@ -191,20 +194,68 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
     final earned = milestones.where((m) => m.isEarned).toList();
     final locked = milestones.where((m) => !m.isEarned).toList();
 
+    // Get RA awards
+    final visibleAwards = _userAwards?['VisibleUserAwards'] as List<dynamic>? ?? [];
+    final totalAwardsCount = _userAwards?['TotalAwardsCount'] ?? 0;
+
     return ListView(
       padding: EdgeInsets.fromLTRB(
         16, 16, 16,
         16 + MediaQuery.of(context).viewPadding.bottom,
       ),
       children: [
-        // Stats summary
-        _buildStatsSummary(earned.length, milestones.length),
+        // Real RA Awards Section
+        if (visibleAwards.isNotEmpty) ...[
+          _buildRAAwradsSummary(totalAwardsCount),
+          const SizedBox(height: 16),
+          Text(
+            'RetroAchievements Awards',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.85,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: visibleAwards.length > 30 ? 30 : visibleAwards.length,
+            itemBuilder: (ctx, i) => _RAAwardBadge(
+              award: visibleAwards[i] as Map<String, dynamic>,
+              onTap: () => _showRAAwardDetail(visibleAwards[i] as Map<String, dynamic>),
+            ),
+          ),
+          if (visibleAwards.length > 30)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '+ ${visibleAwards.length - 30} more awards',
+                style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 24),
+        ],
+
+        // App Goals Section
+        _buildGoalsSummary(earned.length, milestones.length),
+        const SizedBox(height: 12),
+        Text(
+          'Track your progress with app-exclusive goals',
+          style: TextStyle(color: context.subtitleColor, fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 24),
 
-        // Earned milestones
+        // Completed goals
         if (earned.isNotEmpty) ...[
           Text(
-            'Earned Badges (${earned.length})',
+            'Completed (${earned.length})',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -226,15 +277,15 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
           const SizedBox(height: 32),
         ],
 
-        // Locked milestones
+        // In Progress goals
         if (locked.isNotEmpty) ...[
           Text(
-            'Locked (${locked.length})',
+            'In Progress (${locked.length})',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            'Keep playing to unlock more!',
+            'Keep playing to complete these goals!',
             style: TextStyle(color: context.subtitleColor, fontSize: 13),
           ),
           const SizedBox(height: 12),
@@ -258,8 +309,11 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
     );
   }
 
-  Widget _buildStatsSummary(int earned, int total) {
-    final progress = total > 0 ? earned / total : 0.0;
+  Widget _buildRAAwradsSummary(int totalAwards) {
+    final masteryCount = _userAwards?['MasteryAwardsCount'] ?? 0;
+    final beatenHardcore = _userAwards?['BeatenHardcoreAwardsCount'] ?? 0;
+    final beatenSoftcore = _userAwards?['BeatenSoftcoreAwardsCount'] ?? 0;
+    final eventAwards = _userAwards?['EventAwardsCount'] ?? 0;
 
     return Card(
       child: Container(
@@ -268,8 +322,8 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
             colors: [
-              Colors.amber.shade700,
-              Colors.orange.shade800,
+              Colors.blue.shade700,
+              Colors.purple.shade800,
             ],
           ),
         ),
@@ -278,10 +332,10 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.workspace_premium, color: Colors.white, size: 28),
+                const Icon(Icons.military_tech, color: Colors.white, size: 28),
                 const SizedBox(width: 8),
                 Text(
-                  '$earned / $total',
+                  '$totalAwards',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -292,7 +346,245 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Milestones Earned',
+              'RetroAchievements Awards',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _AwardStat(icon: Icons.workspace_premium, value: masteryCount, label: 'Mastery'),
+                _AwardStat(icon: Icons.verified, value: beatenHardcore, label: 'Beaten HC'),
+                _AwardStat(icon: Icons.check_circle, value: beatenSoftcore, label: 'Beaten'),
+                if (eventAwards > 0)
+                  _AwardStat(icon: Icons.celebration, value: eventAwards, label: 'Events'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRAAwardDetail(Map<String, dynamic> award) {
+    final title = award['Title'] ?? 'Award';
+    final consoleName = award['ConsoleName'] ?? '';
+    final awardType = award['AwardType'] ?? '';
+    final awardedAt = award['AwardedAt'] ?? '';
+    final imageIcon = award['ImageIcon'] ?? '';
+
+    // Determine award type name
+    String awardTypeName;
+    Color awardColor;
+    IconData awardIcon;
+
+    switch (awardType) {
+      case 'Mastery/Completion':
+        awardTypeName = 'Mastery';
+        awardColor = Colors.amber;
+        awardIcon = Icons.workspace_premium;
+        break;
+      case 'Game Beaten':
+        final isHardcore = award['AwardDataExtra'] == 1;
+        awardTypeName = isHardcore ? 'Beaten (Hardcore)' : 'Beaten';
+        awardColor = isHardcore ? Colors.orange : Colors.green;
+        awardIcon = Icons.verified;
+        break;
+      default:
+        awardTypeName = awardType.toString();
+        awardColor = Colors.blue;
+        awardIcon = Icons.emoji_events;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            32, 32, 32,
+            32 + MediaQuery.of(ctx).viewPadding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Drag handle
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Game icon - larger and centered
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: awardColor, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: awardColor.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    'https://retroachievements.org$imageIcon',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 120,
+                      height: 120,
+                      color: Colors.grey[800],
+                      child: Icon(awardIcon, size: 56, color: awardColor),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Award type badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: awardColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: awardColor.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(awardIcon, size: 18, color: awardColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      awardTypeName,
+                      style: TextStyle(
+                        color: awardColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+
+              // Console
+              Text(
+                consoleName,
+                style: TextStyle(
+                  color: context.subtitleColor,
+                  fontSize: 16,
+                ),
+              ),
+
+              if (awardedAt.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Awarded: ${_formatDate(awardedAt)}',
+                  style: TextStyle(color: context.subtitleColor, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 20),
+
+              // Share button
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ShareCardScreen(
+                        type: ShareCardType.raAward,
+                        data: {
+                          'title': title,
+                          'consoleName': consoleName,
+                          'awardType': awardTypeName,
+                          'imageIcon': imageIcon,
+                          'awardedAt': awardedAt,
+                          'username': _viewingUsername ?? '',
+                          'userPic': _profile?['UserPic'] ?? '',
+                          'colorValue': awardColor.value,
+                        },
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.share),
+                label: const Text('Share Award'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.month}/${date.day}/${date.year}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  Widget _buildGoalsSummary(int completed, int total) {
+    final progress = total > 0 ? completed / total : 0.0;
+
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              Colors.teal.shade600,
+              Colors.green.shade700,
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.flag, color: Colors.white, size: 28),
+                const SizedBox(width: 8),
+                Text(
+                  '$completed / $total',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'RetroTracker Goals',
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -762,20 +1054,22 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => ShareCardScreen(
-                          type: ShareCardType.achievement,
+                          type: ShareCardType.milestone,
                           data: {
-                            'Title': milestone.title,
-                            'Description': milestone.description,
-                            'Points': milestone.requirement,
-                            'BadgeName': '',
-                            'GameTitle': 'RetroTracker Milestone',
+                            'title': milestone.title,
+                            'description': milestone.description,
+                            'category': milestone.category,
+                            'username': _viewingUsername ?? '',
+                            'userPic': _profile?['UserPic'] ?? '',
+                            'iconCode': milestone.icon.codePoint,
+                            'colorValue': milestone.color.value,
                           },
                         ),
                       ),
                     );
                   },
                   icon: const Icon(Icons.share),
-                  label: const Text('Share Milestone'),
+                  label: const Text('Share Goal'),
                 ),
               ],
             ],
@@ -870,6 +1164,122 @@ class _MilestoneBadge extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RAAwardBadge extends StatelessWidget {
+  final Map<String, dynamic> award;
+  final VoidCallback onTap;
+
+  const _RAAwardBadge({
+    required this.award,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = award['Title'] ?? 'Award';
+    final imageIcon = award['ImageIcon'] ?? '';
+    final awardType = award['AwardType'] ?? '';
+
+    // Determine border color based on award type
+    Color borderColor;
+    switch (awardType) {
+      case 'Mastery/Completion':
+        borderColor = Colors.amber;
+        break;
+      case 'Game Beaten':
+        final isHardcore = award['AwardDataExtra'] == 1;
+        borderColor = isHardcore ? Colors.orange : Colors.green;
+        break;
+      default:
+        borderColor = Colors.blue;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: borderColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: borderColor.withValues(alpha: 0.5),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                'https://retroachievements.org$imageIcon',
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 48,
+                  height: 48,
+                  color: Colors.grey[800],
+                  child: Icon(Icons.emoji_events, color: borderColor, size: 24),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AwardStat extends StatelessWidget {
+  final IconData icon;
+  final int value;
+  final String label;
+
+  const _AwardStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          '$value',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 10,
+          ),
+        ),
+      ],
     );
   }
 }

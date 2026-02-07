@@ -250,12 +250,12 @@ class _ExploreTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // My Milestones
+          // Awards & Goals
           _ExploreCard(
-            icon: Icons.workspace_premium,
-            title: 'My Milestones',
-            subtitle: 'Badges you\'ve earned',
-            color: Colors.amber,
+            icon: Icons.military_tech,
+            title: 'Awards & Goals',
+            subtitle: 'RA awards and app goals',
+            color: Colors.purple,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MilestonesScreen()),
@@ -272,19 +272,6 @@ class _ExploreTab extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FavoritesScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // My Awards
-          _ExploreCard(
-            icon: Icons.military_tech,
-            title: 'My Awards',
-            subtitle: 'Site badges and awards',
-            color: Colors.purple,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AwardsScreen()),
             ),
           ),
           const SizedBox(height: 12),
