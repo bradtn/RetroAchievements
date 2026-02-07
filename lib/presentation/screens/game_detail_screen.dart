@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
+import 'share_card_screen.dart';
 
 class GameDetailScreen extends ConsumerStatefulWidget {
   final int gameId;
@@ -102,6 +103,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           expandedHeight: 200,
           pinned: true,
           actions: [
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShareCardScreen(
+                      type: ShareCardType.game,
+                      data: _gameData!,
+                    ),
+                  ),
+                );
+              },
+            ),
             _FavoriteButton(
               gameId: widget.gameId,
               title: title,

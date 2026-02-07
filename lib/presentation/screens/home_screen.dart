@@ -13,6 +13,7 @@ import 'favorites_screen.dart';
 import 'awards_screen.dart';
 import 'friends_screen.dart';
 import 'calendar_screen.dart';
+import 'share_card_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -182,6 +183,20 @@ class _HomeTab extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.share),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ShareCardScreen(
+                  type: ShareCardType.profile,
+                  data: profile!,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

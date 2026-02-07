@@ -118,6 +118,26 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
     final prefs = await SharedPreferences.getInstance();
     final json = jsonEncode(state.favorites.map((f) => f.toJson()).toList());
     await prefs.setString(_storageKey, json);
+    await _updateWidgetData(prefs);
+  }
+
+  Future<void> _updateWidgetData(SharedPreferences prefs) async {
+    final pinned = state.getPinned();
+    if (pinned != null) {
+      await prefs.setString('widget_game_title', pinned.title);
+      await prefs.setString('widget_console_name', pinned.consoleName);
+      await prefs.setInt('widget_earned', pinned.earnedAchievements);
+      await prefs.setInt('widget_total', pinned.numAchievements);
+      await prefs.setInt('widget_game_id', pinned.gameId);
+      await prefs.setString('widget_image_url', pinned.imageIcon);
+    } else {
+      await prefs.setString('widget_game_title', 'No game pinned');
+      await prefs.setString('widget_console_name', 'Pin a game from Favorites');
+      await prefs.setInt('widget_earned', 0);
+      await prefs.setInt('widget_total', 0);
+      await prefs.setInt('widget_game_id', 0);
+      await prefs.setString('widget_image_url', '');
+    }
   }
 
   Future<void> addFavorite(FavoriteGame game) async {
