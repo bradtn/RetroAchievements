@@ -245,93 +245,96 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title row with earned count and sort
                   Row(
                     children: [
                       Text('Achievements', style: Theme.of(context).textTheme.titleLarge),
-                      const Spacer(),
+                      const SizedBox(width: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.green.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '$numAwarded earned',
+                          '$numAwarded/$numAchievements',
                           style: const TextStyle(color: Colors.green, fontSize: 12),
                         ),
+                      ),
+                      const Spacer(),
+                      // Sort dropdown
+                      PopupMenuButton<AchievementSort>(
+                        onSelected: (v) => setState(() => _sort = v),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[600]!),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.sort, size: 14),
+                              const SizedBox(width: 4),
+                              Text(_getSortLabel(_sort), style: const TextStyle(fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                        itemBuilder: (ctx) => [
+                          _buildSortItem(AchievementSort.normal, 'Default'),
+                          _buildSortItem(AchievementSort.points, 'Points'),
+                          _buildSortItem(AchievementSort.rarity, 'Rarity'),
+                          _buildSortItem(AchievementSort.title, 'Title'),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Filter chips - using Wrap for better layout
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _FilterChip(
+                        label: 'All',
+                        selected: _filter == AchievementFilter.all && !_showMissable,
+                        onTap: () => setState(() {
+                          _filter = AchievementFilter.all;
+                          _showMissable = false;
+                        }),
+                      ),
+                      _FilterChip(
+                        label: 'Earned',
+                        selected: _filter == AchievementFilter.earned,
+                        onTap: () => setState(() {
+                          _filter = AchievementFilter.earned;
+                          _showMissable = false;
+                        }),
+                        color: Colors.green,
+                      ),
+                      _FilterChip(
+                        label: 'Unearned',
+                        selected: _filter == AchievementFilter.unearned,
+                        onTap: () => setState(() {
+                          _filter = AchievementFilter.unearned;
+                          _showMissable = false;
+                        }),
+                        color: Colors.orange,
+                      ),
+                      _FilterChip(
+                        label: 'Missable',
+                        selected: _showMissable,
+                        onTap: () => setState(() {
+                          _showMissable = true;
+                          _filter = AchievementFilter.all;
+                        }),
+                        color: Colors.red,
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Filter chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _FilterChip(
-                          label: 'All',
-                          selected: _filter == AchievementFilter.all,
-                          onTap: () => setState(() => _filter = AchievementFilter.all),
-                        ),
-                        const SizedBox(width: 8),
-                        _FilterChip(
-                          label: 'Earned',
-                          selected: _filter == AchievementFilter.earned,
-                          onTap: () => setState(() => _filter = AchievementFilter.earned),
-                          color: Colors.green,
-                        ),
-                        const SizedBox(width: 8),
-                        _FilterChip(
-                          label: 'Unearned',
-                          selected: _filter == AchievementFilter.unearned,
-                          onTap: () => setState(() => _filter = AchievementFilter.unearned),
-                          color: Colors.orange,
-                        ),
-                        const SizedBox(width: 8),
-                        _FilterChip(
-                          label: 'Missable',
-                          selected: _showMissable,
-                          onTap: () => setState(() => _showMissable = !_showMissable),
-                          color: Colors.red,
-                        ),
-                        const SizedBox(width: 16),
-                        // Sort dropdown
-                        PopupMenuButton<AchievementSort>(
-                          onSelected: (v) => setState(() => _sort = v),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey[600]!),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.sort, size: 16),
-                                const SizedBox(width: 4),
-                                Text(_getSortLabel(_sort), style: const TextStyle(fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                          itemBuilder: (ctx) => [
-                            _buildSortItem(AchievementSort.normal, 'Default'),
-                            _buildSortItem(AchievementSort.points, 'Points'),
-                            _buildSortItem(AchievementSort.rarity, 'Rarity'),
-                            _buildSortItem(AchievementSort.title, 'Title'),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        // Legend info button
-                        IconButton(
-                          icon: const Icon(Icons.info_outline, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _showRarityLegend(context),
-                          tooltip: 'Rarity Legend',
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Static rarity legend
+                  _buildStaticRarityLegend(),
                 ],
               ),
             ),
@@ -455,84 +458,40 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  void _showRarityLegend(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _buildStaticRarityLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.light
+            ? Colors.grey.shade100
+            : Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(8),
       ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Achievement Rarity Legend',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Based on percentage of players who earned each achievement',
-                style: TextStyle(color: context.subtitleColor, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              _buildLegendRow(Icons.diamond, Colors.red, 'Ultra Rare', '< 5% of players'),
-              const SizedBox(height: 12),
-              _buildLegendRow(Icons.star, Colors.purple, 'Rare', '< 15% of players'),
-              const SizedBox(height: 12),
-              _buildLegendRow(Icons.hexagon, Colors.blue, 'Uncommon', '< 40% of players'),
-              const SizedBox(height: 12),
-              _buildLegendRow(Icons.circle, Colors.grey, 'Common', '≥ 40% of players'),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.workspace_premium, color: Colors.amber, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Rarity badges are a premium feature',
-                        style: TextStyle(color: Colors.amber[400], fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildLegendItem(Icons.diamond, Colors.red, '<5%'),
+          _buildLegendItem(Icons.star, Colors.purple, '<15%'),
+          _buildLegendItem(Icons.hexagon, Colors.blue, '<40%'),
+          _buildLegendItem(Icons.circle, Colors.grey, '40%+'),
+        ],
+      ),
     );
   }
 
-  Widget _buildLegendRow(IconData icon, Color color, String label, String description) {
+  Widget _buildLegendItem(IconData icon, Color color, String label) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(8),
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
           ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-            Text(description, style: TextStyle(color: context.subtitleColor, fontSize: 12)),
-          ],
         ),
       ],
     );
