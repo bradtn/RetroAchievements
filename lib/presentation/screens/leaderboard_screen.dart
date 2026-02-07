@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
+import 'user_compare_screen.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -250,6 +251,14 @@ class _LeaderboardTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UserCompareScreen(compareUsername: username),
+            ),
+          );
+        },
         leading: rank <= 3
             ? Icon(rankIcon, color: rankColor, size: 32)
             : CircleAvatar(
@@ -303,6 +312,7 @@ class _LeaderboardTile extends StatelessWidget {
             ],
           ),
         ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
+import 'share_card_screen.dart';
 
 class UserCompareScreen extends ConsumerStatefulWidget {
   final String? compareUsername;
@@ -80,6 +81,26 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Compare Users'),
+        actions: [
+          if (_myProfile != null && _otherProfile != null)
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShareCardScreen(
+                      type: ShareCardType.comparison,
+                      data: {
+                        'myProfile': _myProfile,
+                        'otherProfile': _otherProfile,
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

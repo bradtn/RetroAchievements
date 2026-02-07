@@ -15,6 +15,7 @@ import 'awards_screen.dart';
 import 'friends_screen.dart';
 import 'calendar_screen.dart';
 import 'share_card_screen.dart';
+import 'game_search_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -235,6 +236,19 @@ class _ExploreTab extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Search Games
+          _ExploreCard(
+            icon: Icons.search,
+            title: 'Search Games',
+            subtitle: 'Find any game',
+            color: Colors.pink,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GameSearchScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // My Favorites
           _ExploreCard(
             icon: Icons.star,

@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 
-enum ShareCardType { profile, game, achievement }
+enum ShareCardType { profile, game, achievement, comparison }
 
 class ShareCardScreen extends ConsumerStatefulWidget {
   final ShareCardType type;
@@ -133,6 +133,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                 ShareCardType.profile => _buildProfileCard(),
                 ShareCardType.game => _buildGameCard(),
                 ShareCardType.achievement => _buildAchievementCard(),
+                ShareCardType.comparison => _buildComparisonCard(),
               },
             ),
           ],
@@ -506,6 +507,161 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     );
   }
 
+  Widget _buildComparisonCard() {
+    final myProfile = widget.data['myProfile'] as Map<String, dynamic>? ?? {};
+    final otherProfile = widget.data['otherProfile'] as Map<String, dynamic>? ?? {};
+
+    final myName = myProfile['User'] ?? 'You';
+    final otherName = otherProfile['User'] ?? 'Opponent';
+    final myPic = myProfile['UserPic'] ?? '';
+    final otherPic = otherProfile['UserPic'] ?? '';
+    final myPoints = myProfile['TotalPoints'] ?? 0;
+    final otherPoints = otherProfile['TotalPoints'] ?? 0;
+    final myTruePoints = myProfile['TotalTruePoints'] ?? 0;
+    final otherTruePoints = otherProfile['TotalTruePoints'] ?? 0;
+
+    final myPtsNum = int.tryParse(myPoints.toString()) ?? 0;
+    final otherPtsNum = int.tryParse(otherPoints.toString()) ?? 0;
+    final winner = myPtsNum > otherPtsNum ? 'me' : (otherPtsNum > myPtsNum ? 'other' : 'tie');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // VS Header
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: winner == 'me' ? Colors.green : Colors.white.withValues(alpha: 0.5),
+                        width: winner == 'me' ? 3 : 2,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 35,
+                      backgroundImage: myPic.isNotEmpty
+                          ? CachedNetworkImageProvider('https://retroachievements.org$myPic')
+                          : null,
+                      backgroundColor: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    myName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (winner == 'me')
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'WINNER',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Text(
+                'VS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: winner == 'other' ? Colors.red : Colors.white.withValues(alpha: 0.5),
+                        width: winner == 'other' ? 3 : 2,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 35,
+                      backgroundImage: otherPic.isNotEmpty
+                          ? CachedNetworkImageProvider('https://retroachievements.org$otherPic')
+                          : null,
+                      backgroundColor: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    otherName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (winner == 'other')
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'WINNER',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Stats comparison
+        _ComparisonStatRow(
+          label: 'Points',
+          myValue: _formatNumber(myPoints),
+          otherValue: _formatNumber(otherPoints),
+          myWins: myPtsNum > otherPtsNum,
+          otherWins: otherPtsNum > myPtsNum,
+        ),
+        const SizedBox(height: 8),
+        _ComparisonStatRow(
+          label: 'True Points',
+          myValue: _formatNumber(myTruePoints),
+          otherValue: _formatNumber(otherTruePoints),
+          myWins: (int.tryParse(myTruePoints.toString()) ?? 0) > (int.tryParse(otherTruePoints.toString()) ?? 0),
+          otherWins: (int.tryParse(otherTruePoints.toString()) ?? 0) > (int.tryParse(myTruePoints.toString()) ?? 0),
+        ),
+        const SizedBox(height: 24),
+
+        _buildBranding(),
+      ],
+    );
+  }
+
   Widget _buildPlayerTag() {
     final authState = ref.read(authProvider);
     final username = authState.username ?? 'Player';
@@ -638,6 +794,12 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         final title = widget.data['Title'] ?? 'Achievement';
         final gameTitle = widget.data['GameTitle'] ?? '';
         return 'Just unlocked "$title" in $gameTitle! 🏆 #RetroAchievements #RetroTracker';
+      case ShareCardType.comparison:
+        final myProfile = widget.data['myProfile'] as Map<String, dynamic>? ?? {};
+        final otherProfile = widget.data['otherProfile'] as Map<String, dynamic>? ?? {};
+        final myName = myProfile['User'] ?? 'Me';
+        final otherName = otherProfile['User'] ?? 'Opponent';
+        return 'Check out my comparison vs $otherName on RetroAchievements! ⚔️ #RetroAchievements #RetroTracker';
     }
   }
 }
@@ -736,6 +898,66 @@ class _StatBadge extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ComparisonStatRow extends StatelessWidget {
+  final String label;
+  final String myValue;
+  final String otherValue;
+  final bool myWins;
+  final bool otherWins;
+
+  const _ComparisonStatRow({
+    required this.label,
+    required this.myValue,
+    required this.otherValue,
+    required this.myWins,
+    required this.otherWins,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              myValue,
+              style: TextStyle(
+                color: myWins ? Colors.green : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              otherValue,
+              style: TextStyle(
+                color: otherWins ? Colors.red : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
