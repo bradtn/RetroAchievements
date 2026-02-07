@@ -320,6 +320,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                             _buildSortItem(AchievementSort.title, 'Title'),
                           ],
                         ),
+                        const SizedBox(width: 8),
+                        // Legend info button
+                        IconButton(
+                          icon: const Icon(Icons.info_outline, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _showRarityLegend(context),
+                          tooltip: 'Rarity Legend',
+                        ),
                       ],
                     ),
                   ),
@@ -330,19 +339,49 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
         // Achievements list (only show if game has achievements)
         if (numAchievements > 0)
-          SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
+          Builder(
+            builder: (context) {
               final filtered = _getFilteredAchievements(achievements);
-              if (index >= filtered.length) return null;
-              return _AchievementTile(
-                achievement: filtered[index],
-                numDistinctPlayers: numDistinctPlayers is int ? numDistinctPlayers : int.tryParse(numDistinctPlayers.toString()) ?? 0,
+
+              // Show message if filtering returns no results
+              if (filtered.isEmpty && _showMissable) {
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        Icon(Icons.info_outline, size: 48, color: Colors.grey[600]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No missable achievements found',
+                          style: TextStyle(color: context.subtitleColor, fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'This game may not have any achievements marked as missable by the developers.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: context.subtitleColor, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index >= filtered.length) return null;
+                    return _AchievementTile(
+                      achievement: filtered[index],
+                      numDistinctPlayers: numDistinctPlayers is int ? numDistinctPlayers : int.tryParse(numDistinctPlayers.toString()) ?? 0,
+                    );
+                  },
+                  childCount: filtered.length,
+                ),
               );
             },
-            childCount: _getFilteredAchievements(achievements).length,
           ),
-        ),
 
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
       ],
@@ -359,14 +398,18 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       list = list.where((a) => a['DateEarned'] == null && a['DateEarnedHardcore'] == null).toList();
     }
 
-    // Filter by missable (type field contains "missable" or type value indicates missable)
-    // RetroAchievements uses type values: null=normal, "missable", "progression", "win_condition"
+    // Filter by missable achievements
+    // RetroAchievements API uses "Type" field with value "missable"
     if (_showMissable) {
       list = list.where((a) {
-        final type = a['type']?.toString().toLowerCase() ?? '';
-        final flags = a['Flags'] ?? 0;
-        // Check for missable type or flags that indicate missable
-        return type.contains('missable') || type == '4' || flags == 4;
+        // Check various possible field names and formats
+        final type = (a['Type'] ?? a['type'] ?? '').toString().toLowerCase();
+        final flags = a['Flags'] ?? a['flags'] ?? 0;
+        final isMissable = type == 'missable' ||
+                          type.contains('missable') ||
+                          flags == 4 ||
+                          (flags is int && (flags & 4) != 0);
+        return isMissable;
       }).toList();
     }
 
@@ -409,6 +452,89 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           Text(label),
         ],
       ),
+    );
+  }
+
+  void _showRarityLegend(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Achievement Rarity Legend',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Based on percentage of players who earned each achievement',
+                style: TextStyle(color: context.subtitleColor, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              _buildLegendRow(Icons.diamond, Colors.red, 'Ultra Rare', '< 5% of players'),
+              const SizedBox(height: 12),
+              _buildLegendRow(Icons.star, Colors.purple, 'Rare', '< 15% of players'),
+              const SizedBox(height: 12),
+              _buildLegendRow(Icons.hexagon, Colors.blue, 'Uncommon', '< 40% of players'),
+              const SizedBox(height: 12),
+              _buildLegendRow(Icons.circle, Colors.grey, 'Common', '≥ 40% of players'),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.workspace_premium, color: Colors.amber, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Rarity badges are a premium feature',
+                        style: TextStyle(color: Colors.amber[400], fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLegendRow(IconData icon, Color color, String label, String description) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+            Text(description, style: TextStyle(color: context.subtitleColor, fontSize: 12)),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -501,6 +627,16 @@ class _AchievementTile extends ConsumerWidget {
     return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
   }
 
+  // Check if achievement is missable
+  bool _isMissable(Map<String, dynamic> achievement) {
+    final type = (achievement['Type'] ?? achievement['type'] ?? '').toString().toLowerCase();
+    final flags = achievement['Flags'] ?? achievement['flags'] ?? 0;
+    return type == 'missable' ||
+           type.contains('missable') ||
+           flags == 4 ||
+           (flags is int && (flags & 4) != 0);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = achievement['Title'] ?? 'Achievement';
@@ -510,6 +646,7 @@ class _AchievementTile extends ConsumerWidget {
     final badgeName = achievement['BadgeName'] ?? '';
     final numAwarded = achievement['NumAwarded'] ?? 0;
     final isPremium = ref.watch(isPremiumProvider);
+    final isMissable = _isMissable(achievement);
 
     final rarityInfo = _getRarityInfo(numAwarded, numDistinctPlayers);
 
@@ -582,6 +719,28 @@ class _AchievementTile extends ConsumerWidget {
                   Text(
                     '$numAwarded unlocks',
                     style: TextStyle(color: context.subtitleColor, fontSize: 10),
+                  ),
+                ],
+                // Missable badge
+                if (isMissable) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 10, color: Colors.red),
+                        SizedBox(width: 3),
+                        Text(
+                          'Missable',
+                          style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],
