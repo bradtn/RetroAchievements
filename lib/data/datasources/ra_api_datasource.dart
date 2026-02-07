@@ -349,4 +349,49 @@ class RAApiDataSource {
       return null;
     }
   }
+
+  /// Get achievements earned on a specific day
+  Future<List<dynamic>?> getAchievementsEarnedOnDay(String username, DateTime date) async {
+    try {
+      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final response = await _dio.get(
+        'API_GetAchievementsEarnedOnDay.php',
+        queryParameters: {
+          ..._authParams(),
+          'u': username,
+          'd': dateStr,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as List<dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get achievements earned between two dates
+  Future<List<dynamic>?> getAchievementsEarnedBetween(String username, DateTime from, DateTime to) async {
+    try {
+      // API expects Unix timestamps (seconds since epoch)
+      final fromTimestamp = from.millisecondsSinceEpoch ~/ 1000;
+      final toTimestamp = to.millisecondsSinceEpoch ~/ 1000;
+      final response = await _dio.get(
+        'API_GetAchievementsEarnedBetween.php',
+        queryParameters: {
+          ..._authParams(),
+          'u': username,
+          'f': fromTimestamp,
+          't': toTimestamp,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as List<dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 
-enum ShareCardType { profile, game, achievement, comparison, milestone, raAward }
+enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak }
 
 class ShareCardScreen extends ConsumerStatefulWidget {
   final ShareCardType type;
@@ -136,6 +136,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                 ShareCardType.comparison => _buildComparisonCard(),
                 ShareCardType.milestone => _buildMilestoneCard(),
                 ShareCardType.raAward => _buildRAAwardCard(),
+                ShareCardType.streak => _buildStreakCard(),
               },
             ),
           ],
@@ -953,6 +954,124 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     }
   }
 
+  Widget _buildStreakCard() {
+    final currentStreak = widget.data['currentStreak'] as int? ?? 0;
+    final bestStreak = widget.data['bestStreak'] as int? ?? 0;
+    final username = widget.data['username'] as String? ?? 'Player';
+    final isActive = widget.data['isActive'] as bool? ?? false;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Fire icon
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.orange.shade400,
+                Colors.deepOrange.shade600,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.orange.withValues(alpha: 0.5),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.local_fire_department,
+            size: 56,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Current streak
+        Text(
+          '$currentStreak',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 64,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          currentStreak == 1 ? 'DAY STREAK' : 'DAY STREAK',
+          style: TextStyle(
+            color: Colors.orange.shade300,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Status
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.green.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            isActive ? 'ON FIRE!' : 'STREAK ENDED',
+            style: TextStyle(
+              color: isActive ? Colors.green.shade300 : Colors.grey.shade400,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Best streak
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.emoji_events, color: Colors.amber.shade300, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Best: $bestStreak days',
+                style: TextStyle(
+                  color: Colors.amber.shade300,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Username
+        Text(
+          username,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        _buildBranding(),
+      ],
+    );
+  }
+
   Widget _buildPlayerTag() {
     final authState = ref.read(authProvider);
     final username = authState.username ?? 'Player';
@@ -1100,6 +1219,10 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         final awardType = widget.data['awardType'] ?? 'Award';
         final username = widget.data['username'] ?? 'Player';
         return '$username earned $awardType on $awardTitle! 🏆 #RetroAchievements #RetroTracker';
+      case ShareCardType.streak:
+        final currentStreak = widget.data['currentStreak'] ?? 0;
+        final username = widget.data['username'] ?? 'Player';
+        return '$username is on a $currentStreak day streak! 🔥 #RetroAchievements #RetroTracker';
     }
   }
 }

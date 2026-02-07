@@ -17,6 +17,7 @@ import 'calendar_screen.dart';
 import 'share_card_screen.dart';
 import 'game_search_screen.dart';
 import 'milestones_screen.dart';
+import 'streaks_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -259,6 +260,19 @@ class _ExploreTab extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MilestonesScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // My Streaks
+          _ExploreCard(
+            icon: Icons.local_fire_department,
+            title: 'My Streaks',
+            subtitle: 'Daily achievement streaks',
+            color: Colors.deepOrange,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StreaksScreen()),
             ),
           ),
           const SizedBox(height: 12),
