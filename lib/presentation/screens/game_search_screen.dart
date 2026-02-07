@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
-import '../providers/auth_provider.dart';
+import '../providers/game_cache_provider.dart';
 import 'game_detail_screen.dart';
 
 class GameSearchScreen extends ConsumerStatefulWidget {
@@ -14,20 +14,7 @@ class GameSearchScreen extends ConsumerStatefulWidget {
 
 class _GameSearchScreenState extends ConsumerState<GameSearchScreen> {
   final _searchController = TextEditingController();
-  List<dynamic>? _consoles;
-  List<dynamic>? _recentGames;
-  List<dynamic>? _consoleGames;
-  int? _selectedConsoleId;
-  String? _selectedConsoleName;
-  bool _isLoadingConsoles = true;
-  bool _isLoadingGames = false;
   String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadInitialData();
-  }
 
   @override
   void dispose() {
@@ -35,76 +22,23 @@ class _GameSearchScreenState extends ConsumerState<GameSearchScreen> {
     super.dispose();
   }
 
-  Future<void> _loadInitialData() async {
-    final api = ref.read(apiDataSourceProvider);
-    final username = ref.read(authProvider).username;
-
-    final results = await Future.wait([
-      api.getConsoles(),
-      if (username != null) api.getRecentlyPlayedGames(username, count: 20),
-    ]);
-
-    setState(() {
-      _consoles = results[0] as List<dynamic>?;
-      if (results.length > 1) {
-        _recentGames = results[1] as List<dynamic>?;
-      }
-      _isLoadingConsoles = false;
-    });
-  }
-
-  Future<void> _loadConsoleGames(int consoleId, String consoleName) async {
-    setState(() {
-      _selectedConsoleId = consoleId;
-      _selectedConsoleName = consoleName;
-      _isLoadingGames = true;
-      _consoleGames = null;
-    });
-
-    final api = ref.read(apiDataSourceProvider);
-    final games = await api.getGameList(consoleId);
-
-    setState(() {
-      _consoleGames = games;
-      _isLoadingGames = false;
-    });
-  }
-
-  void _clearConsoleSelection() {
-    setState(() {
-      _selectedConsoleId = null;
-      _selectedConsoleName = null;
-      _consoleGames = null;
-    });
-  }
-
-  List<dynamic> _getFilteredGames() {
-    List<dynamic> games;
-
-    if (_selectedConsoleId != null && _consoleGames != null) {
-      games = _consoleGames!;
-    } else if (_recentGames != null) {
-      games = _recentGames!;
-    } else {
-      return [];
-    }
-
-    if (_searchQuery.isEmpty) {
-      return games.take(50).toList();
-    }
-
-    final query = _searchQuery.toLowerCase();
-    return games
-        .where((g) => (g['Title'] ?? '').toString().toLowerCase().contains(query))
-        .take(50)
-        .toList();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final cacheState = ref.watch(gameCacheProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Search Games'),
+        actions: [
+          if (cacheState.lastUpdated != null)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: cacheState.isLoading
+                  ? null
+                  : () => ref.read(gameCacheProvider.notifier).buildCache(),
+              tooltip: 'Refresh game database',
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -114,9 +48,7 @@ class _GameSearchScreenState extends ConsumerState<GameSearchScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: _selectedConsoleName != null
-                    ? 'Search $_selectedConsoleName games...'
-                    : 'Search your recent games...',
+                hintText: 'Search for any game...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -133,155 +65,222 @@ class _GameSearchScreenState extends ConsumerState<GameSearchScreen> {
                 filled: true,
               ),
               onChanged: (value) => setState(() => _searchQuery = value),
+              autofocus: true,
             ),
           ),
 
-          // Console selector or back button
-          if (_selectedConsoleName != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+          // Content
+          Expanded(
+            child: _buildContent(cacheState),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(GameCacheState cacheState) {
+    // If cache is empty and not loading, show build prompt
+    if (cacheState.games.isEmpty && !cacheState.isLoading) {
+      return _buildEmptyCacheView();
+    }
+
+    // If loading, show progress
+    if (cacheState.isLoading) {
+      return _buildLoadingView(cacheState);
+    }
+
+    // If we have games, show search results
+    if (_searchQuery.isEmpty) {
+      return _buildEmptySearchView(cacheState);
+    }
+
+    final results = ref.read(gameCacheProvider.notifier).search(_searchQuery);
+
+    if (results.isEmpty) {
+      return _buildNoResultsView();
+    }
+
+    return _buildResultsList(results);
+  }
+
+  Widget _buildEmptyCacheView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_download, size: 64, color: Colors.grey[600]),
+            const SizedBox(height: 24),
+            Text(
+              'Build Game Database',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Download the complete list of games from RetroAchievements to enable searching across all platforms.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.subtitleColor),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => ref.read(gameCacheProvider.notifier).buildCache(),
+              icon: const Icon(Icons.download),
+              label: const Text('Download Game Database'),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This may take a minute',
+              style: TextStyle(color: context.subtitleColor, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingView(GameCacheState cacheState) {
+    final percent = (cacheState.progress * 100).toInt();
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  TextButton.icon(
-                    onPressed: _clearConsoleSelection,
-                    icon: const Icon(Icons.arrow_back, size: 18),
-                    label: const Text('All Consoles'),
+                  SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: CircularProgressIndicator(
+                      value: cacheState.progress,
+                      strokeWidth: 8,
+                      backgroundColor: Colors.grey[800],
+                    ),
                   ),
-                  const Spacer(),
-                  Chip(
-                    avatar: const Icon(Icons.videogame_asset, size: 16),
-                    label: Text(_selectedConsoleName!),
+                  Text(
+                    '$percent%',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
-
-          // Content
-          Expanded(
-            child: _buildContent(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContent() {
-    if (_isLoadingConsoles) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    // If a console is selected, show games from that console
-    if (_selectedConsoleId != null) {
-      if (_isLoadingGames) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      return _buildGamesList();
-    }
-
-    // Otherwise, show recent games + console selector
-    return ListView(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewPadding.bottom + 16,
-      ),
-      children: [
-        // Recent games section
-        if (_recentGames != null && _recentGames!.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              _searchQuery.isEmpty ? 'Recently Played' : 'Search Results',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          ..._getFilteredGames().map((game) => _GameTile(game: game)),
-          if (_searchQuery.isEmpty) const SizedBox(height: 24),
-        ],
-
-        // Console selector
-        if (_searchQuery.isEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text(
-              'Browse by Console',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          if (_consoles != null)
-            ..._consoles!.map((console) => _ConsoleTile(
-                  console: console,
-                  onTap: () => _loadConsoleGames(
-                    console['ID'] as int,
-                    console['Name'] as String,
-                  ),
-                )),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildGamesList() {
-    final games = _getFilteredGames();
-
-    if (games.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[600]),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
-              'No games found',
+              'Building game database...',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Downloading games from all consoles',
               style: TextStyle(color: context.subtitleColor),
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  Widget _buildEmptySearchView(GameCacheState cacheState) {
+    final gameCount = cacheState.games.length;
+    final lastUpdated = cacheState.lastUpdated;
+    final daysAgo = lastUpdated != null
+        ? DateTime.now().difference(lastUpdated).inDays
+        : 0;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search, size: 64, color: Colors.grey[600]),
+            const SizedBox(height: 24),
+            Text(
+              'Search $gameCount games',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Type to search across all platforms',
+              style: TextStyle(color: context.subtitleColor),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              daysAgo == 0
+                  ? 'Database updated today'
+                  : 'Last updated $daysAgo days ago',
+              style: TextStyle(color: context.subtitleColor, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 64, color: Colors.grey[600]),
+          const SizedBox(height: 16),
+          Text(
+            'No games found for "$_searchQuery"',
+            style: TextStyle(color: context.subtitleColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsList(List<CachedGame> results) {
     return ListView.builder(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewPadding.bottom + 16,
       ),
-      itemCount: games.length,
-      itemBuilder: (context, index) => _GameTile(game: games[index]),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final game = results[index];
+        return _GameTile(game: game);
+      },
     );
   }
 }
 
 class _GameTile extends StatelessWidget {
-  final dynamic game;
+  final CachedGame game;
 
   const _GameTile({required this.game});
 
   @override
   Widget build(BuildContext context) {
-    final title = game['Title'] ?? 'Unknown';
-    final imageIcon = game['ImageIcon'] ?? '';
-    final consoleName = game['ConsoleName'] ?? '';
-    final gameId = game['GameID'] ?? game['ID'];
-    final numAchievements = game['NumAchievements'] ?? game['NumPossibleAchievements'] ?? 0;
-    final numAchieved = game['NumAchieved'] ?? game['NumAwardedToUser'] ?? 0;
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         onTap: () {
-          if (gameId != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => GameDetailScreen(
-                  gameId: gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0,
-                  gameTitle: title,
-                ),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GameDetailScreen(
+                gameId: game.id,
+                gameTitle: game.title,
               ),
-            );
-          }
+            ),
+          );
         },
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: CachedNetworkImage(
-            imageUrl: 'https://retroachievements.org$imageIcon',
+            imageUrl: 'https://retroachievements.org${game.imageIcon}',
             width: 48,
             height: 48,
             fit: BoxFit.cover,
@@ -294,57 +293,30 @@ class _GameTile extends StatelessWidget {
           ),
         ),
         title: Text(
-          title,
+          game.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(
-          consoleName.isNotEmpty ? consoleName : '$numAchievements achievements',
-          style: TextStyle(color: context.subtitleColor, fontSize: 12),
+        subtitle: Row(
+          children: [
+            Expanded(
+              child: Text(
+                game.consoleName,
+                style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (game.numAchievements > 0) ...[
+              Icon(Icons.emoji_events, size: 12, color: Colors.amber[400]),
+              const SizedBox(width: 4),
+              Text(
+                '${game.numAchievements}',
+                style: TextStyle(color: context.subtitleColor, fontSize: 12),
+              ),
+            ],
+          ],
         ),
-        trailing: numAchieved > 0
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$numAchieved/$numAchievements',
-                  style: const TextStyle(color: Colors.green, fontSize: 12),
-                ),
-              )
-            : null,
-      ),
-    );
-  }
-}
-
-class _ConsoleTile extends StatelessWidget {
-  final dynamic console;
-  final VoidCallback onTap;
-
-  const _ConsoleTile({required this.console, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = console['Name'] ?? 'Unknown';
-    final iconUrl = console['IconURL'] ?? '';
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        onTap: onTap,
-        leading: iconUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: 'https://retroachievements.org$iconUrl',
-                width: 32,
-                height: 32,
-                errorWidget: (_, __, ___) => const Icon(Icons.videogame_asset),
-              )
-            : const Icon(Icons.videogame_asset),
-        title: Text(name),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(Icons.chevron_right, size: 20),
       ),
     );
   }
