@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -93,6 +94,7 @@ class FavoritesState {
 
 class FavoritesNotifier extends StateNotifier<FavoritesState> {
   static const _storageKey = 'favorite_games';
+  static const _widgetChannel = MethodChannel('com.retrotracker.retrotracker/widget');
 
   FavoritesNotifier() : super(FavoritesState()) {
     _load();
@@ -137,6 +139,17 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
       await prefs.setInt('widget_total', 0);
       await prefs.setInt('widget_game_id', 0);
       await prefs.setString('widget_image_url', '');
+    }
+
+    // Notify Android to refresh the widget
+    _refreshWidget();
+  }
+
+  Future<void> _refreshWidget() async {
+    try {
+      await _widgetChannel.invokeMethod('updateWidget');
+    } catch (e) {
+      // Widget update failed, ignore (might be on iOS or no widget)
     }
   }
 

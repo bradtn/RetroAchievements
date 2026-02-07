@@ -4,7 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 
 class UserCompareScreen extends ConsumerStatefulWidget {
-  const UserCompareScreen({super.key});
+  final String? compareUsername;
+
+  const UserCompareScreen({super.key, this.compareUsername});
 
   @override
   ConsumerState<UserCompareScreen> createState() => _UserCompareScreenState();
@@ -22,6 +24,13 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
   void initState() {
     super.initState();
     _loadMyProfile();
+
+    // If a username was passed, pre-fill and auto-search
+    if (widget.compareUsername != null && widget.compareUsername!.isNotEmpty) {
+      _usernameController.text = widget.compareUsername!;
+      // Delay search until after build
+      Future.microtask(() => _searchUser());
+    }
   }
 
   @override

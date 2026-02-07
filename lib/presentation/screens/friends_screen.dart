@@ -236,7 +236,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   void _compareFriend(String username) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const UserCompareScreen()),
+      MaterialPageRoute(builder: (_) => UserCompareScreen(compareUsername: username)),
     );
   }
 }
