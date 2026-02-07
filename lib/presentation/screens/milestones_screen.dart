@@ -1115,6 +1115,11 @@ class _MilestoneBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progress = milestone.requirement > 0
+        ? (milestone.currentValue / milestone.requirement).clamp(0.0, 1.0)
+        : 0.0;
+    final progressPercent = (progress * 100).toInt();
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1133,32 +1138,68 @@ class _MilestoneBadge extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              milestone.icon,
-              size: 32,
-              color: milestone.isEarned ? milestone.color : Colors.grey,
-            ),
-            const SizedBox(height: 8),
+            if (milestone.isEarned) ...[
+              // Earned: just show the icon
+              Icon(
+                milestone.icon,
+                size: 32,
+                color: milestone.color,
+              ),
+            ] else ...[
+              // Not earned: show icon with circular progress
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Background circle
+                    CircularProgressIndicator(
+                      value: 1.0,
+                      strokeWidth: 3,
+                      color: Colors.grey.withValues(alpha: 0.2),
+                    ),
+                    // Progress circle
+                    CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 3,
+                      color: milestone.color.withValues(alpha: 0.7),
+                      backgroundColor: Colors.transparent,
+                    ),
+                    // Icon in center
+                    Icon(
+                      milestone.icon,
+                      size: 20,
+                      color: Colors.grey,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Text(
                 milestone.title,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: milestone.isEarned ? null : Colors.grey,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             if (!milestone.isEarned) ...[
-              const SizedBox(height: 4),
-              Icon(
-                Icons.lock,
-                size: 12,
-                color: Colors.grey[500],
+              const SizedBox(height: 2),
+              Text(
+                '$progressPercent%',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: milestone.color,
+                ),
               ),
             ],
           ],

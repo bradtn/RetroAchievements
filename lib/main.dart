@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
+import 'services/notification_service.dart';
+import 'services/background_sync_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  // Initialize background sync service and check streak status
+  final backgroundSyncService = BackgroundSyncService();
+  await backgroundSyncService.initialize();
+
+  // Check streak status on app open (runs in background, doesn't block)
+  backgroundSyncService.checkStreakOnAppOpen();
 
   runApp(
     const ProviderScope(

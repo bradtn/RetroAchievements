@@ -113,6 +113,14 @@ class StreakNotifier extends StateNotifier<StreakState> {
       DateTime? lastActivityDate;
       final loadedMonths = <String>{};
 
+      // Mark all months in the 90-day range as loaded (even if no achievements)
+      DateTime checkDate = ninetyDaysAgo;
+      while (!checkDate.isAfter(now)) {
+        loadedMonths.add('${checkDate.year}-${checkDate.month}');
+        // Move to next month
+        checkDate = DateTime(checkDate.year, checkDate.month + 1, 1);
+      }
+
       for (final ach in achievements) {
         final dateStr = ach['Date'] ?? ach['DateEarned'] ?? '';
         if (dateStr.isEmpty) continue;
@@ -121,7 +129,6 @@ class StreakNotifier extends StateNotifier<StreakState> {
           final date = DateTime.parse(dateStr);
           final dayOnly = DateTime(date.year, date.month, date.day);
           activityMap[dayOnly] = (activityMap[dayOnly] ?? 0) + 1;
-          loadedMonths.add('${date.year}-${date.month}');
 
           if (lastActivityDate == null || dayOnly.isAfter(lastActivityDate)) {
             lastActivityDate = dayOnly;

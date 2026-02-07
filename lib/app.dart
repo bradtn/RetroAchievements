@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/game_detail_screen.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/premium_provider.dart';
 import 'services/widget_service.dart';
+import 'services/notification_service.dart';
 
 /// Global navigator key for widget navigation
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -19,11 +21,27 @@ class RetroTrackerApp extends ConsumerStatefulWidget {
 }
 
 class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
+  bool _hasRequestedPermission = false;
+
   @override
   void initState() {
     super.initState();
     // Initialize widget service to handle widget clicks
     WidgetService.init(onGameSelected: _onWidgetGameSelected);
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    if (_hasRequestedPermission) return;
+    _hasRequestedPermission = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final hasAsked = prefs.getBool('notification_permission_asked') ?? false;
+
+    if (!hasAsked) {
+      await prefs.setBool('notification_permission_asked', true);
+      final notificationService = NotificationService();
+      await notificationService.requestPermissions();
+    }
   }
 
   void _onWidgetGameSelected(int gameId) {
@@ -42,6 +60,11 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
+
+    // Request notification permission after user is authenticated
+    if (authState.isAuthenticated) {
+      _requestNotificationPermission();
+    }
 
     return MaterialApp(
       navigatorKey: navigatorKey,

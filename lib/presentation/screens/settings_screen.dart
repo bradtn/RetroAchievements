@@ -1,7 +1,90 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
+import '../../services/notification_service.dart';
+import '../../services/background_sync_service.dart';
+
+// Provider for notification settings
+final notificationSettingsProvider = StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((ref) {
+  return NotificationSettingsNotifier();
+});
+
+class NotificationSettings {
+  final bool streakNotificationsEnabled;
+  final bool eveningReminderEnabled;
+  final bool milestonesEnabled;
+  final bool dailySummaryEnabled;
+
+  NotificationSettings({
+    this.streakNotificationsEnabled = true,
+    this.eveningReminderEnabled = true,
+    this.milestonesEnabled = true,
+    this.dailySummaryEnabled = true,
+  });
+
+  NotificationSettings copyWith({
+    bool? streakNotificationsEnabled,
+    bool? eveningReminderEnabled,
+    bool? milestonesEnabled,
+    bool? dailySummaryEnabled,
+  }) {
+    return NotificationSettings(
+      streakNotificationsEnabled: streakNotificationsEnabled ?? this.streakNotificationsEnabled,
+      eveningReminderEnabled: eveningReminderEnabled ?? this.eveningReminderEnabled,
+      milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
+      dailySummaryEnabled: dailySummaryEnabled ?? this.dailySummaryEnabled,
+    );
+  }
+}
+
+class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
+  NotificationSettingsNotifier() : super(NotificationSettings()) {
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = NotificationSettings(
+      streakNotificationsEnabled: prefs.getBool('streak_notifications_enabled') ?? true,
+      eveningReminderEnabled: prefs.getBool('streak_reminder_enabled') ?? true,
+      milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? true,
+      dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? true,
+    );
+  }
+
+  Future<void> setStreakNotifications(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('streak_notifications_enabled', enabled);
+    state = state.copyWith(streakNotificationsEnabled: enabled);
+
+    final backgroundSync = BackgroundSyncService();
+    if (enabled) {
+      await backgroundSync.registerPeriodicTasks();
+    } else {
+      await backgroundSync.cancelAllTasks();
+    }
+  }
+
+  Future<void> setEveningReminder(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('streak_reminder_enabled', enabled);
+    state = state.copyWith(eveningReminderEnabled: enabled);
+  }
+
+  Future<void> setMilestones(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('milestone_notifications_enabled', enabled);
+    state = state.copyWith(milestonesEnabled: enabled);
+  }
+
+  Future<void> setDailySummary(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('daily_summary_enabled', enabled);
+    state = state.copyWith(dailySummaryEnabled: enabled);
+  }
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -11,6 +94,7 @@ class SettingsScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final premium = ref.watch(premiumProvider);
     final themeMode = ref.watch(themeProvider);
+    final notificationSettings = ref.watch(notificationSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -83,6 +167,91 @@ class SettingsScreen extends ConsumerWidget {
             onTap: premium.isPremium
                 ? () => _showThemeDialog(context, ref, themeMode)
                 : () => _showPremiumRequired(context),
+          ),
+
+          const Divider(),
+
+          // Notifications
+          _SectionTitle('Notifications'),
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications_active),
+            title: const Text('Streak Notifications'),
+            subtitle: const Text('Get notified about your streaks'),
+            value: notificationSettings.streakNotificationsEnabled,
+            onChanged: (value) async {
+              if (value) {
+                final granted = await NotificationService().requestPermissions();
+                if (!granted) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enable notifications in system settings')),
+                    );
+                  }
+                  return;
+                }
+              }
+              ref.read(notificationSettingsProvider.notifier).setStreakNotifications(value);
+            },
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.access_time),
+            title: const Text('Evening Reminder'),
+            subtitle: const Text('Remind me at 7 PM if I haven\'t played'),
+            value: notificationSettings.eveningReminderEnabled,
+            onChanged: notificationSettings.streakNotificationsEnabled
+                ? (value) => ref.read(notificationSettingsProvider.notifier).setEveningReminder(value)
+                : null,
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.emoji_events),
+            title: const Text('Milestone Alerts'),
+            subtitle: const Text('Celebrate streak milestones (7, 30, 100 days)'),
+            value: notificationSettings.milestonesEnabled,
+            onChanged: notificationSettings.streakNotificationsEnabled
+                ? (value) => ref.read(notificationSettingsProvider.notifier).setMilestones(value)
+                : null,
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.summarize),
+            title: const Text('Daily Summary'),
+            subtitle: const Text('Show achievements earned today'),
+            value: notificationSettings.dailySummaryEnabled,
+            onChanged: notificationSettings.streakNotificationsEnabled
+                ? (value) => ref.read(notificationSettingsProvider.notifier).setDailySummary(value)
+                : null,
+          ),
+          ListTile(
+            leading: const Icon(Icons.notifications),
+            title: const Text('Test Notification'),
+            subtitle: const Text('Send a test streak notification'),
+            onTap: () async {
+              final notificationService = NotificationService();
+              await notificationService.initialize();
+
+              // Request permission first
+              final granted = await notificationService.requestPermissions();
+
+              if (!granted) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please allow notifications in your device settings'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+                return;
+              }
+
+              // Show the test notification
+              await notificationService.showStreakMilestoneNotification(7);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Test notification sent! Check your notification shade.')),
+                );
+              }
+            },
           ),
 
           const Divider(),
