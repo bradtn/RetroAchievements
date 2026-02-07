@@ -1,0 +1,606 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../providers/auth_provider.dart';
+import 'settings_screen.dart';
+import 'stats_screen.dart';
+import 'game_detail_screen.dart';
+import 'console_browser_screen.dart';
+import 'leaderboard_screen.dart';
+import 'aotw_screen.dart';
+import 'user_compare_screen.dart';
+import 'favorites_screen.dart';
+import 'awards_screen.dart';
+import 'friends_screen.dart';
+import 'calendar_screen.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  int _currentIndex = 0;
+  Map<String, dynamic>? _profile;
+  List<dynamic>? _recentGames;
+  List<dynamic>? _recentAchievements;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    final api = ref.read(apiDataSourceProvider);
+    final username = ref.read(authProvider).username;
+
+    if (username != null) {
+      final results = await Future.wait([
+        api.getUserProfile(username),
+        api.getRecentlyPlayedGames(username),
+        api.getRecentAchievements(username, count: 20),
+      ]);
+
+      setState(() {
+        _profile = results[0] as Map<String, dynamic>?;
+        _recentGames = results[1] as List<dynamic>?;
+        _recentAchievements = results[2] as List<dynamic>?;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _HomeTab(
+            profile: _profile,
+            recentGames: _recentGames,
+            isLoading: _isLoading,
+            onRefresh: _loadData,
+          ),
+          const _ExploreTab(),
+          _AchievementsTab(
+            achievements: _recentAchievements,
+            isLoading: _isLoading,
+            onRefresh: _loadData,
+          ),
+          const SettingsScreen(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.explore), label: 'Explore'),
+          NavigationDestination(icon: Icon(Icons.emoji_events), label: 'Achievements'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+        ],
+      ),
+    );
+  }
+}
+
+// ============ HOME TAB ============
+class _HomeTab extends StatelessWidget {
+  final Map<String, dynamic>? profile;
+  final List<dynamic>? recentGames;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+
+  const _HomeTab({
+    required this.profile,
+    required this.recentGames,
+    required this.isLoading,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const SizedBox(height: 40),
+          // Profile header
+          if (profile != null) _buildProfileHeader(context),
+          const SizedBox(height: 24),
+          // Stats cards
+          if (profile != null) _buildStatsRow(context),
+          const SizedBox(height: 16),
+          // View detailed stats button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StatsScreen()),
+                );
+              },
+              icon: const Icon(Icons.analytics),
+              label: const Text('View Detailed Stats'),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Recent games
+          Text('Recently Played', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          if (recentGames != null && recentGames!.isNotEmpty)
+            ...recentGames!.take(5).map((game) => _GameListTile(game: game))
+          else
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No recent games'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(BuildContext context) {
+    final picUrl = 'https://retroachievements.org${profile!['UserPic']}';
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 40,
+          backgroundImage: CachedNetworkImageProvider(picUrl),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                profile!['User'] ?? 'User',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                profile!['RichPresenceMsg'] ?? 'Offline',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: _StatCard(
+          icon: Icons.stars,
+          label: 'Points',
+          value: '${profile!['TotalPoints'] ?? 0}',
+          color: Colors.amber,
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _StatCard(
+          icon: Icons.military_tech,
+          label: 'True Points',
+          value: '${profile!['TotalTruePoints'] ?? 0}',
+          color: Colors.purple,
+        )),
+      ],
+    );
+  }
+}
+
+// ============ EXPLORE TAB ============
+class _ExploreTab extends StatelessWidget {
+  const _ExploreTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Explore')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // My Favorites
+          _ExploreCard(
+            icon: Icons.star,
+            title: 'My Favorites',
+            subtitle: 'Games you\'re tracking',
+            color: Colors.amber,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // My Awards
+          _ExploreCard(
+            icon: Icons.workspace_premium,
+            title: 'My Awards',
+            subtitle: 'Badges and achievements earned',
+            color: Colors.purple,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AwardsScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Achievement of the Week
+          _ExploreCard(
+            icon: Icons.emoji_events,
+            title: 'Achievement of the Week',
+            subtitle: 'Current weekly challenge',
+            color: Colors.orange,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AchievementOfTheWeekScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Browse by Console
+          _ExploreCard(
+            icon: Icons.videogame_asset,
+            title: 'Browse by Console',
+            subtitle: 'Explore games by platform',
+            color: Colors.blue,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ConsoleBrowserScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Leaderboards
+          _ExploreCard(
+            icon: Icons.leaderboard,
+            title: 'Leaderboards',
+            subtitle: 'Top players worldwide',
+            color: Colors.green,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Friends
+          _ExploreCard(
+            icon: Icons.people,
+            title: 'Friends',
+            subtitle: 'Track and compare with friends',
+            color: Colors.teal,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FriendsScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Calendar
+          _ExploreCard(
+            icon: Icons.calendar_month,
+            title: 'Achievement Calendar',
+            subtitle: 'View unlock history by date',
+            color: Colors.indigo,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CalendarScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Stats (Premium)
+          _ExploreCard(
+            icon: Icons.analytics,
+            title: 'Detailed Statistics',
+            subtitle: 'Charts and insights',
+            color: Colors.pink,
+            isPremium: true,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StatsScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExploreCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isPremium;
+
+  const _ExploreCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.isPremium = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (isPremium) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.amber,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'PRO',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============ ACHIEVEMENTS TAB ============
+class _AchievementsTab extends StatelessWidget {
+  final List<dynamic>? achievements;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+
+  const _AchievementsTab({
+    required this.achievements,
+    required this.isLoading,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Recent Achievements')),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () async => onRefresh(),
+              child: achievements == null || achievements!.isEmpty
+                  ? const Center(child: Text('No achievements found'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: achievements!.length,
+                      itemBuilder: (ctx, i) => _AchievementTile(achievement: achievements![i]),
+                    ),
+            ),
+    );
+  }
+}
+
+
+// ============ HELPER WIDGETS ============
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            )),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GameListTile extends StatelessWidget {
+  final dynamic game;
+
+  const _GameListTile({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = 'https://retroachievements.org${game['ImageIcon']}';
+    final earned = game['NumAchieved'] ?? 0;
+    final total = game['NumPossibleAchievements'] ?? 0;
+    final progress = total > 0 ? earned / total : 0.0;
+    final gameId = game['GameID'] ?? game['ID'];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: gameId != null ? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GameDetailScreen(
+                gameId: int.tryParse(gameId.toString()) ?? 0,
+                gameTitle: game['Title'],
+              ),
+            ),
+          );
+        } : null,
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(
+              width: 48,
+              height: 48,
+              color: Colors.grey[800],
+            ),
+            errorWidget: (_, __, ___) => Container(
+              width: 48,
+              height: 48,
+              color: Colors.grey[800],
+              child: const Icon(Icons.games),
+            ),
+          ),
+        ),
+        title: Text(game['Title'] ?? 'Unknown Game'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(game['ConsoleName'] ?? ''),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey[700],
+            ),
+            Text('$earned / $total achievements'),
+          ],
+        ),
+        isThreeLine: true,
+      ),
+    );
+  }
+}
+
+class _AchievementTile extends StatelessWidget {
+  final dynamic achievement;
+
+  const _AchievementTile({required this.achievement});
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeUrl = 'https://retroachievements.org/Badge/${achievement['BadgeName']}.png';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: CachedNetworkImage(
+            imageUrl: badgeUrl,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(
+              width: 48,
+              height: 48,
+              color: Colors.grey[800],
+            ),
+            errorWidget: (_, __, ___) => Container(
+              width: 48,
+              height: 48,
+              color: Colors.grey[800],
+              child: const Icon(Icons.emoji_events),
+            ),
+          ),
+        ),
+        title: Text(achievement['Title'] ?? 'Achievement'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              achievement['Description'] ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${achievement['Points'] ?? 0} points • ${achievement['GameTitle'] ?? ''}',
+              style: TextStyle(color: Colors.amber[400], fontSize: 12),
+            ),
+          ],
+        ),
+        isThreeLine: true,
+      ),
+    );
+  }
+}
+
