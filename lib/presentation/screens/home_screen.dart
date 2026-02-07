@@ -16,6 +16,7 @@ import 'friends_screen.dart';
 import 'calendar_screen.dart';
 import 'share_card_screen.dart';
 import 'game_search_screen.dart';
+import 'milestones_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -249,6 +250,19 @@ class _ExploreTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
+          // My Milestones
+          _ExploreCard(
+            icon: Icons.workspace_premium,
+            title: 'My Milestones',
+            subtitle: 'Badges you\'ve earned',
+            color: Colors.amber,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MilestonesScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // My Favorites
           _ExploreCard(
             icon: Icons.star,
@@ -264,9 +278,9 @@ class _ExploreTab extends StatelessWidget {
 
           // My Awards
           _ExploreCard(
-            icon: Icons.workspace_premium,
+            icon: Icons.military_tech,
             title: 'My Awards',
-            subtitle: 'Badges and achievements earned',
+            subtitle: 'Site badges and awards',
             color: Colors.purple,
             onTap: () => Navigator.push(
               context,
