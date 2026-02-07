@@ -81,7 +81,10 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
         title: const Text('Compare Users'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16, 16, 16,
+          16 + MediaQuery.of(context).viewPadding.bottom,
+        ),
         children: [
           // Search bar
           Row(

@@ -86,10 +86,11 @@ class _AwardsScreenState extends ConsumerState<AwardsScreen> with SingleTickerPr
       return _buildEmptyState('No mastery awards yet', 'Complete all achievements in a game to earn mastery!');
     }
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return RefreshIndicator(
       onRefresh: _loadAwards,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         children: [
           // Stats summary
           _buildAwardsSummary(),
@@ -141,10 +142,11 @@ class _AwardsScreenState extends ConsumerState<AwardsScreen> with SingleTickerPr
       return _buildEmptyState('No completed games', 'Beat games to see them here!');
     }
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return RefreshIndicator(
       onRefresh: _loadAwards,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         children: [
           ...byConsole.entries.map((entry) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,10 +177,11 @@ class _AwardsScreenState extends ConsumerState<AwardsScreen> with SingleTickerPr
       return _buildEmptyState('No event awards', 'Participate in events to earn special awards!');
     }
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return RefreshIndicator(
       onRefresh: _loadAwards,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         children: eventAwards.map((award) => _EventAwardTile(award: award)).toList(),
       ),
     );

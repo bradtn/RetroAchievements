@@ -108,7 +108,10 @@ class _ConsoleBrowserScreenState extends ConsumerState<ConsoleBrowserScreen> {
                     : RefreshIndicator(
                         onRefresh: _loadConsoles,
                         child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.fromLTRB(
+                            16, 0, 16,
+                            16 + MediaQuery.of(context).viewPadding.bottom,
+                          ),
                           itemCount: _filteredConsoles.length,
                           itemBuilder: (ctx, i) {
                             final console = _filteredConsoles[i];
@@ -168,6 +171,7 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _sortBy = 'title'; // title, achievements, points
+  bool _hideNoAchievements = false;
 
   @override
   void initState() {
@@ -188,9 +192,11 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
   List<dynamic> get _filteredGames {
     if (_games == null) return [];
     var filtered = _games!.where((g) {
-      if (_searchQuery.isEmpty) return true;
       final title = (g['Title'] ?? '').toString().toLowerCase();
-      return title.contains(_searchQuery.toLowerCase());
+      final matchesSearch = _searchQuery.isEmpty || title.contains(_searchQuery.toLowerCase());
+      final hasAchievements = (g['NumAchievements'] ?? 0) > 0;
+      final passesFilter = !_hideNoAchievements || hasAchievements;
+      return matchesSearch && passesFilter;
     }).toList();
 
     // Sort
@@ -275,7 +281,7 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
               onChanged: (v) => setState(() => _searchQuery = v),
             ),
           ),
-          // Games count
+          // Games count and filter
           if (!_isLoading && _games != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -284,6 +290,14 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
                   Text(
                     '${_filteredGames.length} games',
                     style: TextStyle(color: Colors.grey[400]),
+                  ),
+                  const Spacer(),
+                  FilterChip(
+                    label: const Text('Has achievements'),
+                    selected: _hideNoAchievements,
+                    onSelected: (v) => setState(() => _hideNoAchievements = v),
+                    showCheckmark: true,
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
@@ -298,7 +312,10 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
                     : RefreshIndicator(
                         onRefresh: _loadGames,
                         child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.fromLTRB(
+                            16, 0, 16,
+                            16 + MediaQuery.of(context).viewPadding.bottom,
+                          ),
                           itemCount: _filteredGames.length,
                           itemBuilder: (ctx, i) => _GameTile(game: _filteredGames[i]),
                         ),
@@ -359,17 +376,22 @@ class _GameTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Row(
-          children: [
-            Icon(Icons.emoji_events, size: 14, color: Colors.amber[400]),
-            const SizedBox(width: 4),
-            Text('$numAchievements'),
-            const SizedBox(width: 12),
-            Icon(Icons.stars, size: 14, color: Colors.purple[300]),
-            const SizedBox(width: 4),
-            Text('$points pts'),
-          ],
-        ),
+        subtitle: numAchievements > 0
+            ? Row(
+                children: [
+                  Icon(Icons.emoji_events, size: 14, color: Colors.amber[400]),
+                  const SizedBox(width: 4),
+                  Text('$numAchievements'),
+                  const SizedBox(width: 12),
+                  Icon(Icons.stars, size: 14, color: Colors.purple[300]),
+                  const SizedBox(width: 4),
+                  Text('$points pts'),
+                ],
+              )
+            : Text(
+                'No achievements yet',
+                style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic),
+              ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
           Navigator.push(

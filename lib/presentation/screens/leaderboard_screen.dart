@@ -51,7 +51,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           : RefreshIndicator(
               onRefresh: _loadData,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(
+                  16, 16, 16,
+                  16 + MediaQuery.of(context).viewPadding.bottom,
+                ),
                 children: [
                   // My Rank Card
                   if (_myRank != null) _buildMyRankCard(),

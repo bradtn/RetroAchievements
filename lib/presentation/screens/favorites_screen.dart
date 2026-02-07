@@ -60,8 +60,9 @@ class FavoritesScreen extends ConsumerWidget {
     final pinned = state.getPinned();
     final others = state.favorites.where((f) => !f.isPinned).toList();
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
       children: [
         // Pinned game (for widget)
         if (pinned != null) ...[

@@ -73,16 +73,21 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
 
           // Style selector
           Container(
-            height: 80,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _styles.length,
-              itemBuilder: (ctx, i) => _StyleButton(
-                style: _styles[i],
-                isSelected: _selectedStyle == i,
-                onTap: () => setState(() => _selectedStyle = i),
+            padding: EdgeInsets.only(
+              top: 12,
+              bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+            ),
+            child: SizedBox(
+              height: 60,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _styles.length,
+                itemBuilder: (ctx, i) => _StyleButton(
+                  style: _styles[i],
+                  isSelected: _selectedStyle == i,
+                  onTap: () => setState(() => _selectedStyle = i),
+                ),
               ),
             ),
           ),

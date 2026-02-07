@@ -105,10 +105,11 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
 
     final consoleName = console?['Name'] ?? '';
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         children: [
           // Achievement Card
           Card(

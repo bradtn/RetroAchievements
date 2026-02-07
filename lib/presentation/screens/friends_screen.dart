@@ -166,7 +166,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                           await _loadFriendProfiles();
                         },
                         child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.fromLTRB(
+                            16, 0, 16,
+                            16 + MediaQuery.of(context).viewPadding.bottom,
+                          ),
                           itemCount: friends.length,
                           itemBuilder: (ctx, i) => _FriendTile(
                             username: friends[i],

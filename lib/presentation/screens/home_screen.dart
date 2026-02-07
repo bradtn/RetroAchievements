@@ -552,11 +552,17 @@ class _GameListTile extends StatelessWidget {
           children: [
             Text(game['ConsoleName'] ?? ''),
             const SizedBox(height: 4),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey[700],
-            ),
-            Text('$earned / $total achievements'),
+            if (total > 0) ...[
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[700],
+              ),
+              Text('$earned / $total achievements'),
+            ] else
+              Text(
+                'No achievements yet',
+                style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic),
+              ),
           ],
         ),
         isThreeLine: true,

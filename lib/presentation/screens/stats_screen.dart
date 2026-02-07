@@ -51,10 +51,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       return const Center(child: Text('Failed to load stats'));
     }
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return RefreshIndicator(
       onRefresh: _loadStats,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         children: [
           // Points Overview
           _buildPointsCard(),
