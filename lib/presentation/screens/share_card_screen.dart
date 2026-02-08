@@ -369,42 +369,161 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     final points = widget.data['Points'] ?? 0;
     final badgeName = widget.data['BadgeName'] ?? '';
     final gameTitle = widget.data['GameTitle'] ?? '';
+    final gameIcon = widget.data['GameIcon'] ?? '';
+    final username = widget.data['Username'] ?? '';
+    final userPic = widget.data['UserPic'] ?? '';
+    final isEarned = widget.data['IsEarned'] == true;
+    final unlockPercent = widget.data['UnlockPercent'];
+    final rarityLabel = widget.data['RarityLabel'] ?? '';
     final isHardcore = widget.data['HardcoreMode'] == 1;
-    final rarity = widget.data['TrueRatio'] != null
-        ? (widget.data['TrueRatio'] / (points > 0 ? points : 1) * 100).toStringAsFixed(1)
-        : null;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Badge
+        // Game info row at top with cover art
+        if (gameTitle.isNotEmpty || gameIcon.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (gameIcon.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: CachedNetworkImage(
+                      imageUrl: 'https://retroachievements.org$gameIcon',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        width: 28,
+                        height: 28,
+                        color: Colors.grey[700],
+                        child: const Icon(Icons.games, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              if (gameIcon.isNotEmpty && gameTitle.isNotEmpty)
+                const SizedBox(width: 8),
+              if (gameTitle.isNotEmpty)
+                Flexible(
+                  child: Text(
+                    gameTitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Badge with lock overlay for unearned
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isEarned ? Colors.amber : Colors.grey[600]!,
+                  width: 3,
+                ),
+                boxShadow: [
+                  if (isEarned)
+                    BoxShadow(
+                      color: Colors.amber.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                ],
+              ),
+              child: ClipOval(
+                child: ColorFiltered(
+                  colorFilter: isEarned
+                      ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                      : const ColorFilter.matrix(<double>[
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0, 0, 0, 0.6, 0,
+                        ]),
+                  child: CachedNetworkImage(
+                    imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => Container(
+                      width: 100,
+                      height: 100,
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.emoji_events, size: 48, color: Colors.amber),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Lock icon overlay for unearned
+            if (!isEarned)
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock, color: Colors.white, size: 20),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Earned/Not earned status badge
         Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.amber, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.amber.withValues(alpha: 0.3),
-                blurRadius: 15,
+            color: isEarned
+                ? Colors.green.withValues(alpha: 0.3)
+                : Colors.red.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isEarned
+                  ? Colors.green.withValues(alpha: 0.5)
+                  : Colors.red.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isEarned ? Icons.check_circle : Icons.lock_outline,
+                color: isEarned ? Colors.green : Colors.red[300],
+                size: 14,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isEarned ? 'UNLOCKED' : 'NOT YET UNLOCKED',
+                style: TextStyle(
+                  color: isEarned ? Colors.green : Colors.red[300],
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ],
           ),
-          child: ClipOval(
-            child: CachedNetworkImage(
-              imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => Container(
-                width: 100,
-                height: 100,
-                color: Colors.grey[800],
-                child: const Icon(Icons.emoji_events, size: 48, color: Colors.amber),
-              ),
-            ),
-          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
 
         // Hardcore badge
         if (isHardcore)
@@ -430,31 +549,33 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
           title,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
         // Description
         Text(
           description,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 14,
+            fontSize: 13,
           ),
           textAlign: TextAlign.center,
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
 
         // Points and rarity
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -475,35 +596,121 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                 ],
               ),
             ),
-            if (rarity != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.purple.withValues(alpha: 0.5)),
-                ),
-                child: Text(
-                  '$rarity% rarity',
-                  style: TextStyle(color: Colors.purple[200], fontWeight: FontWeight.bold),
-                ),
+            if (unlockPercent != null && unlockPercent > 0)
+              Builder(
+                builder: (context) {
+                  // Determine rarity based on unlock percent
+                  final IconData rarityIcon;
+                  final Color rarityColor;
+                  final String rarityText;
+
+                  if (unlockPercent < 5) {
+                    rarityIcon = Icons.diamond;
+                    rarityColor = Colors.red;
+                    rarityText = 'Ultra Rare';
+                  } else if (unlockPercent < 15) {
+                    rarityIcon = Icons.star;
+                    rarityColor = Colors.purple;
+                    rarityText = 'Rare';
+                  } else if (unlockPercent < 40) {
+                    rarityIcon = Icons.hexagon;
+                    rarityColor = Colors.blue;
+                    rarityText = 'Uncommon';
+                  } else {
+                    rarityIcon = Icons.circle;
+                    rarityColor = Colors.grey;
+                    rarityText = 'Common';
+                  }
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: rarityColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: rarityColor.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(rarityIcon, color: rarityColor, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${unlockPercent.toStringAsFixed(1)}%',
+                          style: TextStyle(color: rarityColor, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.people, color: rarityColor.withValues(alpha: 0.7), size: 12),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        // Game title
-        Text(
-          gameTitle,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 12,
+        // User info row
+        if (username.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                  ),
+                  child: ClipOval(
+                    child: userPic.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: 'https://retroachievements.org$userPic',
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Container(
+                              width: 28,
+                              height: 28,
+                              color: Colors.grey[700],
+                              child: Center(
+                                child: Text(
+                                  username.isNotEmpty ? username[0].toUpperCase() : '?',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: 28,
+                            height: 28,
+                            color: Colors.grey[700],
+                            child: Center(
+                              child: Text(
+                                username.isNotEmpty ? username[0].toUpperCase() : '?',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
+          const SizedBox(height: 16),
+        ],
 
         _buildBranding(),
       ],
@@ -674,6 +881,10 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     final iconCode = widget.data['iconCode'] as int? ?? Icons.emoji_events.codePoint;
     final colorValue = widget.data['colorValue'] as int? ?? Colors.amber.value;
     final milestoneColor = Color(colorValue);
+    final isEarned = widget.data['isEarned'] == true;
+    final currentValue = widget.data['currentValue'] as int? ?? 0;
+    final requirement = widget.data['requirement'] as int? ?? 1;
+    final progress = requirement > 0 ? (currentValue / requirement).clamp(0.0, 1.0) : 0.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -684,19 +895,22 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
           height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: milestoneColor.withValues(alpha: 0.2),
-            border: Border.all(color: milestoneColor, width: 3),
+            color: milestoneColor.withValues(alpha: isEarned ? 0.2 : 0.15),
+            border: Border.all(
+              color: milestoneColor.withValues(alpha: isEarned ? 1.0 : 0.5),
+              width: 3,
+            ),
             boxShadow: [
               BoxShadow(
-                color: milestoneColor.withValues(alpha: 0.4),
-                blurRadius: 15,
+                color: milestoneColor.withValues(alpha: isEarned ? 0.4 : 0.2),
+                blurRadius: isEarned ? 15 : 8,
               ),
             ],
           ),
           child: Icon(
             IconData(iconCode, fontFamily: 'MaterialIcons'),
             size: 48,
-            color: milestoneColor,
+            color: milestoneColor.withValues(alpha: isEarned ? 1.0 : 0.7),
           ),
         ),
         const SizedBox(height: 16),
@@ -742,30 +956,73 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Earned badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
+        // Earned badge or progress
+        if (isEarned)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 18),
+                SizedBox(width: 6),
+                Text(
+                  'EARNED',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Column(
             children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 18),
-              SizedBox(width: 6),
+              // Progress text
               Text(
-                'EARNED',
-                style: TextStyle(
-                  color: Colors.green,
+                '$currentValue / $requirement',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Progress bar
+              Container(
+                width: 200,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: progress,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: milestoneColor,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${(progress * 100).toInt()}% complete',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 12,
                 ),
               ),
             ],
           ),
-        ),
         const SizedBox(height: 20),
 
         // User info

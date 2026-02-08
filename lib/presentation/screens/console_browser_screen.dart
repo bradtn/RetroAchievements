@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -188,6 +189,15 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
       _games = games;
       _isLoading = false;
     });
+
+    // Cache games for future use
+    if (games != null) {
+      GameCache.instance.init().then((_) {
+        GameCache.instance.putAll(
+          games.map((g) => Map<String, dynamic>.from(g)).toList(),
+        );
+      });
+    }
   }
 
   List<dynamic> get _filteredGames {

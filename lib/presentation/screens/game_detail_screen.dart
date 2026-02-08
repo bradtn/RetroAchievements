@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../core/animations.dart';
+import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/premium_provider.dart';
@@ -10,11 +12,13 @@ import 'share_card_screen.dart';
 class GameDetailScreen extends ConsumerStatefulWidget {
   final int gameId;
   final String? gameTitle;
+  final String? heroTag;
 
   const GameDetailScreen({
     super.key,
     required this.gameId,
     this.gameTitle,
+    this.heroTag,
   });
 
   @override
@@ -28,6 +32,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   Map<String, dynamic>? _gameData;
   bool _isLoading = true;
   String? _error;
+
+  // Leaderboards
+  List<Map<String, dynamic>> _leaderboards = [];
+  bool _isLoadingLeaderboards = false;
+
+  // User's game rank
+  Map<String, dynamic>? _userGameRank;
 
   // Filter state
   AchievementFilter _filter = AchievementFilter.all;
@@ -82,6 +93,39 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       _isLoading = false;
       if (data == null) _error = 'Failed to load game data';
     });
+
+    // Cache game data for future use
+    if (data != null) {
+      GameCache.instance.init().then((_) {
+        GameCache.instance.put(widget.gameId, data);
+      });
+      _loadLeaderboards();
+      _loadUserGameRank();
+    }
+  }
+
+  Future<void> _loadLeaderboards() async {
+    setState(() => _isLoadingLeaderboards = true);
+    final api = ref.read(apiDataSourceProvider);
+    final result = await api.getGameLeaderboards(widget.gameId);
+    if (mounted) {
+      setState(() {
+        _leaderboards = result != null
+            ? List<Map<String, dynamic>>.from(result)
+            : [];
+        _isLoadingLeaderboards = false;
+      });
+    }
+  }
+
+  Future<void> _loadUserGameRank() async {
+    final api = ref.read(apiDataSourceProvider);
+    final username = ref.read(authProvider).username;
+    if (username == null) return;
+    final result = await api.getUserGameRankAndScore(username, widget.gameId);
+    if (mounted && result != null) {
+      setState(() => _userGameRank = result);
+    }
   }
 
   @override
@@ -100,7 +144,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildLoadingShimmer();
     }
 
     if (_error != null || _gameData == null) {
@@ -131,6 +175,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final completion = _gameData!['UserCompletion'] ?? '0%';
     final achievements = _gameData!['Achievements'] as Map<String, dynamic>? ?? {};
     final numDistinctPlayers = _gameData!['NumDistinctPlayers'] ?? _gameData!['NumDistinctPlayersCasual'] ?? 0;
+
+    // Calculate total and earned points from achievements
+    int totalPoints = 0;
+    int earnedPoints = 0;
+    for (final entry in achievements.entries) {
+      final ach = entry.value as Map<String, dynamic>;
+      final pts = ach['Points'] ?? 0;
+      final pointValue = (pts is int) ? pts : int.tryParse(pts.toString()) ?? 0;
+      totalPoints += pointValue;
+      final dateEarned = ach['DateEarned'] ?? ach['DateEarnedHardcore'];
+      if (dateEarned != null && dateEarned.toString().isNotEmpty) {
+        earnedPoints += pointValue;
+      }
+    }
 
     final progress = numAchievements > 0 ? numAwarded / numAchievements : 0.0;
 
@@ -163,10 +221,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               final shadowOpacity = (1.0 - collapseRatio).clamp(0.0, 1.0);
 
               return FlexibleSpaceBar(
+                titlePadding: const EdgeInsets.only(left: 56, right: 16, bottom: 16),
                 title: Text(
                   title,
                   style: TextStyle(
                     color: titleColor,
+                    fontSize: 16,
                     shadows: [
                       Shadow(
                         blurRadius: 4,
@@ -174,6 +234,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ),
                     ],
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 background: Stack(
                   fit: StackFit.expand,
@@ -182,6 +244,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       CachedNetworkImage(
                         imageUrl: 'https://retroachievements.org$imageTitle',
                         fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
                         errorWidget: (_, __, ___) => Container(color: Colors.deepPurple),
                       )
                     else
@@ -195,6 +258,42 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                         ),
                       ),
                     ),
+                    // Hero game icon
+                    if (widget.heroTag != null)
+                      Positioned(
+                        left: 16,
+                        bottom: 60,
+                        child: Hero(
+                          tag: widget.heroTag!,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: CachedNetworkImage(
+                                imageUrl: 'https://retroachievements.org$imageIcon',
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(
+                                  width: 64,
+                                  height: 64,
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.games, size: 32),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               );
@@ -212,12 +311,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
+                      // Add calculated points to the data
+                      final shareData = Map<String, dynamic>.from(_gameData!);
+                      shareData['PossibleScore'] = totalPoints;
+                      shareData['ScoreAchieved'] = earnedPoints;
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ShareCardScreen(
                             type: ShareCardType.game,
-                            data: _gameData!,
+                            data: shareData,
                           ),
                         ),
                       );
@@ -304,6 +408,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ],
                     ),
 
+                    // User's rank on this game
+                    if (_userGameRank != null) ...[
+                      const SizedBox(height: 12),
+                      _buildUserGameRank(),
+                    ],
+
                     const Divider(height: 24),
 
                     // Details
@@ -330,22 +440,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title row with earned count and sort
+                  // Title row with sort dropdown
                   Row(
                     children: [
                       Text('Achievements', style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '$numAwarded/$numAchievements',
-                          style: const TextStyle(color: Colors.green, fontSize: 12),
-                        ),
-                      ),
                       const Spacer(),
                       // Sort dropdown
                       PopupMenuButton<AchievementSort>(
@@ -417,9 +515,55 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  // Show stats row with badges
+                  Builder(
+                    builder: (context) {
+                      final filtered = _getFilteredAchievements(achievements);
+                      return Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$numAwarded/${achievements.length}',
+                              style: const TextStyle(color: Colors.green, fontSize: 11),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star, size: 12, color: Colors.amber[700]),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '$earnedPoints/$totalPoints pts',
+                                  style: TextStyle(color: Colors.amber[700], fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'Showing ${filtered.length}',
+                            style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                   const SizedBox(height: 12),
-                  // Static rarity legend
-                  _buildStaticRarityLegend(),
+                  // Rarity distribution chart and legend
+                  _buildRarityDistributionCard(achievements, numDistinctPlayers),
                 ],
               ),
             ),
@@ -456,13 +600,28 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 );
               }
 
+              // Get user info for achievement details
+              final username = ref.watch(authProvider).username;
+              final userPic = _gameData?['UserPic'] ?? '';
+
               return SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     if (index >= filtered.length) return null;
-                    return _AchievementTile(
-                      achievement: filtered[index],
-                      numDistinctPlayers: numDistinctPlayers is int ? numDistinctPlayers : int.tryParse(numDistinctPlayers.toString()) ?? 0,
+                    return ScrollAnimatedItem(
+                      index: index,
+                      delay: const Duration(milliseconds: 10),
+                      duration: const Duration(milliseconds: 150),
+                      beginOffset: const Offset(0.08, 0.0),
+                      initialOpacity: 0.6,
+                      child: _AchievementTile(
+                        achievement: filtered[index],
+                        numDistinctPlayers: numDistinctPlayers is int ? numDistinctPlayers : int.tryParse(numDistinctPlayers.toString()) ?? 0,
+                        gameTitle: title,
+                        gameIcon: imageIcon,
+                        username: username,
+                        userPic: userPic is String ? userPic : '',
+                      ),
                     );
                   },
                   childCount: filtered.length,
@@ -471,7 +630,263 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             },
           ),
 
+        // Leaderboards section
+        if (_leaderboards.isNotEmpty || _isLoadingLeaderboards)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.leaderboard, size: 22, color: Colors.amber),
+                  const SizedBox(width: 8),
+                  Text('Leaderboards', style: Theme.of(context).textTheme.titleLarge),
+                  const Spacer(),
+                  if (_leaderboards.isNotEmpty)
+                    Text(
+                      '${_leaderboards.length} ${_leaderboards.length == 1 ? 'leaderboard' : 'leaderboards'}',
+                      style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+        if (_isLoadingLeaderboards)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          )
+        else if (_leaderboards.isNotEmpty)
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= _leaderboards.length) return null;
+                return _LeaderboardTile(
+                  leaderboard: _leaderboards[index],
+                  onTap: () => _showLeaderboardDetail(_leaderboards[index]),
+                );
+              },
+              childCount: _leaderboards.length > 5 ? 5 : _leaderboards.length,
+            ),
+          ),
+
+        // Show more leaderboards button
+        if (_leaderboards.length > 5)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: OutlinedButton(
+                onPressed: () => _showAllLeaderboards(),
+                child: Text('View All ${_leaderboards.length} Leaderboards'),
+              ),
+            ),
+          ),
+
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
+      ],
+    );
+  }
+
+  Widget _buildUserGameRank() {
+    if (_userGameRank == null) return const SizedBox.shrink();
+
+    // Parse the rank data - API returns a list with user's position
+    // The structure varies, try to extract rank info
+    final rankData = _userGameRank!;
+    final rank = rankData['Rank'] ?? rankData['UserRank'] ?? 0;
+    final score = rankData['Score'] ?? rankData['TotalScore'] ?? 0;
+    final totalRanked = rankData['TotalRanked'] ?? rankData['NumEntries'] ?? 0;
+
+    if (rank == 0 && score == 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.amber.withValues(alpha: 0.15),
+            Colors.orange.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '#$rank',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your Rank',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  totalRanked > 0
+                      ? 'Rank $rank of $totalRanked players'
+                      : 'Rank #$rank',
+                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.stars, size: 14, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  '$score',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLeaderboardDetail(Map<String, dynamic> leaderboard) async {
+    final id = leaderboard['ID'] ?? leaderboard['LeaderboardId'] ?? 0;
+    final title = leaderboard['Title'] ?? 'Leaderboard';
+    final description = leaderboard['Description'] ?? '';
+    final format = leaderboard['Format'] ?? '';
+
+    // Load entries for this leaderboard
+    showDialog(
+      context: context,
+      builder: (ctx) => _LeaderboardDetailDialog(
+        leaderboardId: id is int ? id : int.tryParse(id.toString()) ?? 0,
+        title: title,
+        description: description,
+        format: format,
+      ),
+    );
+  }
+
+  void _showAllLeaderboards() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.leaderboard, color: Colors.amber),
+                  const SizedBox(width: 8),
+                  Text(
+                    'All Leaderboards (${_leaderboards.length})',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: _leaderboards.length,
+                itemBuilder: (ctx, i) => _LeaderboardTile(
+                  leaderboard: _leaderboards[i],
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showLeaderboardDetail(_leaderboards[i]);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingShimmer() {
+    return CustomScrollView(
+      slivers: [
+        // Shimmer app bar
+        SliverAppBar(
+          expandedHeight: 200,
+          pinned: true,
+          flexibleSpace: FlexibleSpaceBar(
+            background: ShimmerCard(
+              height: 200,
+              borderRadius: 0,
+            ),
+          ),
+        ),
+        // Shimmer game info card
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ShimmerCard(height: 180),
+          ),
+        ),
+        // Shimmer achievement header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ShimmerCard(height: 40, width: 150),
+          ),
+        ),
+        // Shimmer achievement tiles
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: ShimmerAchievementTile(),
+            ),
+            childCount: 8,
+          ),
+        ),
       ],
     );
   }
@@ -543,53 +958,168 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  Widget _buildStaticRarityLegend() {
+  // Calculate rarity tier for an achievement
+  Map<String, dynamic> _getRarityTier(int numAwarded, int numDistinct) {
+    if (numDistinct > 0) {
+      final percent = (numAwarded / numDistinct) * 100;
+      if (percent < 5) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond, 'tier': 0};
+      if (percent < 15) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star, 'tier': 1};
+      if (percent < 40) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon, 'tier': 2};
+      return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle, 'tier': 3};
+    }
+    // Fallback to absolute numbers
+    if (numAwarded < 100) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond, 'tier': 0};
+    if (numAwarded < 500) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star, 'tier': 1};
+    if (numAwarded < 2000) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon, 'tier': 2};
+    return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle, 'tier': 3};
+  }
+
+  Widget _buildRarityDistributionCard(Map<String, dynamic> achievements, int numDistinctPlayers) {
+    // Count achievements per rarity tier
+    int ultraRareCount = 0;
+    int rareCount = 0;
+    int uncommonCount = 0;
+    int commonCount = 0;
+
+    for (final entry in achievements.entries) {
+      final ach = entry.value as Map<String, dynamic>;
+      final numAwarded = ach['NumAwarded'] ?? 0;
+      final tier = _getRarityTier(numAwarded, numDistinctPlayers);
+      switch (tier['tier'] as int) {
+        case 0: ultraRareCount++; break;
+        case 1: rareCount++; break;
+        case 2: uncommonCount++; break;
+        case 3: commonCount++; break;
+      }
+    }
+
+    final total = achievements.length;
+    if (total == 0) return const SizedBox.shrink();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.light
             ? Colors.grey.shade100
             : Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLegendItem(Icons.diamond, Colors.red, 'Ultra Rare', '<5%'),
-          _buildLegendItem(Icons.star, Colors.purple, 'Rare', '<15%'),
-          _buildLegendItem(Icons.hexagon, Colors.blue, 'Uncommon', '<40%'),
-          _buildLegendItem(Icons.circle, Colors.grey, 'Common', '40%+'),
+          // Header
+          Row(
+            children: [
+              const Icon(Icons.bar_chart, size: 16, color: Colors.purple),
+              const SizedBox(width: 6),
+              Text(
+                'Rarity Distribution',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: context.subtitleColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$numDistinctPlayers players',
+                style: TextStyle(fontSize: 10, color: context.subtitleColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Stacked bar chart
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              height: 24,
+              child: Row(
+                children: [
+                  if (ultraRareCount > 0)
+                    Expanded(
+                      flex: ultraRareCount,
+                      child: Container(
+                        color: Colors.red,
+                        child: Center(
+                          child: ultraRareCount >= 3 ? Text(
+                            '$ultraRareCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ) : null,
+                        ),
+                      ),
+                    ),
+                  if (rareCount > 0)
+                    Expanded(
+                      flex: rareCount,
+                      child: Container(
+                        color: Colors.purple,
+                        child: Center(
+                          child: rareCount >= 3 ? Text(
+                            '$rareCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ) : null,
+                        ),
+                      ),
+                    ),
+                  if (uncommonCount > 0)
+                    Expanded(
+                      flex: uncommonCount,
+                      child: Container(
+                        color: Colors.blue,
+                        child: Center(
+                          child: uncommonCount >= 3 ? Text(
+                            '$uncommonCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ) : null,
+                        ),
+                      ),
+                    ),
+                  if (commonCount > 0)
+                    Expanded(
+                      flex: commonCount,
+                      child: Container(
+                        color: Colors.grey,
+                        child: Center(
+                          child: commonCount >= 3 ? Text(
+                            '$commonCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ) : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Legend with counts
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              _buildRarityLegendItem(Icons.diamond, Colors.red, 'Ultra Rare', '<5%', ultraRareCount),
+              _buildRarityLegendItem(Icons.star, Colors.purple, 'Rare', '<15%', rareCount),
+              _buildRarityLegendItem(Icons.hexagon, Colors.blue, 'Uncommon', '<40%', uncommonCount),
+              _buildRarityLegendItem(Icons.circle, Colors.grey, 'Common', '40%+', commonCount),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem(IconData icon, Color color, String name, String percent) {
-    return Column(
+  Widget _buildRarityLegendItem(IconData icon, Color color, String name, String percent, int count) {
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-            Text(
-              percent,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
+        Icon(icon, size: 10, color: color),
+        const SizedBox(width: 3),
         Text(
-          name,
+          '$name ($count)',
           style: TextStyle(
             color: color,
             fontSize: 10,
-            fontWeight: FontWeight.w500,
+            fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ],
@@ -663,8 +1193,19 @@ class _DetailRow extends StatelessWidget {
 class _AchievementTile extends ConsumerWidget {
   final Map<String, dynamic> achievement;
   final int numDistinctPlayers;
+  final String? gameTitle;
+  final String? gameIcon;
+  final String? username;
+  final String? userPic;
 
-  const _AchievementTile({required this.achievement, this.numDistinctPlayers = 0});
+  const _AchievementTile({
+    required this.achievement,
+    this.numDistinctPlayers = 0,
+    this.gameTitle,
+    this.gameIcon,
+    this.username,
+    this.userPic,
+  });
 
   // Get rarity info based on NumAwarded (how many players unlocked it)
   // Lower number = rarer achievement
@@ -713,101 +1254,720 @@ class _AchievementTile extends ConsumerWidget {
         ? (numAwarded / numDistinctPlayers * 100)
         : 0.0;
 
+    final dateEarned = achievement['DateEarned'] ?? achievement['DateEarnedHardcore'];
+    final isEarned = dateEarned != null;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(
-              width: 48, height: 48,
-              color: Colors.grey[800],
-              child: const Icon(Icons.emoji_events),
-            ),
+      child: InkWell(
+        onTap: () => _showAchievementDetail(context, ref),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Achievement badge with earned indicator
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: ColorFiltered(
+                      colorFilter: isEarned
+                          ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                          : const ColorFilter.matrix(<double>[
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0, 0, 0, 0.6, 0,
+                            ]),
+                      child: CachedNetworkImage(
+                        imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          width: 52, height: 52,
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.emoji_events),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (isEarned)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check, color: Colors.white, size: 12),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title row with points badge
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isEarned ? null : context.subtitleColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star, size: 10, color: Colors.amber),
+                              const SizedBox(width: 2),
+                              Text(
+                                '$points',
+                                style: TextStyle(color: Colors.amber[400], fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Description
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.subtitleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Rarity progress bar (always visible)
+                    _buildRarityBar(context, unlockPercent, rarityInfo, isPremium),
+                    const SizedBox(height: 6),
+                    // Badges row
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        // Rarity label badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (rarityInfo['color'] as Color).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: (rarityInfo['color'] as Color).withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(rarityInfo['icon'] as IconData, size: 10, color: rarityInfo['color'] as Color),
+                              const SizedBox(width: 3),
+                              Text(
+                                rarityInfo['label'] as String,
+                                style: TextStyle(color: rarityInfo['color'] as Color, fontSize: 9, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Unlock count badge
+                        if (numAwarded > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.people, size: 10, color: context.subtitleColor),
+                                const SizedBox(width: 3),
+                                Text(
+                                  _formatUnlockCount(numAwarded),
+                                  style: TextStyle(color: context.subtitleColor, fontSize: 9),
+                                ),
+                              ],
+                            ),
+                          ),
+                        // Missable badge
+                        if (isMissable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.red.withValues(alpha: 0.3), width: 1),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.warning_amber_rounded, size: 10, color: Colors.red),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Missable',
+                                  style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        title: Text(title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  Widget _buildRarityBar(BuildContext context, double unlockPercent, Map<String, dynamic> rarityInfo, bool isPremium) {
+    final color = rarityInfo['color'] as Color;
+    // Clamp percentage for bar display (0-100)
+    final barPercent = unlockPercent.clamp(0.0, 100.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Progress bar
+        Stack(
           children: [
-            Text(description, maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
+            // Background
+            Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            // Filled portion
+            FractionallySizedBox(
+              widthFactor: barPercent / 100,
+              child: Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withValues(alpha: 0.7)],
                   ),
-                  child: Text(
-                    '$points pts',
-                    style: TextStyle(color: Colors.amber[400], fontSize: 11),
-                  ),
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.4),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                // Rarity badge with percentage (Premium feature)
-                if (isPremium)
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        // Percentage label
+        Row(
+          children: [
+            Text(
+              numDistinctPlayers > 0
+                  ? '${unlockPercent.toStringAsFixed(1)}% of players'
+                  : 'Unlock rate unavailable',
+              style: TextStyle(
+                color: color,
+                fontSize: 9,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatUnlockCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M unlocks';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K unlocks';
+    }
+    return '$count unlocks';
+  }
+
+  void _showAchievementDetail(BuildContext context, WidgetRef ref) async {
+    final title = achievement['Title'] ?? 'Achievement';
+    final description = achievement['Description'] ?? '';
+    final points = achievement['Points'] ?? 0;
+    final trueRatio = achievement['TrueRatio'] ?? 0;
+    final badgeName = achievement['BadgeName'] ?? '';
+    final numAwarded = achievement['NumAwarded'] ?? 0;
+    final dateEarned = achievement['DateEarned'] ?? achievement['DateEarnedHardcore'];
+    final isEarned = dateEarned != null;
+    final isPremium = ref.read(isPremiumProvider);
+    final rarityInfo = _getRarityInfo(numAwarded, numDistinctPlayers);
+    final unlockPercent = numDistinctPlayers > 0
+        ? (numAwarded / numDistinctPlayers * 100)
+        : 0.0;
+    final isMissable = _isMissable(achievement);
+
+    // Fetch user profile to get avatar
+    String? fetchedUserPic = userPic;
+    if (fetchedUserPic == null || fetchedUserPic.isEmpty) {
+      final api = ref.read(apiDataSourceProvider);
+      final profile = await api.getUserProfile(username ?? '');
+      fetchedUserPic = profile?['UserPic'] ?? '';
+    }
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Achievement badge with earned/locked state
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            if (isEarned)
+                              BoxShadow(
+                                color: Colors.amber.withValues(alpha: 0.4),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: ColorFiltered(
+                            colorFilter: isEarned
+                                ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                                : const ColorFilter.matrix(<double>[
+                                    0.2126, 0.7152, 0.0722, 0, 0,
+                                    0.2126, 0.7152, 0.0722, 0, 0,
+                                    0.2126, 0.7152, 0.0722, 0, 0,
+                                    0, 0, 0, 0.5, 0,
+                                  ]),
+                            child: CachedNetworkImage(
+                              imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                              width: 96,
+                              height: 96,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => Container(
+                                width: 96,
+                                height: 96,
+                                color: Colors.grey[800],
+                                child: const Icon(Icons.emoji_events, size: 48),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (!isEarned)
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.lock, color: Colors.white, size: 24),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Earned status badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
+                      color: isEarned
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.orange.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(rarityInfo['icon'] as IconData, size: 10, color: rarityInfo['color'] as Color),
-                        const SizedBox(width: 3),
+                        Icon(
+                          isEarned ? Icons.check_circle : Icons.lock_outline,
+                          color: isEarned ? Colors.green : Colors.orange,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
                         Text(
-                          numDistinctPlayers > 0
-                              ? '${unlockPercent.toStringAsFixed(1)}%'
-                              : rarityInfo['label'] as String,
-                          style: TextStyle(color: rarityInfo['color'] as Color, fontSize: 10, fontWeight: FontWeight.bold),
+                          isEarned ? 'UNLOCKED' : 'LOCKED',
+                          style: TextStyle(
+                            color: isEarned ? Colors.green : Colors.orange,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                if (isPremium && numAwarded > 0) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(height: 16),
+
+                  // Title
                   Text(
-                    '$numAwarded unlocks',
-                    style: TextStyle(color: context.subtitleColor, fontSize: 10),
-                  ),
-                ],
-                // Missable badge
-                if (isMissable) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Description
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[300]
+                          : Colors.grey[700],
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Points and rarity badges row
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, size: 16, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$points pts',
+                              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: (rarityInfo['color'] as Color).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(rarityInfo['icon'] as IconData, size: 14, color: rarityInfo['color'] as Color),
+                            const SizedBox(width: 4),
+                            Text(
+                              rarityInfo['label'] as String,
+                              style: TextStyle(color: rarityInfo['color'] as Color, fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isMissable)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.warning_amber, size: 14, color: Colors.red),
+                              SizedBox(width: 4),
+                              Text('Missable', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Enhanced rarity visualization
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (rarityInfo['color'] as Color).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
                       children: [
-                        Icon(Icons.warning_amber_rounded, size: 10, color: Colors.red),
-                        SizedBox(width: 3),
-                        Text(
-                          'Missable',
-                          style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                        // Rarity bar
+                        Row(
+                          children: [
+                            Text(
+                              'Rarity',
+                              style: TextStyle(
+                                color: rarityInfo['color'] as Color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              numDistinctPlayers > 0
+                                  ? '${unlockPercent.toStringAsFixed(2)}%'
+                                  : 'N/A',
+                              style: TextStyle(
+                                color: rarityInfo['color'] as Color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Progress bar
+                        Stack(
+                          children: [
+                            Container(
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                            FractionallySizedBox(
+                              widthFactor: (unlockPercent / 100).clamp(0.0, 1.0),
+                              child: Container(
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      rarityInfo['color'] as Color,
+                                      (rarityInfo['color'] as Color).withValues(alpha: 0.7),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (rarityInfo['color'] as Color).withValues(alpha: 0.5),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Stats row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.people, size: 12, color: Theme.of(ctx).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$numAwarded unlocks',
+                                  style: TextStyle(
+                                    color: Theme.of(ctx).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600],
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (numDistinctPlayers > 0)
+                              Text(
+                                'of $numDistinctPlayers players',
+                                style: TextStyle(
+                                  color: Theme.of(ctx).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600],
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // User info
+                  if (username != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.grey.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: fetchedUserPic != null && fetchedUserPic.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: 'https://retroachievements.org$fetchedUserPic',
+                                    width: 40,
+                                    height: 40,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, __, ___) => Container(
+                                      width: 40,
+                                      height: 40,
+                                      color: Colors.grey[700],
+                                      child: Center(
+                                        child: Text(
+                                          username![0].toUpperCase(),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 40,
+                                    height: 40,
+                                    color: Colors.grey[700],
+                                    child: Center(
+                                      child: Text(
+                                        username![0].toUpperCase(),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(username!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  isEarned ? 'Unlocked ${_formatDate(dateEarned)}' : 'Not yet unlocked',
+                                  style: TextStyle(
+                                    color: isEarned ? Colors.green : Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Close'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ShareCardScreen(
+                                  type: ShareCardType.achievement,
+                                  data: {
+                                    'Title': title,
+                                    'Description': description,
+                                    'Points': points,
+                                    'BadgeName': badgeName,
+                                    'GameTitle': gameTitle ?? '',
+                                    'GameIcon': gameIcon ?? '',
+                                    'Username': username ?? '',
+                                    'UserPic': fetchedUserPic ?? '',
+                                    'IsEarned': isEarned,
+                                    'DateEarned': dateEarned,
+                                    'UnlockPercent': unlockPercent,
+                                    'RarityLabel': rarityInfo['label'],
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.share, size: 18),
+                          label: const Text('Share'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ],
+              ),
             ),
-          ],
+          ),
         ),
-        isThreeLine: true,
       ),
     );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inDays == 0) return 'today';
+      if (diff.inDays == 1) return 'yesterday';
+      if (diff.inDays < 7) return '${diff.inDays} days ago';
+      if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
+      if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} months ago';
+      return '${(diff.inDays / 365).floor()} years ago';
+    } catch (e) {
+      return dateStr;
+    }
   }
 }
 
@@ -869,6 +2029,383 @@ class _FavoriteButtonLarge extends ConsumerWidget {
       SnackBar(
         content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites'),
         duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+}
+
+class _LeaderboardTile extends StatelessWidget {
+  final Map<String, dynamic> leaderboard;
+  final VoidCallback onTap;
+
+  const _LeaderboardTile({
+    required this.leaderboard,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = leaderboard['Title'] ?? 'Leaderboard';
+    final description = leaderboard['Description'] ?? '';
+    final numEntries = leaderboard['NumEntries'] ?? leaderboard['NumResults'] ?? 0;
+    final format = leaderboard['Format'] ?? '';
+
+    // Determine icon based on format/type
+    IconData icon = Icons.leaderboard;
+    Color iconColor = Colors.amber;
+    if (format.toLowerCase().contains('time') || format.toLowerCase().contains('speed')) {
+      icon = Icons.timer;
+      iconColor = Colors.blue;
+    } else if (format.toLowerCase().contains('score') || format.toLowerCase().contains('point')) {
+      icon = Icons.stars;
+      iconColor = Colors.amber;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.people, size: 12, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$numEntries',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LeaderboardDetailDialog extends ConsumerStatefulWidget {
+  final int leaderboardId;
+  final String title;
+  final String description;
+  final String format;
+
+  const _LeaderboardDetailDialog({
+    required this.leaderboardId,
+    required this.title,
+    required this.description,
+    required this.format,
+  });
+
+  @override
+  ConsumerState<_LeaderboardDetailDialog> createState() => _LeaderboardDetailDialogState();
+}
+
+class _LeaderboardDetailDialogState extends ConsumerState<_LeaderboardDetailDialog> {
+  List<Map<String, dynamic>> _entries = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEntries();
+  }
+
+  Future<void> _loadEntries() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final api = ref.read(apiDataSourceProvider);
+    final result = await api.getLeaderboardEntries(widget.leaderboardId, count: 100);
+
+    if (mounted) {
+      if (result != null) {
+        // The API returns entries in a 'Results' or 'Entries' key typically
+        final entries = result['Results'] ?? result['Entries'] ?? result['entries'] ?? [];
+        setState(() {
+          _entries = List<Map<String, dynamic>>.from(entries);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _error = 'Failed to load leaderboard entries';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = ref.watch(authProvider).username;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.leaderboard, color: Colors.amber),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (widget.description.isNotEmpty)
+                              Text(
+                                widget.description,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Entries list
+            Flexible(
+              child: _isLoading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : _error != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error, color: Colors.red, size: 48),
+                              const SizedBox(height: 16),
+                              Text(_error!),
+                              const SizedBox(height: 16),
+                              FilledButton(
+                                onPressed: _loadEntries,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _entries.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.hourglass_empty, color: Colors.grey, size: 48),
+                                  SizedBox(height: 16),
+                                  Text('No entries yet'),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              itemCount: _entries.length,
+                              itemBuilder: (ctx, i) {
+                                final entry = _entries[i];
+                                final rank = entry['Rank'] ?? entry['rank'] ?? i + 1;
+                                final user = entry['User'] ?? entry['user'] ?? 'Unknown';
+                                final score = entry['Score'] ?? entry['score'] ?? 0;
+                                final formattedScore = entry['FormattedScore'] ?? entry['ScoreFormatted'] ?? '$score';
+                                final userPic = entry['UserPic'] ?? '';
+                                final isCurrentUser = user.toString().toLowerCase() == currentUser?.toLowerCase();
+
+                                // Rank medal colors
+                                Color? medalColor;
+                                IconData? medalIcon;
+                                if (rank == 1) {
+                                  medalColor = Colors.amber;
+                                  medalIcon = Icons.emoji_events;
+                                } else if (rank == 2) {
+                                  medalColor = Colors.grey[400];
+                                  medalIcon = Icons.emoji_events;
+                                } else if (rank == 3) {
+                                  medalColor = Colors.orange[700];
+                                  medalIcon = Icons.emoji_events;
+                                }
+
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isCurrentUser
+                                        ? Colors.amber.withValues(alpha: 0.15)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: isCurrentUser
+                                        ? Border.all(color: Colors.amber.withValues(alpha: 0.3))
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Rank
+                                      SizedBox(
+                                        width: 36,
+                                        child: medalIcon != null
+                                            ? Icon(medalIcon, color: medalColor, size: 22)
+                                            : Text(
+                                                '#$rank',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isCurrentUser ? Colors.amber : Colors.grey,
+                                                ),
+                                              ),
+                                      ),
+                                      // Avatar
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: userPic.isNotEmpty
+                                            ? CachedNetworkImage(
+                                                imageUrl: 'https://retroachievements.org$userPic',
+                                                width: 32,
+                                                height: 32,
+                                                fit: BoxFit.cover,
+                                                errorWidget: (_, __, ___) => _buildDefaultAvatar(user),
+                                              )
+                                            : _buildDefaultAvatar(user),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      // Username
+                                      Expanded(
+                                        child: Text(
+                                          user,
+                                          style: TextStyle(
+                                            fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                                            color: isCurrentUser ? Colors.amber : null,
+                                          ),
+                                        ),
+                                      ),
+                                      // Score
+                                      Text(
+                                        formattedScore,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: medalColor ?? (isCurrentUser ? Colors.amber : null),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar(String username) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: Colors.grey[700],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+        child: Text(
+          username.isNotEmpty ? username[0].toUpperCase() : '?',
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
       ),
     );
   }

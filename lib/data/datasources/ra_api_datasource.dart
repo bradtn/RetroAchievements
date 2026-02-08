@@ -111,19 +111,43 @@ class RAApiDataSource {
     }
   }
 
-  /// Get user's recent achievements
+  /// Get user's recent achievements using UserSummary endpoint
+  /// The RecentAchievements endpoint only returns last X minutes, so we use Summary instead
   Future<List<dynamic>?> getRecentAchievements(String username, {int count = 50}) async {
     try {
       final response = await _dio.get(
-        'API_GetUserRecentAchievements.php',
+        'API_GetUserSummary.php',
         queryParameters: {
           ..._authParams(),
           'u': username,
-          'c': count,
+          'g': 5, // number of recent games
+          'a': count, // number of recent achievements
         },
       );
+
       if (response.statusCode == 200 && response.data != null) {
-        return response.data as List<dynamic>;
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final recentAch = data['RecentAchievements'];
+          List<dynamic> achievements = [];
+
+          if (recentAch is List) {
+            achievements = recentAch;
+          } else if (recentAch is Map) {
+            achievements = recentAch.values.toList();
+          }
+
+          // Handle nested structure where first item contains all achievements
+          if (achievements.isNotEmpty && achievements.first is Map) {
+            final first = achievements.first as Map;
+            if (first.values.isNotEmpty && first.values.first is Map) {
+              // Flatten - achievements are nested inside
+              achievements = first.values.map((v) => v as Map<String, dynamic>).toList();
+            }
+          }
+
+          return achievements;
+        }
       }
       return null;
     } catch (e) {
@@ -384,6 +408,165 @@ class RAApiDataSource {
           'u': username,
           'f': fromTimestamp,
           't': toTimestamp,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as List<dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get users that the current user follows
+  Future<List<dynamic>?> getUsersIFollow() async {
+    try {
+      final response = await _dio.get(
+        'API_GetUsersIFollow.php',
+        queryParameters: _authParams(),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        // API returns { Count, Total, Results: [...] } (PascalCase)
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          return data['Results'] as List<dynamic>? ??
+                 data['results'] as List<dynamic>? ?? [];
+        } else if (data is List) {
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get users following the current user
+  Future<List<dynamic>?> getUsersFollowingMe() async {
+    try {
+      final response = await _dio.get(
+        'API_GetUsersFollowingMe.php',
+        queryParameters: _authParams(),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        // API returns { Count, Total, Results: [...] } (PascalCase)
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          return data['Results'] as List<dynamic>? ??
+                 data['results'] as List<dynamic>? ?? [];
+        } else if (data is List) {
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get recent game awards (live feed of community unlocks)
+  Future<List<dynamic>?> getRecentGameAwards({int count = 50, int? offset}) async {
+    try {
+      final params = {
+        ..._authParams(),
+        'c': count,
+      };
+      if (offset != null) params['o'] = offset;
+
+      final response = await _dio.get(
+        'API_GetRecentGameAwards.php',
+        queryParameters: params,
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        // API returns { Count, Total, Results: [...] } (PascalCase)
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          return data['Results'] as List<dynamic>? ??
+                 data['results'] as List<dynamic>? ?? [];
+        } else if (data is List) {
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get game leaderboards
+  Future<List<dynamic>?> getGameLeaderboards(int gameId) async {
+    try {
+      final response = await _dio.get(
+        'API_GetGameLeaderboards.php',
+        queryParameters: {
+          ..._authParams(),
+          'i': gameId,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as List<dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get leaderboard entries
+  Future<Map<String, dynamic>?> getLeaderboardEntries(int leaderboardId, {int count = 50, int? offset}) async {
+    try {
+      final params = {
+        ..._authParams(),
+        'i': leaderboardId,
+        'c': count,
+      };
+      if (offset != null) params['o'] = offset;
+
+      final response = await _dio.get(
+        'API_GetLeaderboardEntries.php',
+        queryParameters: params,
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get user's rank on a specific game
+  Future<Map<String, dynamic>?> getUserGameRankAndScore(String username, int gameId) async {
+    try {
+      final response = await _dio.get(
+        'API_GetUserGameRankAndScore.php',
+        queryParameters: {
+          ..._authParams(),
+          'u': username,
+          'g': gameId,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get comments for a game or achievement
+  Future<List<dynamic>?> getComments(int type, int id, {int count = 50}) async {
+    try {
+      // type: 1 = game, 2 = achievement, 3 = user
+      final response = await _dio.get(
+        'API_GetComments.php',
+        queryParameters: {
+          ..._authParams(),
+          't': type,
+          'i': id,
+          'c': count,
         },
       );
       if (response.statusCode == 200 && response.data != null) {

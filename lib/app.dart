@@ -100,6 +100,7 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
         brightness: Brightness.light,
         surface: const Color(0xFFF5F5F5), // Slight grey background
         surfaceContainerHighest: Colors.white,
+        onSurface: Colors.black87,
       ),
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       // Improve card contrast in light mode
@@ -113,16 +114,44 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       ),
       // Better list tile styling
       listTileTheme: ListTileThemeData(
-        subtitleTextStyle: TextStyle(color: Colors.grey.shade700),
+        textColor: Colors.black87,
+        iconColor: Colors.grey.shade700,
+        subtitleTextStyle: TextStyle(color: Colors.grey.shade600),
+      ),
+      // Icon theme for light mode
+      iconTheme: IconThemeData(
+        color: Colors.grey.shade700,
+      ),
+      // Switch styling
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.deepPurple;
+          }
+          return Colors.grey.shade400;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.deepPurple.shade200;
+          }
+          return Colors.grey.shade300;
+        }),
       ),
       // Improve text contrast
       textTheme: TextTheme(
         bodySmall: TextStyle(color: Colors.grey.shade700),
         bodyMedium: TextStyle(color: Colors.grey.shade800),
+        bodyLarge: TextStyle(color: Colors.grey.shade900),
         labelSmall: TextStyle(color: Colors.grey.shade600),
+        labelMedium: TextStyle(color: Colors.grey.shade700),
+        labelLarge: TextStyle(color: Colors.grey.shade800),
         titleSmall: TextStyle(color: Colors.grey.shade800),
         titleMedium: TextStyle(color: Colors.grey.shade900),
         titleLarge: TextStyle(color: Colors.grey.shade900),
+      ),
+      // Divider styling
+      dividerTheme: DividerThemeData(
+        color: Colors.grey.shade300,
       ),
       // AppBar styling
       appBarTheme: const AppBarTheme(
@@ -135,6 +164,18 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
         indicatorColor: Colors.deepPurple.shade100,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: Colors.deepPurple.shade700);
+          }
+          return IconThemeData(color: Colors.grey.shade600);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(color: Colors.deepPurple.shade700, fontSize: 12);
+          }
+          return TextStyle(color: Colors.grey.shade600, fontSize: 12);
+        }),
       ),
       // Input decoration
       inputDecorationTheme: InputDecorationTheme(

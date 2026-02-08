@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
-import 'user_compare_screen.dart';
+import 'profile_screen.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -91,9 +91,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   }
 
   Widget _buildMyRankCard() {
-    final rank = _myRank!['Rank'] ?? '?';
+    final rankRaw = _myRank!['Rank'];
+    final rank = rankRaw is int ? rankRaw : int.tryParse(rankRaw?.toString() ?? '') ?? 0;
     final score = _myRank!['Score'] ?? 0;
     final truePoints = _myRank!['TruePoints'] ?? 0;
+    final isUnranked = rank == 0 || rank == null;
 
     return Card(
       child: Container(
@@ -101,45 +103,59 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
-            colors: [
-              Colors.deepPurple.shade800,
-              Colors.deepPurple.shade600,
-            ],
+            colors: isUnranked
+                ? [Colors.grey.shade700, Colors.grey.shade600]
+                : [Colors.deepPurple.shade800, Colors.deepPurple.shade600],
           ),
         ),
         child: Column(
           children: [
-            const Text(
-              'Your Rank',
-              style: TextStyle(
+            Text(
+              isUnranked ? 'Not Ranked Yet' : 'Your Rank',
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                const Text(
-                  '#',
-                  style: TextStyle(
-                    color: Colors.amber,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+            if (isUnranked)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  children: [
+                    Icon(Icons.hourglass_empty, color: Colors.white54, size: 40),
+                    SizedBox(height: 8),
+                    Text(
+                      'Earn achievements to get ranked!',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
                 ),
-                Text(
-                  '$rank',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  const Text(
+                    '#',
+                    style: TextStyle(
+                      color: Colors.amber,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  Text(
+                    '$rank',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -255,7 +271,7 @@ class _LeaderboardTile extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => UserCompareScreen(compareUsername: username),
+              builder: (_) => ProfileScreen(username: username),
             ),
           );
         },

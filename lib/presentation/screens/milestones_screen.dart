@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:confetti/confetti.dart';
 import '../../core/theme_utils.dart';
+import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import 'share_card_screen.dart';
 
 class MilestonesScreen extends ConsumerStatefulWidget {
-  const MilestonesScreen({super.key});
+  final String? username;
+
+  const MilestonesScreen({super.key, this.username});
 
   @override
   ConsumerState<MilestonesScreen> createState() => _MilestonesScreenState();
@@ -23,8 +27,8 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
   @override
   void initState() {
     super.initState();
-    // Load current user's milestones by default
-    final username = ref.read(authProvider).username;
+    // Load specified user or current user's milestones by default
+    final username = widget.username ?? ref.read(authProvider).username;
     if (username != null) {
       _viewingUsername = username;
       _loadData(username);
@@ -133,20 +137,66 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
           ),
 
           // Show who we're viewing if not ourselves
-          if (!isViewingMyself && _viewingUsername != null)
+          if (!isViewingMyself && _viewingUsername != null && _profile != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Chip(
-                    avatar: const Icon(Icons.person, size: 16),
-                    label: Text('Viewing: $_viewingUsername'),
-                    onDeleted: _loadMyMilestones,
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                  ),
-                ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    // User avatar
+                    ClipOval(
+                      child: Image.network(
+                        'https://retroachievements.org${_profile!['UserPic'] ?? ''}',
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 36,
+                          height: 36,
+                          color: Colors.grey[700],
+                          child: Center(
+                            child: Text(
+                              _viewingUsername![0].toUpperCase(),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _viewingUsername!,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Text(
+                            'Viewing milestones',
+                            style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _loadMyMilestones,
+                      icon: const Icon(Icons.close, size: 20),
+                      tooltip: 'View my milestones',
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
               ),
             ),
+
+          if (!isViewingMyself && _viewingUsername != null && _profile != null)
+            const SizedBox(height: 8),
 
           // Content
           Expanded(
@@ -396,145 +446,146 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
         awardIcon = Icons.emoji_events;
     }
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) {
-        return Container(
-          padding: EdgeInsets.fromLTRB(
-            32, 32, 32,
-            32 + MediaQuery.of(ctx).viewPadding.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Drag handle
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Game icon - larger and centered
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: awardColor, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: awardColor.withValues(alpha: 0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 340),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Game icon - larger and centered
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: awardColor, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: awardColor.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    'https://retroachievements.org$imageIcon',
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 120,
-                      height: 120,
-                      color: Colors.grey[800],
-                      child: Icon(awardIcon, size: 56, color: awardColor),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        'https://retroachievements.org$imageIcon',
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 100,
+                          height: 100,
+                          color: Colors.grey[800],
+                          child: Icon(awardIcon, size: 48, color: awardColor),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-              // Award type badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: awardColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: awardColor.withValues(alpha: 0.5)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(awardIcon, size: 18, color: awardColor),
-                    const SizedBox(width: 8),
+                  // Award type badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: awardColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: awardColor.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(awardIcon, size: 16, color: awardColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          awardTypeName,
+                          style: TextStyle(
+                            color: awardColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Title
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Console
+                  Text(
+                    consoleName,
+                    style: TextStyle(
+                      color: context.subtitleColor,
+                      fontSize: 14,
+                    ),
+                  ),
+
+                  if (awardedAt.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Text(
-                      awardTypeName,
-                      style: TextStyle(
-                        color: awardColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                      'Awarded: ${_formatDate(awardedAt)}',
+                      style: TextStyle(color: context.subtitleColor, fontSize: 12),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-              // Title
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-
-              // Console
-              Text(
-                consoleName,
-                style: TextStyle(
-                  color: context.subtitleColor,
-                  fontSize: 16,
-                ),
-              ),
-
-              if (awardedAt.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Awarded: ${_formatDate(awardedAt)}',
-                  style: TextStyle(color: context.subtitleColor, fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 20),
-
-              // Share button
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ShareCardScreen(
-                        type: ShareCardType.raAward,
-                        data: {
-                          'title': title,
-                          'consoleName': consoleName,
-                          'awardType': awardTypeName,
-                          'imageIcon': imageIcon,
-                          'awardedAt': awardedAt,
-                          'username': _viewingUsername ?? '',
-                          'userPic': _profile?['UserPic'] ?? '',
-                          'colorValue': awardColor.value,
-                        },
+                  // Buttons row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Close'),
+                        ),
                       ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.share),
-                label: const Text('Share Award'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ShareCardScreen(
+                                  type: ShareCardType.raAward,
+                                  data: {
+                                    'title': title,
+                                    'consoleName': consoleName,
+                                    'awardType': awardTypeName,
+                                    'imageIcon': imageIcon,
+                                    'awardedAt': awardedAt,
+                                    'username': _viewingUsername ?? '',
+                                    'userPic': _profile?['UserPic'] ?? '',
+                                    'colorValue': awardColor.value,
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.share, size: 18),
+                          label: const Text('Share'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -940,142 +991,36 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
   }
 
   void _showMilestoneDetail(Milestone milestone) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (ctx) => _MilestoneDetailDialog(
+        milestone: milestone,
+        viewingUsername: _viewingUsername,
+        userPic: _profile?['UserPic'] ?? '',
+        onShare: () {
+          Navigator.pop(ctx);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ShareCardScreen(
+                type: ShareCardType.milestone,
+                data: {
+                  'title': milestone.title,
+                  'description': milestone.description,
+                  'category': milestone.category,
+                  'username': _viewingUsername ?? '',
+                  'userPic': _profile?['UserPic'] ?? '',
+                  'iconCode': milestone.icon.codePoint,
+                  'colorValue': milestone.color.value,
+                  'isEarned': milestone.isEarned,
+                  'currentValue': milestone.currentValue,
+                  'requirement': milestone.requirement,
+                },
+              ),
+            ),
+          );
+        },
       ),
-      builder: (ctx) {
-        final progress = milestone.requirement > 0
-            ? (milestone.currentValue / milestone.requirement).clamp(0.0, 1.0)
-            : 0.0;
-
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            24, 24, 24,
-            24 + MediaQuery.of(ctx).viewPadding.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Badge icon
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: milestone.isEarned
-                      ? milestone.color.withValues(alpha: 0.2)
-                      : Colors.grey.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  milestone.icon,
-                  size: 40,
-                  color: milestone.isEarned ? milestone.color : Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Title
-              Text(
-                milestone.title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Description
-              Text(
-                milestone.description,
-                style: TextStyle(color: context.subtitleColor),
-              ),
-              const SizedBox(height: 8),
-
-              // Category
-              Chip(
-                label: Text(milestone.category),
-                backgroundColor: milestone.color.withValues(alpha: 0.1),
-                labelStyle: TextStyle(color: milestone.color, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-
-              // Progress
-              if (!milestone.isEarned) ...[
-                Text(
-                  '${milestone.currentValue} / ${milestone.requirement}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 10,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: AlwaysStoppedAnimation(milestone.color),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${(progress * 100).toInt()}% complete',
-                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                ),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'EARNED',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ShareCardScreen(
-                          type: ShareCardType.milestone,
-                          data: {
-                            'title': milestone.title,
-                            'description': milestone.description,
-                            'category': milestone.category,
-                            'username': _viewingUsername ?? '',
-                            'userPic': _profile?['UserPic'] ?? '',
-                            'iconCode': milestone.icon.codePoint,
-                            'colorValue': milestone.color.value,
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.share),
-                  label: const Text('Share Goal'),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
     );
   }
 }
@@ -1104,6 +1049,263 @@ class Milestone {
   });
 }
 
+class _MilestoneDetailDialog extends StatefulWidget {
+  final Milestone milestone;
+  final String? viewingUsername;
+  final String userPic;
+  final VoidCallback onShare;
+
+  const _MilestoneDetailDialog({
+    required this.milestone,
+    required this.viewingUsername,
+    required this.userPic,
+    required this.onShare,
+  });
+
+  @override
+  State<_MilestoneDetailDialog> createState() => _MilestoneDetailDialogState();
+}
+
+class _MilestoneDetailDialogState extends State<_MilestoneDetailDialog> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+
+    // Auto-trigger confetti for earned milestones
+    if (widget.milestone.isEarned) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _confettiController.play();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final milestone = widget.milestone;
+    final progress = milestone.requirement > 0
+        ? (milestone.currentValue / milestone.requirement).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Badge icon with celebration animation
+                  if (milestone.isEarned)
+                    CelebrationBadge(
+                      celebrate: true,
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: milestone.color.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: milestone.color.withValues(alpha: 0.4),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          milestone.icon,
+                          size: 36,
+                          color: milestone.color,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: milestone.color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: milestone.color.withValues(alpha: 0.4),
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        milestone.icon,
+                        size: 36,
+                        color: milestone.color.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+
+                  // Title
+                  Text(
+                    milestone.title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Description
+                  Text(
+                    milestone.description,
+                    style: TextStyle(color: context.subtitleColor, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Category chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: milestone.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      milestone.category,
+                      style: TextStyle(color: milestone.color, fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Progress or earned status
+                  if (!milestone.isEarned) ...[
+                    AnimatedCounter(
+                      value: milestone.currentValue,
+                      suffix: ' / ${milestone.requirement}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    AnimatedProgressBar(
+                      progress: progress,
+                      color: milestone.color,
+                      backgroundColor: Colors.grey,
+                      height: 8,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${(progress * 100).toInt()}% complete',
+                      style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: widget.onShare,
+                            icon: const Icon(Icons.share, size: 18),
+                            label: const Text('Share'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'EARNED',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: widget.onShare,
+                            icon: const Icon(Icons.share, size: 18),
+                            label: const Text('Share'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // Confetti overlay for earned milestones
+            if (milestone.isEarned)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: _confettiController,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    shouldLoop: false,
+                    colors: [
+                      milestone.color,
+                      milestone.color.withValues(alpha: 0.7),
+                      Colors.amber,
+                      Colors.orange,
+                      Colors.yellow,
+                    ],
+                    numberOfParticles: 20,
+                    maxBlastForce: 15,
+                    minBlastForce: 5,
+                    emissionFrequency: 0.05,
+                    gravity: 0.2,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MilestoneBadge extends StatelessWidget {
   final Milestone milestone;
   final VoidCallback onTap;
@@ -1124,14 +1326,10 @@ class _MilestoneBadge extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: milestone.isEarned
-              ? milestone.color.withValues(alpha: 0.15)
-              : Colors.grey.withValues(alpha: 0.1),
+          color: milestone.color.withValues(alpha: milestone.isEarned ? 0.15 : 0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: milestone.isEarned
-                ? milestone.color.withValues(alpha: 0.5)
-                : Colors.grey.withValues(alpha: 0.3),
+            color: milestone.color.withValues(alpha: milestone.isEarned ? 0.5 : 0.3),
             width: 2,
           ),
         ),
@@ -1157,20 +1355,20 @@ class _MilestoneBadge extends StatelessWidget {
                     CircularProgressIndicator(
                       value: 1.0,
                       strokeWidth: 3,
-                      color: Colors.grey.withValues(alpha: 0.2),
+                      color: milestone.color.withValues(alpha: 0.15),
                     ),
                     // Progress circle
                     CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 3,
-                      color: milestone.color.withValues(alpha: 0.7),
+                      color: milestone.color.withValues(alpha: 0.8),
                       backgroundColor: Colors.transparent,
                     ),
                     // Icon in center
                     Icon(
                       milestone.icon,
                       size: 20,
-                      color: Colors.grey,
+                      color: milestone.color.withValues(alpha: 0.6),
                     ),
                   ],
                 ),
@@ -1184,7 +1382,7 @@ class _MilestoneBadge extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: milestone.isEarned ? null : Colors.grey,
+                  color: milestone.isEarned ? null : milestone.color.withValues(alpha: 0.8),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,

@@ -95,10 +95,28 @@ class SettingsScreen extends ConsumerWidget {
     final premium = ref.watch(premiumProvider);
     final themeMode = ref.watch(themeProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
+      backgroundColor: isDark ? null : const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: isDark ? null : Colors.white,
+        title: Text(
+          'Settings',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+      ),
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          listTileTheme: ListTileThemeData(
+            textColor: isDark ? Colors.white : Colors.black87,
+            iconColor: isDark ? Colors.white70 : Colors.grey.shade700,
+            subtitleTextStyle: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+        ),
+        child: ListView(
         children: [
           // Premium Banner (if not premium)
           if (!premium.isPremium)
@@ -151,8 +169,8 @@ class SettingsScreen extends ConsumerWidget {
           else
             ListTile(
               leading: const Icon(Icons.verified, color: Colors.amber),
-              title: const Text('Premium Active'),
-              subtitle: const Text('All features unlocked!'),
+              title: Text('Premium Active', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+              subtitle: Text('All features unlocked!', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             ),
 
           const Divider(),
@@ -160,9 +178,9 @@ class SettingsScreen extends ConsumerWidget {
           // Appearance
           _SectionTitle('Appearance'),
           ListTile(
-            leading: const Icon(Icons.palette),
-            title: const Text('Theme'),
-            subtitle: Text(_themeName(themeMode)),
+            leading: Icon(Icons.palette, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Theme', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text(_themeName(themeMode), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             trailing: premium.isPremium ? null : _ProBadge(),
             onTap: premium.isPremium
                 ? () => _showThemeDialog(context, ref, themeMode)
@@ -174,9 +192,9 @@ class SettingsScreen extends ConsumerWidget {
           // Notifications
           _SectionTitle('Notifications'),
           SwitchListTile(
-            secondary: const Icon(Icons.notifications_active),
-            title: const Text('Streak Notifications'),
-            subtitle: const Text('Get notified about your streaks'),
+            secondary: Icon(Icons.notifications_active, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Streak Notifications', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Get notified about your streaks', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.streakNotificationsEnabled,
             onChanged: (value) async {
               if (value) {
@@ -194,36 +212,36 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           SwitchListTile(
-            secondary: const Icon(Icons.access_time),
-            title: const Text('Evening Reminder'),
-            subtitle: const Text('Remind me at 7 PM if I haven\'t played'),
+            secondary: Icon(Icons.access_time, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Evening Reminder', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Remind me at 7 PM if I haven\'t played', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.eveningReminderEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
                 ? (value) => ref.read(notificationSettingsProvider.notifier).setEveningReminder(value)
                 : null,
           ),
           SwitchListTile(
-            secondary: const Icon(Icons.emoji_events),
-            title: const Text('Milestone Alerts'),
-            subtitle: const Text('Celebrate streak milestones (7, 30, 100 days)'),
+            secondary: Icon(Icons.emoji_events, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Milestone Alerts', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Celebrate streak milestones (7, 30, 100 days)', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.milestonesEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
                 ? (value) => ref.read(notificationSettingsProvider.notifier).setMilestones(value)
                 : null,
           ),
           SwitchListTile(
-            secondary: const Icon(Icons.summarize),
-            title: const Text('Daily Summary'),
-            subtitle: const Text('Show achievements earned today'),
+            secondary: Icon(Icons.summarize, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Daily Summary', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Show achievements earned today', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.dailySummaryEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
                 ? (value) => ref.read(notificationSettingsProvider.notifier).setDailySummary(value)
                 : null,
           ),
           ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('Test Notification'),
-            subtitle: const Text('Send a test streak notification'),
+            leading: Icon(Icons.notifications, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Test Notification', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Send a test streak notification', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             onTap: () async {
               final notificationService = NotificationService();
               await notificationService.initialize();
@@ -268,9 +286,9 @@ class SettingsScreen extends ConsumerWidget {
           // Account
           _SectionTitle('Account'),
           ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Logged in as'),
-            subtitle: Text(authState.username ?? 'Unknown'),
+            leading: Icon(Icons.person, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Logged in as', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text(authState.username ?? 'Unknown', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -283,9 +301,9 @@ class SettingsScreen extends ConsumerWidget {
           // Dev Tools
           _SectionTitle('Developer'),
           ListTile(
-            leading: const Icon(Icons.bug_report),
-            title: const Text('Toggle Premium (Dev)'),
-            subtitle: Text(premium.isPremium ? 'Currently: Premium' : 'Currently: Free'),
+            leading: Icon(Icons.bug_report, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Toggle Premium (Dev)', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text(premium.isPremium ? 'Currently: Premium' : 'Currently: Free', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             onTap: () {
               ref.read(premiumProvider.notifier).togglePremium();
             },
@@ -295,14 +313,15 @@ class SettingsScreen extends ConsumerWidget {
 
           // About
           _SectionTitle('About'),
-          const ListTile(
-            leading: Icon(Icons.info),
-            title: Text('Version'),
-            subtitle: Text('1.0.0'),
+          ListTile(
+            leading: Icon(Icons.info, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Version', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('1.0.0', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
           ),
 
           const SizedBox(height: 32),
         ],
+      ),
       ),
     );
   }
@@ -425,10 +444,12 @@ class _SectionTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: TextStyle(
           color: Theme.of(context).colorScheme.primary,
           fontWeight: FontWeight.bold,
+          fontSize: 12,
+          letterSpacing: 1.2,
         ),
       ),
     );
@@ -459,10 +480,14 @@ class _FeatureTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtitleColor = isDark ? Colors.grey[400] : Colors.grey[600];
+
     return ListTile(
       leading: Icon(icon, color: locked ? Colors.grey : Colors.green),
-      title: Text(title),
-      subtitle: Text(subtitle),
+      title: Text(title, style: TextStyle(color: textColor)),
+      subtitle: Text(subtitle, style: TextStyle(color: subtitleColor)),
       trailing: locked
           ? const Icon(Icons.lock, size: 18, color: Colors.grey)
           : const Icon(Icons.check_circle, size: 18, color: Colors.green),
@@ -476,13 +501,18 @@ class _CheckItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           const Icon(Icons.check_circle, color: Colors.green, size: 20),
           const SizedBox(width: 12),
-          Text(text),
+          Text(
+            text,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+          ),
         ],
       ),
     );
