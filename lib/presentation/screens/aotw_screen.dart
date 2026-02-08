@@ -248,12 +248,23 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
           const SizedBox(height: 16),
 
           // Game Card
+          Text(
+            'From Game',
+            style: TextStyle(
+              color: context.subtitleColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
           Card(
             child: ListTile(
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: CachedNetworkImage(
-                  imageUrl: 'https://retroachievements.org$gameIcon',
+                  imageUrl: gameIcon.isNotEmpty
+                      ? 'https://retroachievements.org${gameIcon.startsWith('/') ? '' : '/'}$gameIcon'
+                      : 'https://retroachievements.org/Images/000001.png',
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
