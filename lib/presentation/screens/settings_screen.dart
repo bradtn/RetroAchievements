@@ -243,40 +243,6 @@ class SettingsScreen extends ConsumerWidget {
                 ? (value) => ref.read(notificationSettingsProvider.notifier).setDailySummary(value)
                 : null,
           ),
-          ListTile(
-            leading: Icon(Icons.notifications, color: isDark ? Colors.white70 : Colors.grey.shade700),
-            title: Text('Test Notification', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('Send a test streak notification', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-            onTap: () async {
-              final notificationService = NotificationService();
-              await notificationService.initialize();
-
-              // Request permission first
-              final granted = await notificationService.requestPermissions();
-
-              if (!granted) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please allow notifications in your device settings'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-                return;
-              }
-
-              // Show the test notification
-              await notificationService.showStreakMilestoneNotification(7);
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Test notification sent! Check your notification shade.')),
-                );
-              }
-            },
-          ),
-
           const Divider(),
 
           // Premium Features
