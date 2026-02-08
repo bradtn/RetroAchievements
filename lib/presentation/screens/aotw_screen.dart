@@ -103,9 +103,16 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
 
     final gameTitle = game['Title'] ?? 'Unknown Game';
     final gameId = game['ID'];
-    final gameIcon = game['ImageIcon'] ?? '';
+    // Try multiple possible field names for game icon
+    final gameIcon = game['ImageIcon'] ?? game['Icon'] ?? game['ImageBoxArt'] ?? '';
 
-    final consoleName = console?['Name'] ?? '';
+    // Console might use 'Title' or 'Name'
+    final consoleName = console?['Title'] ?? console?['Name'] ?? '';
+
+    // Calculate unlock rate
+    final unlockRate = totalPlayers > 0
+        ? (unlocksCount / totalPlayers * 100).toStringAsFixed(1)
+        : '0.0';
 
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return RefreshIndicator(
@@ -196,9 +203,11 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      // Points
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // Points and stats
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -207,6 +216,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.stars, color: Colors.amber[400], size: 18),
                                 const SizedBox(width: 4),
@@ -220,7 +230,6 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
@@ -228,6 +237,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.military_tech, color: Colors.purple[300], size: 18),
                                 const SizedBox(width: 4),
@@ -235,6 +245,27 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                                   'RP: $achTrueRatio',
                                   style: TextStyle(
                                     color: Colors.purple[300],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.percent, color: Colors.green[400], size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$unlockRate% unlocked',
+                                  style: TextStyle(
+                                    color: Colors.green[400],
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
