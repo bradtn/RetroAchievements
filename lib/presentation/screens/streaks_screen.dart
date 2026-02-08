@@ -205,7 +205,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
             value: streakState.bestStreak,
             icon: Icons.emoji_events,
             color: Colors.amber,
-            subtitle: 'Personal record',
+            subtitle: '${DateTime.now().year} record',
           ),
         ),
       ],

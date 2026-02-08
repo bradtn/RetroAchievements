@@ -90,13 +90,13 @@ class StreakNotifier extends StateNotifier<StreakState> {
 
     try {
 
-      // Get achievements from the last 90 days for streak calculation
+      // Get achievements from the start of the calendar year for streak calculation
       final now = DateTime.now();
-      final ninetyDaysAgo = now.subtract(const Duration(days: 90));
+      final startOfYear = DateTime(now.year, 1, 1);
 
       final achievements = await _api.getAchievementsEarnedBetween(
         username,
-        ninetyDaysAgo,
+        startOfYear,
         now,
       );
 
@@ -113,8 +113,8 @@ class StreakNotifier extends StateNotifier<StreakState> {
       DateTime? lastActivityDate;
       final loadedMonths = <String>{};
 
-      // Mark all months in the 90-day range as loaded (even if no achievements)
-      DateTime checkDate = ninetyDaysAgo;
+      // Mark all months in the year range as loaded (even if no achievements)
+      DateTime checkDate = startOfYear;
       while (!checkDate.isAfter(now)) {
         loadedMonths.add('${checkDate.year}-${checkDate.month}');
         // Move to next month
