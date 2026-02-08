@@ -86,7 +86,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
     final game = _aotwData!['Game'] as Map<String, dynamic>?;
     final console = _aotwData!['Console'] as Map<String, dynamic>?;
     final startAt = _formatDate(_aotwData!['StartAt']);
-    final endAt = _formatDate(_aotwData!['EndAt']);
+    final endAt = _calculateEndDate(_aotwData!['StartAt']);
     final unlocks = _aotwData!['Unlocks'] as List<dynamic>? ?? [];
     final totalPlayers = _aotwData!['TotalPlayers'] ?? 0;
     final unlocksCount = _aotwData!['UnlocksCount'] ?? unlocks.length;
@@ -341,12 +341,24 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
     );
   }
 
+  String _calculateEndDate(String? startDate) {
+    if (startDate == null || startDate.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(startDate);
+      final endDt = dt.add(const Duration(days: 7));
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[endDt.month - 1]} ${endDt.day}';
+    } catch (_) {
+      return '';
+    }
+  }
+
   String _formatDate(String? date) {
     if (date == null || date.isEmpty) return '';
     try {
       final dt = DateTime.parse(date);
       final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+      return '${months[dt.month - 1]} ${dt.day}';
     } catch (_) {
       return date;
     }
