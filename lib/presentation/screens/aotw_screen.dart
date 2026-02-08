@@ -345,7 +345,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
     if (startDate == null || startDate.isEmpty) return '';
     try {
       final dt = DateTime.parse(startDate);
-      final endDt = dt.add(const Duration(days: 7));
+      final endDt = dt.add(const Duration(days: 6));
       final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return '${months[endDt.month - 1]} ${endDt.day}';
     } catch (_) {
