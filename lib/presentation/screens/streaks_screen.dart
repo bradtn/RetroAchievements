@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
+import '../widgets/premium_gate.dart';
 import 'share_card_screen.dart';
 
 class StreaksScreen extends ConsumerStatefulWidget {
@@ -59,16 +60,12 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isViewingMyself ? 'My Streaks' : 'Streaks'),
-        actions: [
-          if (streakState.currentStreak > 0)
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => _shareStreak(streakState),
-              tooltip: 'Share streak',
-            ),
-        ],
       ),
-      body: Column(
+      body: PremiumGate(
+        featureName: 'Streak Tracking',
+        description: 'Track your daily gaming streaks. Keep the fire burning and share your progress.',
+        icon: Icons.local_fire_department,
+        child: Column(
         children: [
           // Search bar
           Padding(
@@ -131,6 +128,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
                       ),
           ),
         ],
+      ),
       ),
     );
   }

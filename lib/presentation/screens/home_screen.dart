@@ -5,6 +5,7 @@ import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/ad_banner.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
 import 'game_detail_screen.dart';
@@ -77,22 +78,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: Column(
         children: [
-          _HomeTab(
-            profile: _profile,
-            recentGames: _recentGames,
-            isLoading: _isLoading,
-            onRefresh: _loadData,
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                _HomeTab(
+                  profile: _profile,
+                  recentGames: _recentGames,
+                  isLoading: _isLoading,
+                  onRefresh: _loadData,
+                ),
+                const _ExploreTab(),
+                _AchievementsTab(
+                  achievements: _recentAchievements,
+                  isLoading: _isLoading,
+                  onRefresh: _loadData,
+                ),
+                const SettingsScreen(),
+              ],
+            ),
           ),
-          const _ExploreTab(),
-          _AchievementsTab(
-            achievements: _recentAchievements,
-            isLoading: _isLoading,
-            onRefresh: _loadData,
-          ),
-          const SettingsScreen(),
+          // Banner ad (hidden for premium users)
+          const AdBanner(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -589,7 +598,7 @@ class _ExploreCard extends StatelessWidget {
 }
 
 // ============ ACHIEVEMENTS TAB ============
-class _AchievementsTab extends ConsumerStatefulWidget {
+class _AchievementsTab extends StatelessWidget {
   final List<dynamic>? achievements;
   final bool isLoading;
   final VoidCallback onRefresh;
@@ -601,225 +610,49 @@ class _AchievementsTab extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_AchievementsTab> createState() => _AchievementsTabState();
-}
-
-class _AchievementsTabState extends ConsumerState<_AchievementsTab> {
-  final TextEditingController _debugUserController = TextEditingController();
-  List<dynamic>? _debugAchievements;
-  bool _isLoadingDebug = false;
-  String? _debugUsername;
-  String? _debugError;
-
-  Future<void> _loadDebugUser() async {
-    final username = _debugUserController.text.trim();
-    if (username.isEmpty) return;
-
-    setState(() {
-      _isLoadingDebug = true;
-      _debugUsername = username;
-      _debugError = null;
-    });
-
-    try {
-      final api = ref.read(apiDataSourceProvider);
-      final achievements = await api.getRecentAchievements(username, count: 50);
-
-      setState(() {
-        _debugAchievements = achievements;
-        _isLoadingDebug = false;
-        if (achievements == null) {
-          _debugError = 'User not found or API error';
-        } else if (achievements.isEmpty) {
-          _debugError = 'No recent achievements';
-        } else {
-          _debugError = null;
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingDebug = false;
-        _debugError = 'Error: $e';
-      });
-    }
-  }
-
-  void _clearDebugUser() {
-    setState(() {
-      _debugUsername = null;
-      _debugAchievements = null;
-      _debugError = null;
-      _debugUserController.clear();
-    });
-  }
-
-  @override
-  void dispose() {
-    _debugUserController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDebugMode = _debugUsername != null;
-    final displayAchievements = isDebugMode ? _debugAchievements : widget.achievements;
-    final isLoading = isDebugMode ? _isLoadingDebug : widget.isLoading;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(isDebugMode
-            ? 'Achievements (${_debugUsername})'
-            : 'Recent Achievements'),
-        actions: [
-          if (isDebugMode)
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: 'Clear debug user',
-              onPressed: _clearDebugUser,
-            ),
-        ],
+        title: const Text('Recent Achievements'),
       ),
-      body: Column(
-        children: [
-          // Debug user input (collapsible)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              border: Border(
-                bottom: BorderSide(color: Colors.orange.withValues(alpha: 0.3)),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.bug_report, color: Colors.orange, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _debugUserController,
-                    decoration: InputDecoration(
-                      hintText: 'Enter username to preview...',
-                      hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.orange.withValues(alpha: 0.5)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.orange.withValues(alpha: 0.3)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.orange),
-                      ),
-                    ),
-                    style: const TextStyle(fontSize: 14),
-                    onSubmitted: (_) => _loadDebugUser(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _isLoadingDebug ? null : _loadDebugUser,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
-                  child: _isLoadingDebug
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Load'),
-                ),
-              ],
-            ),
-          ),
-          // Achievements list
-          Expanded(
-            child: isLoading
-                ? _buildShimmerLoading()
-                : RefreshIndicator(
-                    onRefresh: () async {
-                      if (isDebugMode) {
-                        await _loadDebugUser();
-                      } else {
-                        widget.onRefresh();
-                      }
-                    },
-                    child: displayAchievements == null || displayAchievements.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _debugError != null ? Icons.error_outline : Icons.emoji_events_outlined,
-                                  size: 64,
-                                  color: _debugError != null ? Colors.orange : Colors.grey[600],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  isDebugMode
-                                      ? 'No achievements found for $_debugUsername'
-                                      : 'No achievements yet',
-                                  style: TextStyle(color: Colors.grey[500], fontSize: 16),
-                                ),
-                                if (_debugError != null) ...[
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _debugError!,
-                                    style: TextStyle(color: Colors.orange[300], fontSize: 12),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                                if (!isDebugMode && _debugError == null) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Try entering a username above to preview',
-                                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: displayAchievements.length + (isDebugMode ? 1 : 0),
-                            itemBuilder: (ctx, i) {
-                              // Show info header in debug mode
-                              if (isDebugMode && i == 0) {
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.person_outline, size: 16, color: Colors.blue),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Previewing $_debugUsername\'s ${displayAchievements.length} recent achievements',
-                                        style: TextStyle(color: Colors.blue[300], fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                              final achIndex = isDebugMode ? i - 1 : i;
-                              return AnimatedListItem(
-                                index: achIndex,
-                                child: _AchievementTile(achievement: displayAchievements[achIndex]),
-                              );
-                            },
+      body: isLoading
+          ? _buildShimmerLoading()
+          : RefreshIndicator(
+              onRefresh: () async => onRefresh(),
+              child: achievements == null || achievements!.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.emoji_events_outlined,
+                            size: 64,
+                            color: Colors.grey[600],
                           ),
-                  ),
-          ),
-        ],
-      ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No achievements yet',
+                            style: TextStyle(color: Colors.grey[500], fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Start playing to earn achievements!',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: achievements!.length,
+                      itemBuilder: (ctx, i) {
+                        return AnimatedListItem(
+                          index: i,
+                          child: _AchievementTile(achievement: achievements![i]),
+                        );
+                      },
+                    ),
+            ),
     );
   }
 

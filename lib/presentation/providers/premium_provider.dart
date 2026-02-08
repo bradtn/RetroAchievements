@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/purchase_service.dart';
 
 /// Premium state
 class PremiumState {
@@ -29,8 +30,21 @@ class PremiumState {
 
 /// Premium notifier
 class PremiumNotifier extends StateNotifier<PremiumState> {
+  final PurchaseService _purchaseService = PurchaseService();
+
   PremiumNotifier() : super(const PremiumState()) {
-    _loadStatus();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _loadStatus();
+
+    // Set up purchase callback
+    _purchaseService.onPurchaseComplete = (success) {
+      if (success) {
+        unlockPremium();
+      }
+    };
   }
 
   Future<void> _loadStatus() async {
@@ -43,28 +57,48 @@ class PremiumNotifier extends StateNotifier<PremiumState> {
     }
   }
 
-  /// Unlock premium (after purchase)
+  /// Unlock premium (after purchase verified)
   Future<void> unlockPremium() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_premium', true);
-    state = state.copyWith(isPremium: true);
+    state = state.copyWith(isPremium: true, isLoading: false);
   }
 
-  /// Toggle premium (for testing)
-  Future<void> togglePremium() async {
-    final prefs = await SharedPreferences.getInstance();
-    final newStatus = !state.isPremium;
-    await prefs.setBool('is_premium', newStatus);
-    state = state.copyWith(isPremium: newStatus);
+  /// Purchase premium
+  Future<bool> purchasePremium() async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final success = await _purchaseService.purchasePremium();
+      if (!success) {
+        state = state.copyWith(isLoading: false, error: 'Purchase failed');
+      }
+      // If successful, the callback will handle unlocking
+      return success;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
   }
 
   /// Restore purchases
   Future<void> restorePurchases() async {
-    state = state.copyWith(isLoading: true);
-    // TODO: Implement actual restore with in_app_purchase
-    await _loadStatus();
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      await _purchaseService.restorePurchases();
+      // Give it a moment for the stream to process
+      await Future.delayed(const Duration(seconds: 2));
+      await _loadStatus();
+    } catch (e) {
+      state = state.copyWith(error: 'Restore failed');
+    }
+
     state = state.copyWith(isLoading: false);
   }
+
+  /// Get price string from store
+  String get priceString => _purchaseService.premiumPrice;
 }
 
 /// Provider for premium state

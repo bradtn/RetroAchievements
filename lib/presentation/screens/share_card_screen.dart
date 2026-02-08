@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
+import '../widgets/premium_gate.dart';
 
 enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak }
 
@@ -42,57 +43,71 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Share Card'),
-        actions: [
-          TextButton.icon(
-            onPressed: _isGenerating ? null : _shareCard,
-            icon: _isGenerating
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.share),
-            label: const Text('Share'),
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          // Card preview
-          Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: RepaintBoundary(
-                  key: _cardKey,
-                  child: _buildCard(),
-                ),
-              ),
-            ),
-          ),
+      body: PremiumGate(
+        featureName: 'Share Cards',
+        description: 'Create beautiful cards to share your achievements, stats, and milestones on social media.',
+        icon: Icons.share,
+        child: _buildContent(context),
+      ),
+    );
+  }
 
-          // Style selector
-          Container(
-            padding: EdgeInsets.only(
-              top: 12,
-              bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+  Widget _buildContent(BuildContext context) {
+    return Column(
+      children: [
+        // Share button at top
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isGenerating ? null : _shareCard,
+              icon: _isGenerating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.share),
+              label: const Text('Share Card'),
             ),
-            child: SizedBox(
-              height: 60,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _styles.length,
-                itemBuilder: (ctx, i) => _StyleButton(
-                  style: _styles[i],
-                  isSelected: _selectedStyle == i,
-                  onTap: () => setState(() => _selectedStyle = i),
-                ),
+          ),
+        ),
+        // Card preview
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: RepaintBoundary(
+                key: _cardKey,
+                child: _buildCard(),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+
+        // Style selector
+        Container(
+          padding: EdgeInsets.only(
+            top: 12,
+            bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+          ),
+          child: SizedBox(
+            height: 60,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _styles.length,
+              itemBuilder: (ctx, i) => _StyleButton(
+                style: _styles[i],
+                isSelected: _selectedStyle == i,
+                onTap: () => setState(() => _selectedStyle = i),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

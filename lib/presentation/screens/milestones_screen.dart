@@ -4,6 +4,7 @@ import 'package:confetti/confetti.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/premium_gate.dart';
 import 'share_card_screen.dart';
 
 class MilestonesScreen extends ConsumerStatefulWidget {
@@ -105,7 +106,11 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
       appBar: AppBar(
         title: Text(isViewingMyself ? 'My Milestones' : 'Milestones'),
       ),
-      body: Column(
+      body: PremiumGate(
+        featureName: 'Milestones',
+        description: 'Track personal achievements like total points, mastered games, and more.',
+        icon: Icons.emoji_events,
+        child: Column(
         children: [
           // Search bar
           Padding(
@@ -210,6 +215,7 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
                       ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -19,6 +19,12 @@ dependencies:
   # Local Storage (simple, works everywhere)
   shared_preferences: ^2.2.2
 
+  # Secure Storage (encrypted credentials)
+  flutter_secure_storage: ^9.0.0
+
+  # URL Launcher (open links)
+  url_launcher: ^6.2.4
+
   # UI Helpers
   cached_network_image: ^3.3.1
 
@@ -40,6 +46,12 @@ dependencies:
   shimmer: ^3.0.0
   confetti: ^0.7.0
   animated_text_kit: ^4.2.2
+
+  # Ads (Google AdMob)
+  google_mobile_ads: ^5.1.0
+
+  # In-App Purchases
+  in_app_purchase: ^3.1.13
 
 dev_dependencies:
   flutter_test:

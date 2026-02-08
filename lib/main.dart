@@ -3,9 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'services/notification_service.dart';
 import 'services/background_sync_service.dart';
+import 'services/ad_service.dart';
+import 'services/purchase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize AdMob
+  await AdService().initialize();
+
+  // Initialize in-app purchases
+  await PurchaseService().initialize();
 
   // Initialize notification service
   final notificationService = NotificationService();

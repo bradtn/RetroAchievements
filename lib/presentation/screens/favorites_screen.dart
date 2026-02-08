@@ -15,14 +15,6 @@ class FavoritesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Favorites'),
-        actions: [
-          if (favState.favorites.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.sort),
-              onPressed: () => _showSortOptions(context),
-              tooltip: 'Sort',
-            ),
-        ],
       ),
       body: favState.isLoading
           ? const Center(child: CircularProgressIndicator())

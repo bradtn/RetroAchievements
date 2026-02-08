@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
-import 'share_card_screen.dart';
+import '../widgets/premium_gate.dart';
 
 class UserCompareScreen extends ConsumerStatefulWidget {
   final String? compareUsername;
@@ -81,96 +81,85 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Compare Users'),
-        actions: [
-          if (_myProfile != null && _otherProfile != null)
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ShareCardScreen(
-                      type: ShareCardType.comparison,
-                      data: {
-                        'myProfile': _myProfile,
-                        'otherProfile': _otherProfile,
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
       ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          16, 16, 16,
-          16 + MediaQuery.of(context).viewPadding.bottom,
+      body: PremiumGate(
+        featureName: 'Compare Users',
+        description: 'Go head-to-head with friends. Compare points, achievements, and rankings.',
+        icon: Icons.compare_arrows,
+        child: _buildContent(context),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        16, 16, 16,
+        16 + MediaQuery.of(context).viewPadding.bottom,
+      ),
+      children: [
+        // Search bar
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _usernameController,
+                decoration: InputDecoration(
+                  hintText: 'Enter username to compare...',
+                  prefixIcon: const Icon(Icons.person_search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                ),
+                onSubmitted: (_) => _searchUser(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: _isLoadingOther ? null : _searchUser,
+              child: _isLoadingOther
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Compare'),
+            ),
+          ],
         ),
-        children: [
-          // Search bar
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter username to compare...',
-                    prefixIcon: const Icon(Icons.person_search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                  ),
-                  onSubmitted: (_) => _searchUser(),
-                ),
-              ),
-              const SizedBox(width: 12),
-              FilledButton(
-                onPressed: _isLoadingOther ? null : _searchUser,
-                child: _isLoadingOther
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Compare'),
-              ),
-            ],
-          ),
 
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            Card(
-              color: Colors.red.withValues(alpha: 0.1),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error, color: Colors.red),
-                    const SizedBox(width: 12),
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                  ],
-                ),
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            color: Colors.red.withValues(alpha: 0.1),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                ],
               ),
             ),
-          ],
-
-          const SizedBox(height: 24),
-
-          // Comparison view
-          if (_myProfile != null && _otherProfile != null) ...[
-            _buildComparisonHeader(),
-            const SizedBox(height: 24),
-            _buildComparisonStats(),
-          ] else if (_myProfile != null && _otherProfile == null && !_isLoadingOther) ...[
-            // Show just my profile with placeholder
-            _buildSingleProfileView(),
-          ] else if (_isLoadingMe) ...[
-            const Center(child: CircularProgressIndicator()),
-          ],
+          ),
         ],
-      ),
+
+        const SizedBox(height: 24),
+
+        // Comparison view
+        if (_myProfile != null && _otherProfile != null) ...[
+          _buildComparisonHeader(),
+          const SizedBox(height: 24),
+          _buildComparisonStats(),
+        ] else if (_myProfile != null && _otherProfile == null && !_isLoadingOther) ...[
+          // Show just my profile with placeholder
+          _buildSingleProfileView(),
+        ] else if (_isLoadingMe) ...[
+          const Center(child: CircularProgressIndicator()),
+        ],
+      ],
     );
   }
 

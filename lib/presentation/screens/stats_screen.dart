@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
-import '../providers/premium_provider.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
@@ -43,21 +42,15 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isPremium = ref.watch(isPremiumProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Statistics'),
       ),
-      body: _buildBody(isPremium),
+      body: _buildBody(),
     );
   }
 
-  Widget _buildBody(bool isPremium) {
-    if (!isPremium) {
-      return _buildPremiumGate(context);
-    }
-
+  Widget _buildBody() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -332,39 +325,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 label: Text(e.key, style: const TextStyle(fontSize: 12)),
                 visualDensity: VisualDensity.compact,
               )).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPremiumGate(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.analytics, size: 80, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              'Advanced Statistics',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Unlock detailed stats, charts, and insights with Premium',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.subtitleColor),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () {
-                ref.read(premiumProvider.notifier).togglePremium();
-              },
-              icon: const Icon(Icons.star),
-              label: const Text('Unlock Premium'),
             ),
           ],
         ),

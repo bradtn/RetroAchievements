@@ -434,59 +434,197 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: toShow.map((ach) {
         final achievement = ach as Map<String, dynamic>;
         final title = achievement['Title'] ?? 'Achievement';
+        final description = achievement['Description'] ?? '';
         final badgeName = achievement['BadgeName'] ?? '';
         final gameTitle = achievement['GameTitle'] ?? '';
+        final gameId = achievement['GameID'] ?? 0;
         final points = achievement['Points'] ?? 0;
         final dateEarned = achievement['Date'] ?? achievement['DateEarned'] ?? '';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: badgeName.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _buildDefaultBadge(),
-                    )
-                  : _buildDefaultBadge(),
-            ),
-            title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  gameTitle,
-                  style: TextStyle(fontSize: 12, color: context.subtitleColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
+          child: InkWell(
+            onTap: () {
+              final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+              if (id > 0) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GameDetailScreen(gameId: id, gameTitle: gameTitle),
+                  ),
+                );
+              }
+            },
+            onLongPress: () {
+              // Show achievement details on long press
+              showModalBottomSheet(
+                context: context,
+                builder: (ctx) => Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: badgeName.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    width: 64,
+                                    height: 64,
+                                    color: Colors.grey[800],
+                                    child: const Icon(Icons.emoji_events, size: 32),
+                                  ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  gameTitle,
+                                  style: TextStyle(
+                                    color: context.subtitleColor,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        '$points pts',
-                        style: TextStyle(color: Colors.amber[600], fontSize: 10),
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          description,
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$points points',
+                              style: TextStyle(
+                                color: Colors.amber[600],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Earned ${_formatDate(dateEarned)}',
+                            style: TextStyle(color: context.subtitleColor),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatDate(dateEarned),
-                      style: TextStyle(fontSize: 10, color: context.subtitleColor),
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+                            if (id > 0) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => GameDetailScreen(gameId: id, gameTitle: gameTitle),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('View Game'),
+                        ),
+                      ),
+                      SizedBox(height: MediaQuery.of(ctx).viewPadding.bottom),
+                    ],
+                  ),
                 ),
-              ],
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: badgeName.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => _buildDefaultBadge(),
+                          )
+                        : _buildDefaultBadge(),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          gameTitle,
+                          style: TextStyle(fontSize: 12, color: context.subtitleColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '$points pts',
+                                style: TextStyle(color: Colors.amber[600], fontSize: 10),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatDate(dateEarned),
+                              style: TextStyle(fontSize: 10, color: context.subtitleColor),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: context.subtitleColor),
+                ],
+              ),
             ),
-            isThreeLine: true,
           ),
         );
       }).toList(),

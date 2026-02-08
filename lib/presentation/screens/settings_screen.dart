@@ -1,10 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/background_sync_service.dart';
+
+const String _appVersion = '1.0.0';
+const String _developerEmail = 'your.email@gmail.com'; // TODO: Replace with your email
 
 // Provider for notification settings
 final notificationSettingsProvider = StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((ref) {
@@ -160,7 +165,7 @@ class SettingsScreen extends ConsumerWidget {
                         backgroundColor: Colors.amber,
                         foregroundColor: Colors.black,
                       ),
-                      child: const Text('Upgrade for \$6.99'),
+                      child: const Text('Upgrade for \$4.99'),
                     ),
                   ),
                 ],
@@ -298,15 +303,28 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(),
 
-          // Dev Tools
-          _SectionTitle('Developer'),
+          // Support
+          _SectionTitle('Support'),
           ListTile(
-            leading: Icon(Icons.bug_report, color: isDark ? Colors.white70 : Colors.grey.shade700),
-            title: Text('Toggle Premium (Dev)', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text(premium.isPremium ? 'Currently: Premium' : 'Currently: Free', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-            onTap: () {
-              ref.read(premiumProvider.notifier).togglePremium();
-            },
+            leading: Icon(Icons.bug_report_outlined, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Report a Bug', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Something not working right?', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => _sendFeedbackEmail(context, 'Bug Report', authState.username),
+          ),
+          ListTile(
+            leading: Icon(Icons.lightbulb_outline, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Request a Feature', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Have an idea? Let me know!', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => _sendFeedbackEmail(context, 'Feature Request', authState.username),
+          ),
+          ListTile(
+            leading: Icon(Icons.star_outline, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Rate on Play Store', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Enjoying the app? Leave a review!', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => _openPlayStore(context),
           ),
 
           const Divider(),
@@ -316,7 +334,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: Icon(Icons.info, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Version', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('1.0.0', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            subtitle: Text(_appVersion, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
           ),
 
           const SizedBox(height: 32),
@@ -390,18 +408,41 @@ class SettingsScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () {
-                  ref.read(premiumProvider.notifier).unlockPremium();
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Premium unlocked!')),
-                  );
+                onPressed: () async {
+                  final success = await ref.read(premiumProvider.notifier).purchasePremium();
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Premium unlocked!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('Purchase for \$6.99', style: TextStyle(fontSize: 18)),
+                  child: Text('Purchase for \$4.99', style: TextStyle(fontSize: 18)),
                 ),
               ),
+            ),
+            TextButton(
+              onPressed: () async {
+                await ref.read(premiumProvider.notifier).restorePurchases();
+                if (context.mounted) {
+                  Navigator.pop(ctx);
+                  final isPremium = ref.read(premiumProvider).isPremium;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isPremium ? 'Purchase restored!' : 'No previous purchase found'),
+                      backgroundColor: isPremium ? Colors.green : null,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Restore Purchase'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -432,6 +473,59 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _sendFeedbackEmail(BuildContext context, String type, String? username) async {
+    final String platform = Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown';
+    final String osVersion = Platform.operatingSystemVersion;
+
+    final String subject = Uri.encodeComponent('[RetroTracker] $type');
+    final String body = Uri.encodeComponent('''
+Hi,
+
+[Please describe your $type here]
+
+
+
+
+---
+App Info (please don't delete):
+- App Version: $_appVersion
+- Platform: $platform
+- OS Version: $osVersion
+- Username: ${username ?? 'Not logged in'}
+''');
+
+    final Uri emailUri = Uri.parse('mailto:$_developerEmail?subject=$subject&body=$body');
+
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open email app. Email me at: $_developerEmail'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openPlayStore(BuildContext context) async {
+    // TODO: Replace with your actual Play Store URL
+    const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.retrotracker.retrotracker';
+    final Uri uri = Uri.parse(playStoreUrl);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open Play Store')),
+        );
+      }
+    }
   }
 }
 

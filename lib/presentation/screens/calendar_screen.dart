@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/premium_gate.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -71,19 +72,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       appBar: AppBar(
         title: const Text('Achievement Calendar'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Calendar
-                _buildCalendar(),
-                const Divider(height: 1),
-                // Selected day achievements
-                Expanded(
-                  child: _buildDayDetail(),
-                ),
-              ],
-            ),
+      body: PremiumGate(
+        featureName: 'Achievement Calendar',
+        description: 'View your achievement history on a calendar. See what you unlocked on any day.',
+        icon: Icons.calendar_month,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // Calendar
+                  _buildCalendar(),
+                  const Divider(height: 1),
+                  // Selected day achievements
+                  Expanded(
+                    child: _buildDayDetail(),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
