@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
@@ -67,6 +68,16 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
       _isLoading = false;
       if (data == null) _error = 'Failed to load Achievement of the Week';
     });
+
+    // Mark as viewed
+    if (data != null) {
+      final achievement = data['Achievement'] as Map<String, dynamic>?;
+      final achievementId = achievement?['ID']?.toString() ?? '';
+      if (achievementId.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_viewed_aotw_id', achievementId);
+      }
+    }
   }
 
   @override

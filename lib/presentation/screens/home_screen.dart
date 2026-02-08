@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../data/cache/game_cache.dart';
@@ -323,8 +324,31 @@ class _HomeTab extends StatelessWidget {
 }
 
 // ============ EXPLORE TAB ============
-class _ExploreTab extends StatelessWidget {
+class _ExploreTab extends StatefulWidget {
   const _ExploreTab();
+
+  @override
+  State<_ExploreTab> createState() => _ExploreTabState();
+}
+
+class _ExploreTabState extends State<_ExploreTab> {
+  bool _hasNewAotw = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForNewAotw();
+  }
+
+  Future<void> _checkForNewAotw() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastKnownId = prefs.getString('last_known_aotw_id') ?? '';
+    final lastViewedId = prefs.getString('last_viewed_aotw_id') ?? '';
+
+    if (mounted && lastKnownId.isNotEmpty && lastKnownId != lastViewedId) {
+      setState(() => _hasNewAotw = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -427,10 +451,14 @@ class _ExploreTab extends StatelessWidget {
             title: 'Achievement of the Week',
             subtitle: 'Current weekly challenge',
             color: Colors.orange,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const AchievementOfTheWeekScreen()),
-            ),
+            showNewBadge: _hasNewAotw,
+            onTap: () {
+              setState(() => _hasNewAotw = false);
+              Navigator.push(
+                context,
+                SlidePageRoute(page: const AchievementOfTheWeekScreen()),
+              );
+            },
           ),
           const SizedBox(height: 12),
 
@@ -511,6 +539,7 @@ class _ExploreCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final bool isPremium;
+  final bool showNewBadge;
   final Widget? customIcon;
 
   const _ExploreCard({
@@ -520,6 +549,7 @@ class _ExploreCard extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.isPremium = false,
+    this.showNewBadge = false,
     this.customIcon,
   });
 
@@ -566,6 +596,24 @@ class _ExploreCard extends StatelessWidget {
                               'PRO',
                               style: TextStyle(
                                 color: Colors.black,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (showNewBadge) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'NEW',
+                              style: TextStyle(
+                                color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),

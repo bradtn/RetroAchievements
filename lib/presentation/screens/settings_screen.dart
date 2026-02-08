@@ -21,12 +21,14 @@ class NotificationSettings {
   final bool eveningReminderEnabled;
   final bool milestonesEnabled;
   final bool dailySummaryEnabled;
+  final bool aotwNotificationsEnabled;
 
   NotificationSettings({
     this.streakNotificationsEnabled = true,
     this.eveningReminderEnabled = true,
     this.milestonesEnabled = true,
     this.dailySummaryEnabled = true,
+    this.aotwNotificationsEnabled = true,
   });
 
   NotificationSettings copyWith({
@@ -34,12 +36,14 @@ class NotificationSettings {
     bool? eveningReminderEnabled,
     bool? milestonesEnabled,
     bool? dailySummaryEnabled,
+    bool? aotwNotificationsEnabled,
   }) {
     return NotificationSettings(
       streakNotificationsEnabled: streakNotificationsEnabled ?? this.streakNotificationsEnabled,
       eveningReminderEnabled: eveningReminderEnabled ?? this.eveningReminderEnabled,
       milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
       dailySummaryEnabled: dailySummaryEnabled ?? this.dailySummaryEnabled,
+      aotwNotificationsEnabled: aotwNotificationsEnabled ?? this.aotwNotificationsEnabled,
     );
   }
 }
@@ -56,6 +60,7 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
       eveningReminderEnabled: prefs.getBool('streak_reminder_enabled') ?? true,
       milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? true,
       dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? true,
+      aotwNotificationsEnabled: prefs.getBool('aotw_notifications_enabled') ?? true,
     );
   }
 
@@ -88,6 +93,12 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('daily_summary_enabled', enabled);
     state = state.copyWith(dailySummaryEnabled: enabled);
+  }
+
+  Future<void> setAotwNotifications(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('aotw_notifications_enabled', enabled);
+    state = state.copyWith(aotwNotificationsEnabled: enabled);
   }
 }
 
@@ -242,6 +253,13 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: notificationSettings.streakNotificationsEnabled
                 ? (value) => ref.read(notificationSettingsProvider.notifier).setDailySummary(value)
                 : null,
+          ),
+          SwitchListTile(
+            secondary: Icon(Icons.emoji_events, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Achievement of the Week', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Notify when new AOTW is available', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            value: notificationSettings.aotwNotificationsEnabled,
+            onChanged: (value) => ref.read(notificationSettingsProvider.notifier).setAotwNotifications(value),
           ),
           const Divider(),
 
