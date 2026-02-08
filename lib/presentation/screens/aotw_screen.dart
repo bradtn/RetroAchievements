@@ -86,6 +86,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
     final game = _aotwData!['Game'] as Map<String, dynamic>?;
     final console = _aotwData!['Console'] as Map<String, dynamic>?;
     final startAt = _formatDate(_aotwData!['StartAt']);
+    final endAt = _formatDate(_aotwData!['EndAt']);
     final unlocks = _aotwData!['Unlocks'] as List<dynamic>? ?? [];
     final totalPlayers = _aotwData!['TotalPlayers'] ?? 0;
     final unlocksCount = _aotwData!['UnlocksCount'] ?? unlocks.length;
@@ -142,9 +143,13 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                           letterSpacing: 1.5,
                         ),
                       ),
-                      if (startAt != null)
+                      if (startAt.isNotEmpty || endAt.isNotEmpty)
                         Text(
-                          'Started: $startAt',
+                          startAt.isNotEmpty && endAt.isNotEmpty
+                              ? '$startAt - $endAt'
+                              : startAt.isNotEmpty
+                                  ? 'Started: $startAt'
+                                  : 'Ends: $endAt',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,
