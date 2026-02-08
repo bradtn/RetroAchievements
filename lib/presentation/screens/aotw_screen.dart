@@ -27,6 +27,7 @@ class AchievementOfTheWeekScreen extends ConsumerStatefulWidget {
 
 class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWeekScreen> {
   Map<String, dynamic>? _aotwData;
+  Map<String, dynamic>? _gameDetails;
   bool _isLoading = true;
   String? _error;
 
@@ -45,8 +46,22 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
     final api = ref.read(apiDataSourceProvider);
     final data = await api.getAchievementOfTheWeek();
 
+    // Fetch game details to get the image
+    Map<String, dynamic>? gameDetails;
+    if (data != null) {
+      final game = data['Game'] as Map<String, dynamic>?;
+      final gameId = game?['ID'];
+      if (gameId != null) {
+        final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+        if (id > 0) {
+          gameDetails = await api.getGameInfo(id);
+        }
+      }
+    }
+
     setState(() {
       _aotwData = data;
+      _gameDetails = gameDetails;
       _isLoading = false;
       if (data == null) _error = 'Failed to load Achievement of the Week';
     });
@@ -103,11 +118,11 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
 
     final gameTitle = game['Title'] ?? 'Unknown Game';
     final gameId = game['ID'];
-    // Try multiple possible field names for game icon
-    final gameIcon = game['ImageIcon'] ?? game['Icon'] ?? game['ImageBoxArt'] ?? '';
+    // Get game icon from the detailed game info
+    final gameIcon = _gameDetails?['ImageIcon'] ?? _gameDetails?['ImageBoxArt'] ?? '';
 
-    // Console might use 'Title' or 'Name'
-    final consoleName = console?['Title'] ?? console?['Name'] ?? '';
+    // Console uses 'Title' in the API response
+    final consoleName = console?['Title'] ?? _gameDetails?['ConsoleName'] ?? '';
 
     // Calculate unlock rate
     final unlockRate = totalPlayers > 0
