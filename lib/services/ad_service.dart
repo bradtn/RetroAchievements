@@ -22,13 +22,12 @@ class AdService {
     }
   }
 
-  /// Get the banner ad unit ID (test IDs for development)
+  /// Get the banner ad unit ID
   String get bannerAdUnitId {
     if (Platform.isAndroid) {
-      // Android test banner ad unit ID
-      return 'ca-app-pub-3940256099942544/6300978111';
+      return 'ca-app-pub-2658368978045167/6585548356';
     } else if (Platform.isIOS) {
-      // iOS test banner ad unit ID
+      // TODO: Add iOS ad unit ID when iOS app is set up
       return 'ca-app-pub-3940256099942544/2934735716';
     }
     throw UnsupportedError('Unsupported platform');

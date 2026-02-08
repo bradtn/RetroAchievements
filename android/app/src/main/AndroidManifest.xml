@@ -56,10 +56,10 @@
             android:name="flutterEmbedding"
             android:value="2"/>
 
-        <!-- Google AdMob App ID (TEST ID - replace with real ID for production) -->
+        <!-- Google AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-2658368978045167~6487046244"/>
 
         <!-- Home Screen Widget -->
         <receiver
