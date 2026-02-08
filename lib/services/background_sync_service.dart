@@ -179,4 +179,71 @@ class BackgroundSyncService {
       // Silently fail - we'll try again next time
     }
   }
+
+  /// Check for new Achievement of the Week
+  Future<void> checkAotwOnAppOpen() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check if AOTW notifications are enabled
+    final aotwNotificationsEnabled = prefs.getBool('aotw_notifications_enabled') ?? true;
+    if (!aotwNotificationsEnabled) return;
+
+    // Get stored credentials
+    final username = prefs.getString('ra_username');
+    final apiKey = prefs.getString('ra_api_key');
+
+    if (username == null || apiKey == null) return;
+
+    // Only check once per day
+    final lastCheckDate = prefs.getString('last_aotw_check_date');
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month}-${today.day}';
+
+    if (lastCheckDate == todayStr) return;
+
+    try {
+      final dio = Dio(BaseOptions(
+        baseUrl: 'https://retroachievements.org/API/',
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+
+      final response = await dio.get(
+        'API_GetAchievementOfTheWeek.php',
+        queryParameters: {
+          'z': username,
+          'y': apiKey,
+        },
+      );
+
+      if (response.statusCode != 200 || response.data == null) return;
+
+      final data = response.data as Map<String, dynamic>;
+      final achievement = data['Achievement'] as Map<String, dynamic>?;
+      final game = data['Game'] as Map<String, dynamic>?;
+
+      if (achievement == null || game == null) return;
+
+      final achievementId = achievement['ID']?.toString() ?? '';
+      final achievementTitle = achievement['Title'] ?? 'New Achievement';
+      final gameTitle = game['Title'] ?? 'Unknown Game';
+
+      // Check if this is a new AOTW
+      final lastKnownAotwId = prefs.getString('last_known_aotw_id') ?? '';
+
+      if (lastKnownAotwId.isNotEmpty && lastKnownAotwId != achievementId) {
+        // New AOTW! Send notification
+        final notificationService = NotificationService();
+        await notificationService.initialize();
+        await notificationService.showAotwNotification(achievementTitle, gameTitle);
+      }
+
+      // Save current AOTW ID
+      await prefs.setString('last_known_aotw_id', achievementId);
+      await prefs.setString('last_aotw_check_date', todayStr);
+
+    } catch (e) {
+      // Silently fail
+    }
+  }
 }

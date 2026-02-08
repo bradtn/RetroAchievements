@@ -26,6 +26,9 @@ void main() async {
   // Check streak status on app open (runs in background, doesn't block)
   backgroundSyncService.checkStreakOnAppOpen();
 
+  // Check for new Achievement of the Week
+  backgroundSyncService.checkAotwOnAppOpen();
+
   runApp(
     const ProviderScope(
       child: RetroTrackerApp(),

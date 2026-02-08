@@ -22,6 +22,7 @@ class NotificationService {
   static const int streakMilestoneNotificationId = 2;
   static const int streakBrokenNotificationId = 3;
   static const int dailySummaryNotificationId = 4;
+  static const int aotwNotificationId = 5;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -215,6 +216,16 @@ class NotificationService {
   // Cancel specific notification
   Future<void> cancel(int id) async {
     await _notifications.cancel(id);
+  }
+
+  // Show Achievement of the Week notification
+  Future<void> showAotwNotification(String achievementTitle, String gameTitle) async {
+    await _notifications.show(
+      aotwNotificationId,
+      'New Achievement of the Week! 🏆',
+      '$achievementTitle from $gameTitle',
+      _getNotificationDetails(),
+    );
   }
 
   NotificationDetails _getNotificationDetails() {

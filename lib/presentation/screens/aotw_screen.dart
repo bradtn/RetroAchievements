@@ -8,7 +8,9 @@ import 'game_detail_screen.dart';
 String _formatDateTime(String? date) {
   if (date == null || date.isEmpty) return '';
   try {
-    final dt = DateTime.parse(date);
+    // Parse as UTC and convert to local time
+    final utc = DateTime.parse(date);
+    final dt = utc.toLocal();
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final ampm = dt.hour >= 12 ? 'PM' : 'AM';
