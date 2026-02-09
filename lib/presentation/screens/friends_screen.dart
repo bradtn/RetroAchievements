@@ -1,52 +1,13 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'user_compare_screen.dart';
 import 'profile_screen.dart';
+import 'friends/friends_provider.dart';
+import 'friends/friends_widgets.dart';
 
-// Friends provider (local friends list)
-class FriendsNotifier extends StateNotifier<List<String>> {
-  static const _key = 'friends_list';
-
-  FriendsNotifier() : super([]) {
-    _load();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_key);
-    if (json != null) {
-      state = List<String>.from(jsonDecode(json));
-    }
-  }
-
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(state));
-  }
-
-  Future<void> addFriend(String username) async {
-    if (!state.contains(username.toLowerCase())) {
-      state = [...state, username];
-      await _save();
-    }
-  }
-
-  Future<void> removeFriend(String username) async {
-    state = state.where((f) => f.toLowerCase() != username.toLowerCase()).toList();
-    await _save();
-  }
-
-  bool isFriend(String username) => state.any((f) => f.toLowerCase() == username.toLowerCase());
-}
-
-final friendsProvider = StateNotifierProvider<FriendsNotifier, List<String>>((ref) {
-  return FriendsNotifier();
-});
+export 'friends/friends_provider.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -59,16 +20,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   late TabController _tabController;
   final _usernameController = TextEditingController();
 
-  // Local friends
   final Map<String, Map<String, dynamic>?> _friendProfiles = {};
   bool _isLoadingFriends = false;
 
-  // Following (people I follow on RA)
   List<Map<String, dynamic>> _following = [];
   bool _isLoadingFollowing = false;
   String? _followingError;
 
-  // Followers (people following me on RA)
   List<Map<String, dynamic>> _followers = [];
   bool _isLoadingFollowers = false;
   String? _followersError;
@@ -156,7 +114,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     final username = _usernameController.text.trim();
     if (username.isEmpty) return;
 
-    // Verify user exists
     final api = ref.read(apiDataSourceProvider);
     final profile = await api.getUserProfile(username);
 
@@ -179,144 +136,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
         SnackBar(content: Text('Added $username to your friends list')),
       );
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Social'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.people),
-              text: 'My Friends',
-            ),
-            Tab(
-              icon: const Icon(Icons.person_add),
-              text: 'Following',
-            ),
-            Tab(
-              icon: const Icon(Icons.group),
-              text: 'Followers',
-            ),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMyFriendsTab(),
-          _buildFollowingTab(),
-          _buildFollowersTab(),
-        ],
-      ),
-    );
-  }
-
-  // ============= MY FRIENDS TAB (Local) =============
-  Widget _buildMyFriendsTab() {
-    final friends = ref.watch(friendsProvider);
-
-    return Column(
-      children: [
-        // Add friend input
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    hintText: 'Add friend by username...',
-                    prefixIcon: const Icon(Icons.person_add),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                  ),
-                  onSubmitted: (_) => _addFriend(),
-                ),
-              ),
-              const SizedBox(width: 12),
-              FilledButton(
-                onPressed: _addFriend,
-                child: const Text('Add'),
-              ),
-            ],
-          ),
-        ),
-
-        // Info text
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Track any player\'s progress - add them by username',
-            style: TextStyle(
-              color: context.subtitleColor,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Friends list
-        Expanded(
-          child: friends.isEmpty
-              ? _buildEmptyFriendsState()
-              : _isLoadingFriends
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        _friendProfiles.clear();
-                        await _loadFriendProfiles();
-                      },
-                      child: ListView.builder(
-                        padding: EdgeInsets.fromLTRB(
-                          16, 8, 16,
-                          16 + MediaQuery.of(context).viewPadding.bottom,
-                        ),
-                        itemCount: friends.length,
-                        itemBuilder: (ctx, i) => _FriendTile(
-                          username: friends[i],
-                          profile: _friendProfiles[friends[i]],
-                          onRemove: () => _removeFriend(friends[i]),
-                          onCompare: () => _compareFriend(friends[i]),
-                          onTap: () => _viewProfile(friends[i]),
-                          isLocal: true,
-                        ),
-                      ),
-                    ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyFriendsState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 80, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              'No Friends Yet',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add friends by their RetroAchievements username to track their progress',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.subtitleColor),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _removeFriend(String username) {
@@ -359,148 +178,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     );
   }
 
-  // ============= FOLLOWING TAB (RA API) =============
-  Widget _buildFollowingTab() {
-    if (_isLoadingFollowing) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_followingError != null) {
-      return _buildErrorState(_followingError!, _loadFollowing);
-    }
-
-    if (_following.isEmpty) {
-      return _buildEmptyFollowingState();
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadFollowing,
-      child: ListView.builder(
-        padding: EdgeInsets.fromLTRB(
-          16, 16, 16,
-          16 + MediaQuery.of(context).viewPadding.bottom,
-        ),
-        itemCount: _following.length,
-        itemBuilder: (ctx, i) => _RAUserTile(
-          userData: _following[i],
-          onTap: () => _viewProfile(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-          onCompare: () => _compareFriend(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-          onAddToFriends: () => _addToLocalFriends(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-          isFollowing: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyFollowingState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_add_disabled, size: 80, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              'Not Following Anyone',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Follow other players on retroachievements.org to see them here',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.subtitleColor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============= FOLLOWERS TAB (RA API) =============
-  Widget _buildFollowersTab() {
-    if (_isLoadingFollowers) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_followersError != null) {
-      return _buildErrorState(_followersError!, _loadFollowers);
-    }
-
-    if (_followers.isEmpty) {
-      return _buildEmptyFollowersState();
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadFollowers,
-      child: ListView.builder(
-        padding: EdgeInsets.fromLTRB(
-          16, 16, 16,
-          16 + MediaQuery.of(context).viewPadding.bottom,
-        ),
-        itemCount: _followers.length,
-        itemBuilder: (ctx, i) => _RAUserTile(
-          userData: _followers[i],
-          onTap: () => _viewProfile(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-          onCompare: () => _compareFriend(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-          onAddToFriends: () => _addToLocalFriends(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-          isFollowing: false,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyFollowersState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.group_off, size: 80, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              'No Followers Yet',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Other players who follow you on retroachievements.org will appear here',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.subtitleColor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String error, VoidCallback onRetry) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 60, color: Colors.red[400]),
-            const SizedBox(height: 16),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.subtitleColor),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _addToLocalFriends(String username) async {
     if (username.isEmpty) return;
 
@@ -526,407 +203,174 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
       );
     }
   }
-}
-
-// Tile for local friends
-class _FriendTile extends StatelessWidget {
-  final String username;
-  final Map<String, dynamic>? profile;
-  final VoidCallback onRemove;
-  final VoidCallback onCompare;
-  final VoidCallback onTap;
-  final bool isLocal;
-
-  const _FriendTile({
-    required this.username,
-    required this.profile,
-    required this.onRemove,
-    required this.onCompare,
-    required this.onTap,
-    this.isLocal = true,
-  });
 
   @override
   Widget build(BuildContext context) {
-    if (profile == null) {
-      return Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.grey[800],
-            child: Text(username[0].toUpperCase()),
-          ),
-          title: Text(username),
-          subtitle: const Text('Loading...'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Social'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.people), text: 'My Friends'),
+            Tab(icon: Icon(Icons.person_add), text: 'Following'),
+            Tab(icon: Icon(Icons.group), text: 'Followers'),
+          ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildMyFriendsTab(),
+          _buildFollowingTab(),
+          _buildFollowersTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyFriendsTab() {
+    final friends = ref.watch(friendsProvider);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    hintText: 'Add friend by username...',
+                    prefixIcon: const Icon(Icons.person_add),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                  ),
+                  onSubmitted: (_) => _addFriend(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: _addFriend,
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Track any player\'s progress - add them by username',
+            style: TextStyle(color: context.subtitleColor, fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: friends.isEmpty
+              ? const EmptyFriendsState(
+                  icon: Icons.people_outline,
+                  title: 'No Friends Yet',
+                  subtitle: 'Add friends by their RetroAchievements username to track their progress',
+                )
+              : _isLoadingFriends
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        _friendProfiles.clear();
+                        await _loadFriendProfiles();
+                      },
+                      child: ListView.builder(
+                        padding: EdgeInsets.fromLTRB(
+                          16, 8, 16,
+                          16 + MediaQuery.of(context).viewPadding.bottom,
+                        ),
+                        itemCount: friends.length,
+                        itemBuilder: (ctx, i) => FriendTile(
+                          username: friends[i],
+                          profile: _friendProfiles[friends[i]],
+                          onRemove: () => _removeFriend(friends[i]),
+                          onCompare: () => _compareFriend(friends[i]),
+                          onTap: () => _viewProfile(friends[i]),
+                          isLocal: true,
+                        ),
+                      ),
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFollowingTab() {
+    if (_isLoadingFollowing) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_followingError != null) {
+      return ErrorState(error: _followingError!, onRetry: _loadFollowing);
+    }
+
+    if (_following.isEmpty) {
+      return const EmptyFriendsState(
+        icon: Icons.person_add_disabled,
+        title: 'Not Following Anyone',
+        subtitle: 'Follow other players on retroachievements.org to see them here',
       );
     }
 
-    final points = profile!['TotalPoints'] ?? 0;
-    final truePoints = profile!['TotalTruePoints'] ?? 0;
-    final richPresence = profile!['RichPresenceMsg'] ?? 'Offline';
-    final userPic = profile!['UserPic'] ?? '';
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundImage: userPic.isNotEmpty
-                        ? CachedNetworkImageProvider('https://retroachievements.org$userPic')
-                        : null,
-                    backgroundColor: Colors.grey[800],
-                    child: userPic.isEmpty ? Text(username[0].toUpperCase()) : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          username,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        Text(
-                          richPresence,
-                          style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Status indicator
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: richPresence.toLowerCase().contains('offline')
-                          ? Colors.grey
-                          : Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Stats
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatChip(
-                      icon: Icons.stars,
-                      value: _formatNumber(points),
-                      label: 'Points',
-                      color: Colors.amber,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _StatChip(
-                      icon: Icons.military_tech,
-                      value: _formatNumber(truePoints),
-                      label: 'True Pts',
-                      color: Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: onCompare,
-                    icon: const Icon(Icons.compare_arrows, size: 18),
-                    label: const Text('Compare'),
-                  ),
-                  if (isLocal)
-                    TextButton.icon(
-                      onPressed: onRemove,
-                      icon: const Icon(Icons.person_remove, size: 18),
-                      label: const Text('Remove'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    ),
-                ],
-              ),
-            ],
-          ),
+    return RefreshIndicator(
+      onRefresh: _loadFollowing,
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(
+          16, 16, 16,
+          16 + MediaQuery.of(context).viewPadding.bottom,
+        ),
+        itemCount: _following.length,
+        itemBuilder: (ctx, i) => RAUserTile(
+          userData: _following[i],
+          onTap: () => _viewProfile(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+          onCompare: () => _compareFriend(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+          onAddToFriends: () => _addToLocalFriends(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+          isFollowing: true,
         ),
       ),
     );
   }
 
-  String _formatNumber(dynamic num) {
-    if (num == null) return '0';
-    final n = int.tryParse(num.toString()) ?? 0;
-    if (n >= 1000000) {
-      return '${(n / 1000000).toStringAsFixed(1)}M';
-    } else if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(1)}K';
-    }
-    return n.toString();
-  }
-}
-
-// Tile for RA following/followers
-class _RAUserTile extends StatelessWidget {
-  final Map<String, dynamic> userData;
-  final VoidCallback onTap;
-  final VoidCallback onCompare;
-  final VoidCallback onAddToFriends;
-  final bool isFollowing;
-
-  const _RAUserTile({
-    required this.userData,
-    required this.onTap,
-    required this.onCompare,
-    required this.onAddToFriends,
-    required this.isFollowing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final username = userData['User'] ?? userData['user'] ?? 'Unknown';
-    final points = userData['Points'] ?? userData['points'] ?? userData['TotalPoints'] ?? 0;
-    // Construct avatar URL from username - API doesn't return UserPic
-    final userPic = '/UserPic/$username.png';
-    final lastSeen = userData['LastActivityDate'] ?? userData['LastActivity'] ?? userData['lastActivity'] ?? '';
-
-    // Parse last activity into a readable format
-    String lastSeenText = 'Unknown';
-    if (lastSeen.isNotEmpty) {
-      try {
-        final date = DateTime.parse(lastSeen);
-        final now = DateTime.now();
-        final diff = now.difference(date);
-
-        if (diff.inMinutes < 5) {
-          lastSeenText = 'Online now';
-        } else if (diff.inMinutes < 60) {
-          lastSeenText = '${diff.inMinutes}m ago';
-        } else if (diff.inHours < 24) {
-          lastSeenText = '${diff.inHours}h ago';
-        } else if (diff.inDays < 7) {
-          lastSeenText = '${diff.inDays}d ago';
-        } else {
-          lastSeenText = '${date.month}/${date.day}/${date.year}';
-        }
-      } catch (_) {
-        lastSeenText = lastSeen;
-      }
+  Widget _buildFollowersTab() {
+    if (_isLoadingFollowers) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    final isOnline = lastSeenText == 'Online now';
+    if (_followersError != null) {
+      return ErrorState(error: _followersError!, onRetry: _loadFollowers);
+    }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: CachedNetworkImage(
-                      imageUrl: 'https://retroachievements.org$userPic',
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        width: 56,
-                        height: 56,
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            username.isNotEmpty ? username[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        width: 56,
-                        height: 56,
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            username.isNotEmpty ? username[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline ? Colors.green : Colors.grey,
-                        border: Border.all(
-                          color: Theme.of(context).cardColor,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      username,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.stars, size: 14, color: Colors.amber),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatNumber(points),
-                          style: TextStyle(
-                            color: context.subtitleColor,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(
-                          Icons.access_time,
-                          size: 14,
-                          color: isOnline ? Colors.green : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          lastSeenText,
-                          style: TextStyle(
-                            color: isOnline ? Colors.green : context.subtitleColor,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'view':
-                      onTap();
-                      break;
-                    case 'compare':
-                      onCompare();
-                      break;
-                    case 'add':
-                      onAddToFriends();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'view',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person, size: 20),
-                        SizedBox(width: 8),
-                        Text('View Profile'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'compare',
-                    child: Row(
-                      children: [
-                        Icon(Icons.compare_arrows, size: 20),
-                        SizedBox(width: 8),
-                        Text('Compare'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'add',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_add, size: 20),
-                        SizedBox(width: 8),
-                        Text('Add to My Friends'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    if (_followers.isEmpty) {
+      return const EmptyFriendsState(
+        icon: Icons.group_off,
+        title: 'No Followers Yet',
+        subtitle: 'Other players who follow you on retroachievements.org will appear here',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadFollowers,
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(
+          16, 16, 16,
+          16 + MediaQuery.of(context).viewPadding.bottom,
         ),
-      ),
-    );
-  }
-
-  String _formatNumber(dynamic num) {
-    if (num == null) return '0';
-    final n = int.tryParse(num.toString()) ?? 0;
-    if (n >= 1000000) {
-      return '${(n / 1000000).toStringAsFixed(1)}M';
-    } else if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(1)}K';
-    }
-    return n.toString();
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  const _StatChip({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 6),
-          Text(
-            value,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-          ),
-        ],
+        itemCount: _followers.length,
+        itemBuilder: (ctx, i) => RAUserTile(
+          userData: _followers[i],
+          onTap: () => _viewProfile(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+          onCompare: () => _compareFriend(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+          onAddToFriends: () => _addToLocalFriends(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+          isFollowing: false,
+        ),
       ),
     );
   }
