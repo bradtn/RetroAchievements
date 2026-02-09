@@ -5,7 +5,7 @@ import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 import 'user_compare_screen.dart';
-import 'milestones_screen.dart';
+import 'milestones/milestones_screen.dart';
 import 'share_card/share_card_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {

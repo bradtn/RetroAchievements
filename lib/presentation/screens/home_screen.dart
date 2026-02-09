@@ -22,7 +22,7 @@ import 'friends_screen.dart';
 import 'calendar_screen.dart';
 import 'share_card/share_card_screen.dart';
 import 'game_search_screen.dart';
-import 'milestones_screen.dart';
+import 'milestones/milestones_screen.dart';
 import 'live_feed_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
