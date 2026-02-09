@@ -6,6 +6,7 @@ import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/game_detail_screen.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/premium_provider.dart';
+import 'presentation/providers/game_cache_provider.dart';
 import 'services/widget_service.dart';
 import 'services/notification_service.dart';
 
@@ -22,6 +23,7 @@ class RetroTrackerApp extends ConsumerStatefulWidget {
 
 class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   bool _hasRequestedPermission = false;
+  bool _hasTriggeredCacheDownload = false;
 
   @override
   void initState() {
@@ -44,6 +46,22 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     }
   }
 
+  /// Automatically download game database in the background if not already cached
+  void _triggerBackgroundCacheDownload() {
+    if (_hasTriggeredCacheDownload) return;
+    _hasTriggeredCacheDownload = true;
+
+    // Use a small delay to let the app fully initialize first
+    Future.delayed(const Duration(seconds: 2), () {
+      final cacheState = ref.read(gameCacheProvider);
+      // Only build cache if it's empty and not already loading
+      if (cacheState.games.isEmpty && !cacheState.isLoading) {
+        // Fire and forget - runs in background
+        ref.read(gameCacheProvider.notifier).buildCache();
+      }
+    });
+  }
+
   void _onWidgetGameSelected(int gameId) {
     // Navigate to the game detail screen
     // Use a small delay to ensure the app is fully initialized
@@ -61,9 +79,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     final authState = ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
 
-    // Request notification permission after user is authenticated
+    // Request notification permission and trigger background cache after user is authenticated
     if (authState.isAuthenticated) {
       _requestNotificationPermission();
+      _triggerBackgroundCacheDownload();
     }
 
     return MaterialApp(

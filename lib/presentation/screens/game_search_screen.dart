@@ -113,12 +113,12 @@ class _GameSearchScreenState extends ConsumerState<GameSearchScreen> {
             Icon(Icons.cloud_download, size: 64, color: Colors.grey[600]),
             const SizedBox(height: 24),
             Text(
-              'Build Game Database',
+              'Game Database',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
             Text(
-              'Download the complete list of games from RetroAchievements to enable searching across all platforms.',
+              'The game database downloads automatically in the background. If it hasn\'t started yet, tap the button below.',
               textAlign: TextAlign.center,
               style: TextStyle(color: context.subtitleColor),
             ),
@@ -126,7 +126,7 @@ class _GameSearchScreenState extends ConsumerState<GameSearchScreen> {
             FilledButton.icon(
               onPressed: () => ref.read(gameCacheProvider.notifier).buildCache(),
               icon: const Icon(Icons.download),
-              label: const Text('Download Game Database'),
+              label: const Text('Download Now'),
             ),
             const SizedBox(height: 12),
             Text(

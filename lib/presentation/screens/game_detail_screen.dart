@@ -206,7 +206,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     final isLightMode = Theme.of(context).brightness == Brightness.light;
 
-    return CustomScrollView(
+    return RefreshIndicator(
+      onRefresh: _loadGame,
+      child: CustomScrollView(
       controller: _scrollController,
       slivers: [
         // App bar with image - no action buttons here to avoid overlap
@@ -234,20 +236,56 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
               return FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.only(left: 56, right: 16, bottom: 16),
-                title: Text(
-                  title,
-                  style: TextStyle(
-                    color: titleColor,
-                    fontSize: 16,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 4,
-                        color: Colors.black.withOpacity(shadowOpacity),
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Game icon that fades in when collapsed
+                    Opacity(
+                      opacity: collapseRatio,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: collapseRatio > 0.5 ? null : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: CachedNetworkImage(
+                            imageUrl: 'https://retroachievements.org$imageIcon',
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Container(
+                              color: Colors.deepPurple,
+                              child: const Icon(Icons.games, size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                    ),
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: titleColor,
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 4,
+                              color: Colors.black.withOpacity(shadowOpacity),
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 background: Stack(
                   fit: StackFit.expand,
@@ -699,6 +737,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
       ],
+      ),
     );
   }
 

@@ -91,38 +91,92 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final score = _myRank!['Score'] ?? 0;
     final truePoints = _myRank!['TruePoints'] ?? 0;
     final isUnranked = rank == 0 || rank == null;
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
+
+    // Determine colors based on rank tier
+    List<Color> gradientColors;
+    Color accentColor;
+    if (isUnranked) {
+      gradientColors = isLightMode
+          ? [Colors.grey.shade300, Colors.grey.shade200]
+          : [Colors.grey.shade800, Colors.grey.shade700];
+      accentColor = Colors.grey;
+    } else if (rank <= 10) {
+      // Top 10 - Gold theme
+      gradientColors = isLightMode
+          ? [Colors.amber.shade200, Colors.amber.shade100]
+          : [Colors.amber.shade900, Colors.amber.shade800];
+      accentColor = Colors.amber;
+    } else if (rank <= 100) {
+      // Top 100 - Purple theme
+      gradientColors = isLightMode
+          ? [Colors.deepPurple.shade200, Colors.deepPurple.shade100]
+          : [Colors.deepPurple.shade800, Colors.deepPurple.shade700];
+      accentColor = Colors.deepPurple;
+    } else if (rank <= 1000) {
+      // Top 1000 - Blue theme
+      gradientColors = isLightMode
+          ? [Colors.blue.shade200, Colors.blue.shade100]
+          : [Colors.blue.shade800, Colors.blue.shade700];
+      accentColor = Colors.blue;
+    } else {
+      // Default - Teal theme
+      gradientColors = isLightMode
+          ? [Colors.teal.shade200, Colors.teal.shade100]
+          : [Colors.teal.shade800, Colors.teal.shade700];
+      accentColor = Colors.teal;
+    }
+
+    final textColor = isLightMode ? Colors.grey.shade800 : Colors.white;
+    final subtleTextColor = isLightMode ? Colors.grey.shade600 : Colors.white70;
 
     return Card(
+      elevation: isLightMode ? 2 : 0,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
-            colors: isUnranked
-                ? [Colors.grey.shade700, Colors.grey.shade600]
-                : [Colors.deepPurple.shade800, Colors.deepPurple.shade600],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
+          border: isLightMode
+              ? Border.all(color: accentColor.withValues(alpha: 0.3), width: 1)
+              : null,
         ),
         child: Column(
           children: [
-            Text(
-              isUnranked ? 'Not Ranked Yet' : 'Your Rank',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isUnranked ? Icons.hourglass_empty : Icons.leaderboard,
+                  size: 16,
+                  color: subtleTextColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isUnranked ? 'Not Ranked Yet' : 'Your Global Rank',
+                  style: TextStyle(
+                    color: subtleTextColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             if (isUnranked)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   children: [
-                    Icon(Icons.hourglass_empty, color: Colors.white54, size: 40),
-                    SizedBox(height: 8),
+                    Icon(Icons.emoji_events_outlined, color: subtleTextColor, size: 40),
+                    const SizedBox(height: 8),
                     Text(
                       'Earn achievements to get ranked!',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: subtleTextColor, fontSize: 12),
                     ),
                   ],
                 ),
@@ -133,18 +187,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  const Text(
+                  Text(
                     '#',
                     style: TextStyle(
-                      color: Colors.amber,
-                      fontSize: 24,
+                      color: accentColor,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     '$rank',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
                     ),
@@ -152,27 +206,38 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 ],
               ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StatItem(
-                  icon: Icons.stars,
-                  label: 'Points',
-                  value: _formatNumber(score),
-                  color: Colors.amber,
-                ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Colors.white24,
-                ),
-                _StatItem(
-                  icon: Icons.military_tech,
-                  label: 'True Points',
-                  value: _formatNumber(truePoints),
-                  color: Colors.purple.shade200,
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: (isLightMode ? Colors.white : Colors.black).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ThemedStatItem(
+                    icon: Icons.stars,
+                    label: 'Points',
+                    value: _formatNumber(score),
+                    color: Colors.amber,
+                    textColor: textColor,
+                    subtleColor: subtleTextColor,
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: subtleTextColor.withValues(alpha: 0.3),
+                  ),
+                  _ThemedStatItem(
+                    icon: Icons.military_tech,
+                    label: 'True Points',
+                    value: _formatNumber(truePoints),
+                    color: Colors.purple,
+                    textColor: textColor,
+                    subtleColor: subtleTextColor,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -223,6 +288,49 @@ class _StatItem extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Colors.white70,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThemedStatItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final Color textColor;
+  final Color subtleColor;
+
+  const _ThemedStatItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.textColor,
+    required this.subtleColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: subtleColor,
             fontSize: 12,
           ),
         ),
