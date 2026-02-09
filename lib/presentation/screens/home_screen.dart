@@ -370,296 +370,238 @@ class _ExploreTabState extends State<_ExploreTab> {
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      _ExploreItem(
+        icon: Icons.search,
+        title: 'Search',
+        color: Colors.pink,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const GameSearchScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.rss_feed,
+        title: 'Live Feed',
+        color: Colors.red,
+        hasLiveIndicator: true,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const LiveFeedScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.military_tech,
+        title: 'Awards',
+        color: Colors.purple,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const MilestonesScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.local_fire_department,
+        title: 'Streaks',
+        color: Colors.deepOrange,
+        isFireIcon: true,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const StreaksScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.star,
+        title: 'Favorites',
+        color: Colors.amber,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const FavoritesScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.emoji_events,
+        title: 'AOTW',
+        color: Colors.orange,
+        showNewBadge: _hasNewAotw,
+        onTap: () {
+          setState(() => _hasNewAotw = false);
+          Navigator.push(context, SlidePageRoute(page: const AchievementOfTheWeekScreen()));
+        },
+      ),
+      _ExploreItem(
+        icon: Icons.videogame_asset,
+        title: 'Consoles',
+        color: Colors.blue,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const ConsoleBrowserScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.leaderboard,
+        title: 'Leaderboard',
+        color: Colors.green,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const LeaderboardScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.people,
+        title: 'Friends',
+        color: Colors.teal,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const FriendsScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.calendar_month,
+        title: 'Calendar',
+        color: Colors.indigo,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const CalendarScreen())),
+      ),
+      _ExploreItem(
+        icon: Icons.analytics,
+        title: 'Stats',
+        color: Colors.pink,
+        isPremium: true,
+        onTap: () => Navigator.push(context, SlidePageRoute(page: const StatsScreen())),
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Explore')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Search Games
-          _ExploreCard(
-            icon: Icons.search,
-            title: 'Search Games',
-            subtitle: 'Find any game',
-            color: Colors.pink,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const GameSearchScreen()),
-            ),
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.95,
           ),
-          const SizedBox(height: 12),
-
-          // Live Feed
-          _ExploreCard(
-            icon: Icons.rss_feed,
-            title: 'Live Feed',
-            subtitle: 'Recent community activity',
-            color: Colors.red,
-            customIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withValues(alpha: 0.5),
-                        blurRadius: 6,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.rss_feed, color: Colors.red, size: 22),
-              ],
-            ),
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const LiveFeedScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Awards & Goals
-          _ExploreCard(
-            icon: Icons.military_tech,
-            title: 'Awards & Goals',
-            subtitle: 'RA awards and app goals',
-            color: Colors.purple,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const MilestonesScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // My Streaks
-          _ExploreCard(
-            icon: Icons.local_fire_department,
-            title: 'My Streaks',
-            subtitle: 'Daily achievement streaks',
-            color: Colors.deepOrange,
-            customIcon: const AnimatedFireIcon(size: 28, color: Colors.deepOrange),
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const StreaksScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // My Favorites
-          _ExploreCard(
-            icon: Icons.star,
-            title: 'My Favorites',
-            subtitle: 'Games you\'re tracking',
-            color: Colors.amber,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const FavoritesScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Achievement of the Week
-          _ExploreCard(
-            icon: Icons.emoji_events,
-            title: 'Achievement of the Week',
-            subtitle: 'Current weekly challenge',
-            color: Colors.orange,
-            showNewBadge: _hasNewAotw,
-            onTap: () {
-              setState(() => _hasNewAotw = false);
-              Navigator.push(
-                context,
-                SlidePageRoute(page: const AchievementOfTheWeekScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // Browse by Console
-          _ExploreCard(
-            icon: Icons.videogame_asset,
-            title: 'Browse by Console',
-            subtitle: 'Explore games by platform',
-            color: Colors.blue,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const ConsoleBrowserScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Leaderboards
-          _ExploreCard(
-            icon: Icons.leaderboard,
-            title: 'Leaderboards',
-            subtitle: 'Top players worldwide',
-            color: Colors.green,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const LeaderboardScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Friends
-          _ExploreCard(
-            icon: Icons.people,
-            title: 'Friends',
-            subtitle: 'Track and compare with friends',
-            color: Colors.teal,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const FriendsScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Calendar
-          _ExploreCard(
-            icon: Icons.calendar_month,
-            title: 'Achievement Calendar',
-            subtitle: 'View unlock history by date',
-            color: Colors.indigo,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const CalendarScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Stats (Premium)
-          _ExploreCard(
-            icon: Icons.analytics,
-            title: 'Detailed Statistics',
-            subtitle: 'Charts and insights',
-            color: Colors.pink,
-            isPremium: true,
-            onTap: () => Navigator.push(
-              context,
-              SlidePageRoute(page: const StatsScreen()),
-            ),
-          ),
-        ],
+          itemCount: items.length,
+          itemBuilder: (context, index) => _ExploreGridItem(item: items[index]),
+        ),
       ),
     );
   }
 }
 
-class _ExploreCard extends StatelessWidget {
+class _ExploreItem {
   final IconData icon;
   final String title;
-  final String subtitle;
   final Color color;
   final VoidCallback onTap;
   final bool isPremium;
   final bool showNewBadge;
-  final Widget? customIcon;
+  final bool hasLiveIndicator;
+  final bool isFireIcon;
 
-  const _ExploreCard({
+  const _ExploreItem({
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.color,
     required this.onTap,
     this.isPremium = false,
     this.showNewBadge = false,
-    this.customIcon,
+    this.hasLiveIndicator = false,
+    this.isFireIcon = false,
   });
+}
+
+class _ExploreGridItem extends StatelessWidget {
+  final _ExploreItem item;
+
+  const _ExploreGridItem({required this.item});
 
   @override
   Widget build(BuildContext context) {
     return TappableCard(
-      onTap: onTap,
+      onTap: item.onTap,
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: customIcon ?? Icon(icon, color: color, size: 28),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: item.color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: _buildIcon(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        if (isPremium) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.amber,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'PRO',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (showNewBadge) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'NEW',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+            ),
+            // Badges
+            if (item.isPremium)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'PRO',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: context.subtitleColor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: context.secondaryIconColor,
+            if (item.showNewBadge)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'NEW',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildIcon() {
+    if (item.isFireIcon) {
+      return AnimatedFireIcon(size: 24, color: item.color);
+    }
+    if (item.hasLiveIndicator) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.5),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(item.icon, color: item.color, size: 24),
+        ],
+      );
+    }
+    return Icon(item.icon, color: item.color, size: 24);
   }
 }
 
