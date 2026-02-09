@@ -8,7 +8,7 @@ import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/premium_provider.dart';
-import 'share_card_screen.dart';
+import 'share_card/share_card_screen.dart';
 import 'game_detail/achievement_tile.dart';
 import 'game_detail/leaderboard_widgets.dart';
 import 'game_detail/game_detail_widgets.dart';

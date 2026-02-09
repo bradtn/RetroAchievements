@@ -1,171 +1,19 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import '../providers/auth_provider.dart';
-import '../widgets/premium_gate.dart';
+import 'share_card_widgets.dart';
 
-enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak }
-
-class ShareCardScreen extends ConsumerStatefulWidget {
-  final ShareCardType type;
+class ProfileCard extends StatelessWidget {
   final Map<String, dynamic> data;
 
-  const ShareCardScreen({
-    super.key,
-    required this.type,
-    required this.data,
-  });
-
-  @override
-  ConsumerState<ShareCardScreen> createState() => _ShareCardScreenState();
-}
-
-class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
-  final GlobalKey _cardKey = GlobalKey();
-  int _selectedStyle = 0;
-  bool _isGenerating = false;
-
-  final List<_CardStyle> _styles = [
-    _CardStyle('Classic', [Color(0xFF1a1a2e), Color(0xFF16213e)]),
-    _CardStyle('Retro', [Color(0xFF2d132c), Color(0xFF801336)]),
-    _CardStyle('Neon', [Color(0xFF0f0c29), Color(0xFF302b63)]),
-    _CardStyle('Forest', [Color(0xFF134e5e), Color(0xFF71b280)]),
-    _CardStyle('Sunset', [Color(0xFFff6b6b), Color(0xFFfeca57)]),
-  ];
+  const ProfileCard({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Share Card'),
-      ),
-      body: PremiumGate(
-        featureName: 'Share Cards',
-        description: 'Create beautiful cards to share your achievements, stats, and milestones on social media.',
-        icon: Icons.share,
-        child: _buildContent(context),
-      ),
-    );
-  }
-
-  Widget _buildContent(BuildContext context) {
-    return Column(
-      children: [
-        // Share button at top
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _isGenerating ? null : _shareCard,
-              icon: _isGenerating
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.share),
-              label: const Text('Share Card'),
-            ),
-          ),
-        ),
-        // Card preview
-        Expanded(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: RepaintBoundary(
-                key: _cardKey,
-                child: _buildCard(),
-              ),
-            ),
-          ),
-        ),
-
-        // Style selector
-        Container(
-          padding: EdgeInsets.only(
-            top: 12,
-            bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
-          ),
-          child: SizedBox(
-            height: 60,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _styles.length,
-              itemBuilder: (ctx, i) => _StyleButton(
-                style: _styles[i],
-                isSelected: _selectedStyle == i,
-                onTap: () => setState(() => _selectedStyle = i),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard() {
-    final style = _styles[_selectedStyle];
-
-    return Container(
-      width: 350,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: style.colors,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: style.colors.first.withValues(alpha: 0.5),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          children: [
-            // Pattern overlay
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _PatternPainter(),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: switch (widget.type) {
-                ShareCardType.profile => _buildProfileCard(),
-                ShareCardType.game => _buildGameCard(),
-                ShareCardType.achievement => _buildAchievementCard(),
-                ShareCardType.comparison => _buildComparisonCard(),
-                ShareCardType.milestone => _buildMilestoneCard(),
-                ShareCardType.raAward => _buildRAAwardCard(),
-                ShareCardType.streak => _buildStreakCard(),
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileCard() {
-    final username = widget.data['Username'] ?? widget.data['User'] ?? 'Player';
-    final points = widget.data['TotalPoints'] ?? 0;
-    final truePoints = widget.data['TotalTruePoints'] ?? 0;
-    final rank = widget.data['Rank'] ?? '-';
-    final userPic = widget.data['UserPic'] ?? '';
+    final username = data['Username'] ?? data['User'] ?? 'Player';
+    final points = data['TotalPoints'] ?? 0;
+    final truePoints = data['TotalTruePoints'] ?? 0;
+    final rank = data['Rank'] ?? '-';
+    final userPic = data['UserPic'] ?? '';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -218,15 +66,15 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _StatBadge(
+            StatBadge(
               icon: Icons.stars,
-              value: _formatNumber(points),
+              value: formatNumber(points),
               label: 'Points',
               color: Colors.amber,
             ),
-            _StatBadge(
+            StatBadge(
               icon: Icons.military_tech,
-              value: _formatNumber(truePoints),
+              value: formatNumber(truePoints),
               label: 'True Points',
               color: Colors.purple[200]!,
             ),
@@ -235,19 +83,27 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         const SizedBox(height: 24),
 
         // Branding
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
+}
 
-  Widget _buildGameCard() {
-    final title = widget.data['Title'] ?? 'Game';
-    final consoleName = widget.data['ConsoleName'] ?? '';
-    final imageIcon = widget.data['ImageIcon'] ?? '';
-    final earned = widget.data['NumAwardedToUser'] ?? widget.data['NumAchieved'] ?? 0;
-    final total = widget.data['NumAchievements'] ?? widget.data['NumPossibleAchievements'] ?? 0;
-    final points = widget.data['Points'] ?? widget.data['PossibleScore'] ?? 0;
-    final earnedPoints = widget.data['ScoreAchieved'] ?? 0;
+class GameCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String username;
+
+  const GameCard({super.key, required this.data, required this.username});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['Title'] ?? 'Game';
+    final consoleName = data['ConsoleName'] ?? '';
+    final imageIcon = data['ImageIcon'] ?? '';
+    final earned = data['NumAwardedToUser'] ?? data['NumAchieved'] ?? 0;
+    final total = data['NumAchievements'] ?? data['NumPossibleAchievements'] ?? 0;
+    final points = data['Points'] ?? data['PossibleScore'] ?? 0;
+    final earnedPoints = data['ScoreAchieved'] ?? 0;
     final progress = total > 0 ? earned / total : 0.0;
     final isMastered = earned == total && total > 0;
 
@@ -370,28 +226,34 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         const SizedBox(height: 20),
 
         // Player info
-        _buildPlayerTag(),
+        PlayerTag(username: username),
         const SizedBox(height: 16),
 
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
+}
 
-  Widget _buildAchievementCard() {
-    final title = widget.data['Title'] ?? 'Achievement';
-    final description = widget.data['Description'] ?? '';
-    final points = widget.data['Points'] ?? 0;
-    final badgeName = widget.data['BadgeName'] ?? '';
-    final gameTitle = widget.data['GameTitle'] ?? '';
-    final gameIcon = widget.data['GameIcon'] ?? '';
-    final consoleName = widget.data['ConsoleName'] ?? widget.data['consoleName'] ?? '';
-    final username = widget.data['Username'] ?? '';
-    final userPic = widget.data['UserPic'] ?? '';
-    final isEarned = widget.data['IsEarned'] == true;
-    final unlockPercent = widget.data['UnlockPercent'];
-    final rarityLabel = widget.data['RarityLabel'] ?? '';
-    final isHardcore = widget.data['HardcoreMode'] == 1;
+class AchievementCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const AchievementCard({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['Title'] ?? 'Achievement';
+    final description = data['Description'] ?? '';
+    final points = data['Points'] ?? 0;
+    final badgeName = data['BadgeName'] ?? '';
+    final gameTitle = data['GameTitle'] ?? '';
+    final gameIcon = data['GameIcon'] ?? '';
+    final consoleName = data['ConsoleName'] ?? data['consoleName'] ?? '';
+    final username = data['Username'] ?? '';
+    final userPic = data['UserPic'] ?? '';
+    final isEarned = data['IsEarned'] == true;
+    final unlockPercent = data['UnlockPercent'];
+    final isHardcore = data['HardcoreMode'] == 1;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -626,54 +488,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
               ),
             ),
             if (unlockPercent != null && unlockPercent > 0)
-              Builder(
-                builder: (context) {
-                  // Determine rarity based on unlock percent
-                  final IconData rarityIcon;
-                  final Color rarityColor;
-                  final String rarityText;
-
-                  if (unlockPercent < 5) {
-                    rarityIcon = Icons.diamond;
-                    rarityColor = Colors.red;
-                    rarityText = 'Ultra Rare';
-                  } else if (unlockPercent < 15) {
-                    rarityIcon = Icons.star;
-                    rarityColor = Colors.purple;
-                    rarityText = 'Rare';
-                  } else if (unlockPercent < 40) {
-                    rarityIcon = Icons.hexagon;
-                    rarityColor = Colors.blue;
-                    rarityText = 'Uncommon';
-                  } else {
-                    rarityIcon = Icons.circle;
-                    rarityColor = Colors.grey;
-                    rarityText = 'Common';
-                  }
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: rarityColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: rarityColor.withValues(alpha: 0.5)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(rarityIcon, color: rarityColor, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${unlockPercent.toStringAsFixed(1)}%',
-                          style: TextStyle(color: rarityColor, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.people, color: rarityColor.withValues(alpha: 0.7), size: 12),
-                      ],
-                    ),
-                  );
-                },
-              ),
+              _buildRarityBadge(unlockPercent),
           ],
         ),
         const SizedBox(height: 16),
@@ -741,14 +556,62 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
           const SizedBox(height: 16),
         ],
 
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
 
-  Widget _buildComparisonCard() {
-    final myProfile = widget.data['myProfile'] as Map<String, dynamic>? ?? {};
-    final otherProfile = widget.data['otherProfile'] as Map<String, dynamic>? ?? {};
+  Widget _buildRarityBadge(double unlockPercent) {
+    final IconData rarityIcon;
+    final Color rarityColor;
+
+    if (unlockPercent < 5) {
+      rarityIcon = Icons.diamond;
+      rarityColor = Colors.red;
+    } else if (unlockPercent < 15) {
+      rarityIcon = Icons.star;
+      rarityColor = Colors.purple;
+    } else if (unlockPercent < 40) {
+      rarityIcon = Icons.hexagon;
+      rarityColor = Colors.blue;
+    } else {
+      rarityIcon = Icons.circle;
+      rarityColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: rarityColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: rarityColor.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(rarityIcon, color: rarityColor, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            '${unlockPercent.toStringAsFixed(1)}%',
+            style: TextStyle(color: rarityColor, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.people, color: rarityColor.withValues(alpha: 0.7), size: 12),
+        ],
+      ),
+    );
+  }
+}
+
+class ComparisonCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const ComparisonCard({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final myProfile = data['myProfile'] as Map<String, dynamic>? ?? {};
+    final otherProfile = data['otherProfile'] as Map<String, dynamic>? ?? {};
 
     final myName = myProfile['User'] ?? 'You';
     final otherName = otherProfile['User'] ?? 'Opponent';
@@ -879,40 +742,47 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         const SizedBox(height: 24),
 
         // Stats comparison
-        _ComparisonStatRow(
+        ComparisonStatRow(
           label: 'Points',
-          myValue: _formatNumber(myPoints),
-          otherValue: _formatNumber(otherPoints),
+          myValue: formatNumber(myPoints),
+          otherValue: formatNumber(otherPoints),
           myWins: myPtsNum > otherPtsNum,
           otherWins: otherPtsNum > myPtsNum,
         ),
         const SizedBox(height: 8),
-        _ComparisonStatRow(
+        ComparisonStatRow(
           label: 'True Points',
-          myValue: _formatNumber(myTruePoints),
-          otherValue: _formatNumber(otherTruePoints),
+          myValue: formatNumber(myTruePoints),
+          otherValue: formatNumber(otherTruePoints),
           myWins: (int.tryParse(myTruePoints.toString()) ?? 0) > (int.tryParse(otherTruePoints.toString()) ?? 0),
           otherWins: (int.tryParse(otherTruePoints.toString()) ?? 0) > (int.tryParse(myTruePoints.toString()) ?? 0),
         ),
         const SizedBox(height: 24),
 
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
+}
 
-  Widget _buildMilestoneCard() {
-    final title = widget.data['title'] ?? 'Milestone';
-    final description = widget.data['description'] ?? '';
-    final category = widget.data['category'] ?? '';
-    final username = widget.data['username'] ?? 'Player';
-    final userPic = widget.data['userPic'] ?? '';
-    final iconCode = widget.data['iconCode'] as int? ?? Icons.emoji_events.codePoint;
-    final colorValue = widget.data['colorValue'] as int? ?? Colors.amber.value;
+class MilestoneCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const MilestoneCard({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['title'] ?? 'Milestone';
+    final description = data['description'] ?? '';
+    final category = data['category'] ?? '';
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final iconCode = data['iconCode'] as int? ?? Icons.emoji_events.codePoint;
+    final colorValue = data['colorValue'] as int? ?? Colors.amber.value;
     final milestoneColor = Color(colorValue);
-    final isEarned = widget.data['isEarned'] == true;
-    final currentValue = widget.data['currentValue'] as int? ?? 0;
-    final requirement = widget.data['requirement'] as int? ?? 1;
+    final isEarned = data['isEarned'] == true;
+    final currentValue = data['currentValue'] as int? ?? 0;
+    final requirement = data['requirement'] as int? ?? 1;
     final progress = requirement > 0 ? (currentValue / requirement).clamp(0.0, 1.0) : 0.0;
 
     return Column(
@@ -1088,20 +958,27 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         ),
         const SizedBox(height: 20),
 
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
+}
 
-  Widget _buildRAAwardCard() {
-    final title = widget.data['title'] ?? 'Award';
-    final consoleName = widget.data['consoleName'] ?? '';
-    final awardType = widget.data['awardType'] ?? 'Award';
-    final imageIcon = widget.data['imageIcon'] ?? '';
-    final awardedAt = widget.data['awardedAt'] ?? '';
-    final username = widget.data['username'] ?? 'Player';
-    final userPic = widget.data['userPic'] ?? '';
-    final colorValue = widget.data['colorValue'] as int? ?? Colors.amber.value;
+class RAAwardCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const RAAwardCard({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['title'] ?? 'Award';
+    final consoleName = data['consoleName'] ?? '';
+    final awardType = data['awardType'] ?? 'Award';
+    final imageIcon = data['imageIcon'] ?? '';
+    final awardedAt = data['awardedAt'] ?? '';
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final colorValue = data['colorValue'] as int? ?? Colors.amber.value;
     final awardColor = Color(colorValue);
 
     return Column(
@@ -1226,7 +1103,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         ),
         const SizedBox(height: 20),
 
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
@@ -1239,12 +1116,19 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
       return dateStr;
     }
   }
+}
 
-  Widget _buildStreakCard() {
-    final currentStreak = widget.data['currentStreak'] as int? ?? 0;
-    final bestStreak = widget.data['bestStreak'] as int? ?? 0;
-    final username = widget.data['username'] as String? ?? 'Player';
-    final isActive = widget.data['isActive'] as bool? ?? false;
+class StreakCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const StreakCard({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStreak = data['currentStreak'] as int? ?? 0;
+    final bestStreak = data['bestStreak'] as int? ?? 0;
+    final username = data['username'] as String? ?? 'Player';
+    final isActive = data['isActive'] as bool? ?? false;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1289,7 +1173,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
           ),
         ),
         Text(
-          currentStreak == 1 ? 'DAY STREAK' : 'DAY STREAK',
+          'DAY STREAK',
           style: TextStyle(
             color: Colors.orange.shade300,
             fontSize: 18,
@@ -1353,341 +1237,8 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         ),
         const SizedBox(height: 20),
 
-        _buildBranding(),
+        const Branding(),
       ],
     );
   }
-
-  Widget _buildPlayerTag() {
-    final authState = ref.read(authProvider);
-    final username = authState.username ?? 'Player';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundImage: CachedNetworkImageProvider(
-              'https://retroachievements.org/UserPic/$username.png',
-            ),
-            backgroundColor: Colors.grey[700],
-            onBackgroundImageError: (_, __) {},
-          ),
-          const SizedBox(width: 8),
-          Text(
-            username,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBranding() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.videogame_asset, color: Colors.white.withValues(alpha: 0.5), size: 16),
-        const SizedBox(width: 6),
-        Text(
-          'RetroTracker',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Text(
-          ' • ',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-        ),
-        Text(
-          'retroachievements.org',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatNumber(dynamic num) {
-    if (num == null) return '0';
-    final n = int.tryParse(num.toString()) ?? 0;
-    if (n >= 1000000) {
-      return '${(n / 1000000).toStringAsFixed(1)}M';
-    } else if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(1)}K';
-    }
-    return n.toString();
-  }
-
-  Future<void> _shareCard() async {
-    setState(() => _isGenerating = true);
-
-    try {
-      // Capture the widget as image
-      final boundary = _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw Exception('Could not capture card');
-      }
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) {
-        throw Exception('Could not convert to image');
-      }
-
-      final bytes = byteData.buffer.asUint8List();
-
-      // Save to temp file
-      final tempDir = await getTemporaryDirectory();
-      final fileName = 'retrotracker_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('${tempDir.path}/$fileName');
-      await file.writeAsBytes(bytes);
-
-      // Share
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: _getShareText(),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGenerating = false);
-      }
-    }
-  }
-
-  String _getShareText() {
-    switch (widget.type) {
-      case ShareCardType.profile:
-        final username = widget.data['User'] ?? 'Player';
-        final points = widget.data['TotalPoints'] ?? 0;
-        return 'Check out my RetroAchievements profile! $points points 🎮 #RetroAchievements #RetroTracker';
-      case ShareCardType.game:
-        final title = widget.data['Title'] ?? 'Game';
-        final earned = widget.data['NumAwardedToUser'] ?? widget.data['NumAchieved'] ?? 0;
-        final total = widget.data['NumAchievements'] ?? widget.data['NumPossibleAchievements'] ?? 0;
-        return 'Playing $title - $earned/$total achievements! 🎮 #RetroAchievements #RetroTracker';
-      case ShareCardType.achievement:
-        final title = widget.data['Title'] ?? 'Achievement';
-        final gameTitle = widget.data['GameTitle'] ?? '';
-        return 'Just unlocked "$title" in $gameTitle! 🏆 #RetroAchievements #RetroTracker';
-      case ShareCardType.comparison:
-        final myProfile = widget.data['myProfile'] as Map<String, dynamic>? ?? {};
-        final otherProfile = widget.data['otherProfile'] as Map<String, dynamic>? ?? {};
-        final myName = myProfile['User'] ?? 'Me';
-        final otherName = otherProfile['User'] ?? 'Opponent';
-        return 'Check out my comparison vs $otherName on RetroAchievements! ⚔️ #RetroAchievements #RetroTracker';
-      case ShareCardType.milestone:
-        final goalTitle = widget.data['title'] ?? 'Goal';
-        final username = widget.data['username'] ?? 'Player';
-        return '$username completed the "$goalTitle" goal! 🏅 #RetroAchievements #RetroTracker';
-      case ShareCardType.raAward:
-        final awardTitle = widget.data['title'] ?? 'Game';
-        final awardType = widget.data['awardType'] ?? 'Award';
-        final username = widget.data['username'] ?? 'Player';
-        return '$username earned $awardType on $awardTitle! 🏆 #RetroAchievements #RetroTracker';
-      case ShareCardType.streak:
-        final currentStreak = widget.data['currentStreak'] ?? 0;
-        final username = widget.data['username'] ?? 'Player';
-        return '$username is on a $currentStreak day streak! 🔥 #RetroAchievements #RetroTracker';
-    }
-  }
-}
-
-class _CardStyle {
-  final String name;
-  final List<Color> colors;
-
-  _CardStyle(this.name, this.colors);
-}
-
-class _StyleButton extends StatelessWidget {
-  final _CardStyle style;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _StyleButton({
-    required this.style,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 60,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: style.colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: isSelected
-              ? Border.all(color: Colors.white, width: 2)
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            style.name,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatBadge extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  const _StatBadge({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(icon, color: color, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ComparisonStatRow extends StatelessWidget {
-  final String label;
-  final String myValue;
-  final String otherValue;
-  final bool myWins;
-  final bool otherWins;
-
-  const _ComparisonStatRow({
-    required this.label,
-    required this.myValue,
-    required this.otherValue,
-    required this.myWins,
-    required this.otherWins,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              myValue,
-              style: TextStyle(
-                color: myWins ? Colors.green : Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 12,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              otherValue,
-              style: TextStyle(
-                color: otherWins ? Colors.red : Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.03)
-      ..strokeWidth = 1;
-
-    // Draw diagonal lines
-    for (var i = -size.height; i < size.width + size.height; i += 20) {
-      canvas.drawLine(
-        Offset(i.toDouble(), 0),
-        Offset(i + size.height, size.height),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

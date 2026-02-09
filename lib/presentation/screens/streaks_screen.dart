@@ -5,7 +5,7 @@ import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
-import 'share_card_screen.dart';
+import 'share_card/share_card_screen.dart';
 
 class StreaksScreen extends ConsumerStatefulWidget {
   const StreaksScreen({super.key});

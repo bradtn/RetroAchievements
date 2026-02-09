@@ -5,7 +5,7 @@ import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/premium_gate.dart';
-import 'share_card_screen.dart';
+import 'share_card/share_card_screen.dart';
 
 class MilestonesScreen extends ConsumerStatefulWidget {
   final String? username;
