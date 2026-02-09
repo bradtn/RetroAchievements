@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-import 'haptics.dart';
 
 /// Pulsing celebration badge
 class CelebrationBadge extends StatefulWidget {

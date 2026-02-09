@@ -6,8 +6,6 @@ import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
-import '../providers/favorites_provider.dart';
-import '../providers/premium_provider.dart';
 import 'share_card/share_card_screen.dart';
 import 'game_detail/achievement_tile.dart';
 import 'game_detail/leaderboard_widgets.dart';
@@ -234,9 +232,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               final titleColor = isLightMode
                   ? Color.lerp(Colors.white, Colors.grey[900], collapseRatio)!
                   : Colors.white;
-
-              // Fade shadow as we collapse (shadow not needed on solid bg)
-              final shadowOpacity = (1.0 - collapseRatio).clamp(0.0, 1.0);
 
               return FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.only(left: 56, right: 16, bottom: 10),
@@ -1198,24 +1193,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       uncommonCount: uncommonCount,
       commonCount: commonCount,
       numDistinctPlayers: numDistinctPlayers,
-    );
-  }
-
-  Widget _buildRarityLegendItem(IconData icon, Color color, String name, String percent, int count) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 10, color: color),
-        const SizedBox(width: 3),
-        Text(
-          '$name ($count)',
-          style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
     );
   }
 }

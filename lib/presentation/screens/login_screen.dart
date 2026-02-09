@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
@@ -17,7 +16,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _obscureApiKey = true;
 
-  static const _raSettingsUrl = 'https://retroachievements.org/settings';
   static const _raApiKeyUrl = 'https://retroachievements.org/controlpanel.php';
 
   @override

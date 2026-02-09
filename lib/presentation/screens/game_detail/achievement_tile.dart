@@ -60,7 +60,6 @@ class AchievementTile extends ConsumerWidget {
     final title = achievement['Title'] ?? 'Achievement';
     final description = achievement['Description'] ?? '';
     final points = achievement['Points'] ?? 0;
-    final trueRatio = achievement['TrueRatio'] ?? 0;
     final badgeName = achievement['BadgeName'] ?? '';
     final numAwarded = achievement['NumAwarded'] ?? 0;
     final isPremium = ref.watch(isPremiumProvider);
@@ -341,12 +340,10 @@ class AchievementTile extends ConsumerWidget {
     final title = achievement['Title'] ?? 'Achievement';
     final description = achievement['Description'] ?? '';
     final points = achievement['Points'] ?? 0;
-    final trueRatio = achievement['TrueRatio'] ?? 0;
     final badgeName = achievement['BadgeName'] ?? '';
     final numAwarded = achievement['NumAwarded'] ?? 0;
     final dateEarned = achievement['DateEarned'] ?? achievement['DateEarnedHardcore'];
     final isEarned = dateEarned != null;
-    final isPremium = ref.read(isPremiumProvider);
     final rarityInfo = _getRarityInfo(numAwarded, numDistinctPlayers);
     final unlockPercent = numDistinctPlayers > 0
         ? (numAwarded / numDistinctPlayers * 100)

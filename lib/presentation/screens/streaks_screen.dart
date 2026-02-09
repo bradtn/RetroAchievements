@@ -5,7 +5,6 @@ import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
-import 'share_card/share_card_screen.dart';
 
 class StreaksScreen extends ConsumerStatefulWidget {
   const StreaksScreen({super.key});
@@ -610,23 +609,6 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _shareStreak(StreakState streakState) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ShareCardScreen(
-          type: ShareCardType.streak,
-          data: {
-            'currentStreak': streakState.currentStreak,
-            'bestStreak': streakState.bestStreak,
-            'username': _viewingUsername ?? '',
-            'isActive': streakState.isStreakActive,
-          },
         ),
       ),
     );

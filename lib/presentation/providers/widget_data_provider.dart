@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/datasources/ra_api_datasource.dart';
 import 'auth_provider.dart';
 import 'streak_provider.dart';
 

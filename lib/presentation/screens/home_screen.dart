@@ -15,9 +15,7 @@ import 'game_detail_screen.dart';
 import 'console_browser_screen.dart';
 import 'leaderboard_screen.dart';
 import 'aotw_screen.dart';
-import 'user_compare_screen.dart';
 import 'favorites_screen.dart';
-import 'awards_screen.dart';
 import 'friends_screen.dart';
 import 'calendar_screen.dart';
 import 'share_card/share_card_screen.dart';
@@ -903,7 +901,6 @@ class _GameListTile extends StatelessWidget {
     final imageUrl = 'https://retroachievements.org${game['ImageIcon']}';
     final earned = game['NumAchieved'] ?? 0;
     final total = game['NumPossibleAchievements'] ?? 0;
-    final progress = total > 0 ? earned / total : 0.0;
     final gameId = game['GameID'] ?? game['ID'];
     final heroTag = 'game_image_$gameId';
 

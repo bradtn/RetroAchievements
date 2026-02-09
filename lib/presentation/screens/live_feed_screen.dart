@@ -320,7 +320,6 @@ class _FeedItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = item['User'] ?? item['user'] ?? 'Unknown';
-    final gameId = item['GameID'] ?? item['gameId'] ?? item['game_id'] ?? 0;
     final gameTitle = item['GameTitle'] ?? item['gameTitle'] ?? item['Title'] ?? 'Unknown Game';
     final consoleName = item['ConsoleName'] ?? item['consoleName'] ?? '';
     final awardKind = item['AwardKind'] ?? item['awardKind'] ?? item['kind'] ?? 'beaten-softcore';
@@ -328,8 +327,6 @@ class _FeedItemTile extends StatelessWidget {
 
     // Construct user avatar URL - API doesn't return this but URL pattern is known
     final userPic = '/UserPic/$user.png';
-    // Game icon URL can't be constructed from gameId alone (needs ImageIcon id)
-    // We'll use a console-based placeholder
 
     // Determine award type and styling
     final awardInfo = _getAwardInfo(awardKind);
