@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:confetti/confetti.dart';
 
@@ -349,12 +350,13 @@ class _AnimatedListItemState extends State<AnimatedListItem>
 
 // ============ INTERACTIVE ANIMATIONS ============
 
-/// Tappable card with scale animation
+/// Tappable card with scale animation and haptic feedback
 class TappableCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final double scaleFactor;
+  final bool enableHaptics;
 
   const TappableCard({
     super.key,
@@ -362,6 +364,7 @@ class TappableCard extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.scaleFactor = 0.97,
+    this.enableHaptics = true,
   });
 
   @override
@@ -395,6 +398,9 @@ class _TappableCardState extends State<TappableCard>
 
   void _onTapDown(TapDownDetails details) {
     _controller.forward();
+    if (widget.enableHaptics) {
+      HapticFeedback.lightImpact();
+    }
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -405,6 +411,13 @@ class _TappableCardState extends State<TappableCard>
     _controller.reverse();
   }
 
+  void _handleLongPress() {
+    if (widget.enableHaptics) {
+      HapticFeedback.mediumImpact();
+    }
+    widget.onLongPress?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -412,7 +425,7 @@ class _TappableCardState extends State<TappableCard>
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
       onTap: widget.onTap,
-      onLongPress: widget.onLongPress,
+      onLongPress: widget.onLongPress != null ? _handleLongPress : null,
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: widget.child,
@@ -1555,5 +1568,46 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         );
       },
     );
+  }
+}
+
+// ============ HAPTIC FEEDBACK UTILITIES ============
+
+/// Utility class for consistent haptic feedback throughout the app
+class Haptics {
+  Haptics._();
+
+  /// Light tap feedback - for button presses, list item taps
+  static void light() => HapticFeedback.lightImpact();
+
+  /// Medium feedback - for toggles, selections, confirmations
+  static void medium() => HapticFeedback.mediumImpact();
+
+  /// Heavy feedback - for important actions, deletions
+  static void heavy() => HapticFeedback.heavyImpact();
+
+  /// Selection feedback - for picker changes, tab switches
+  static void selection() => HapticFeedback.selectionClick();
+
+  /// Vibrate feedback - for errors, warnings
+  static void vibrate() => HapticFeedback.vibrate();
+
+  /// Success feedback - for achievements, completions
+  static void success() {
+    HapticFeedback.mediumImpact();
+    Future.delayed(const Duration(milliseconds: 100), () {
+      HapticFeedback.lightImpact();
+    });
+  }
+
+  /// Celebration feedback - for milestones, big achievements
+  static void celebration() {
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 80), () {
+      HapticFeedback.mediumImpact();
+    });
+    Future.delayed(const Duration(milliseconds: 160), () {
+      HapticFeedback.lightImpact();
+    });
   }
 }

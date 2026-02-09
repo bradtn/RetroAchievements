@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -213,6 +214,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text('Get notified about your streaks', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.streakNotificationsEnabled,
             onChanged: (value) async {
+              HapticFeedback.selectionClick();
               if (value) {
                 final granted = await NotificationService().requestPermissions();
                 if (!granted) {
@@ -233,7 +235,10 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text('Remind me at 7 PM if I haven\'t played', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.eveningReminderEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
-                ? (value) => ref.read(notificationSettingsProvider.notifier).setEveningReminder(value)
+                ? (value) {
+                    HapticFeedback.selectionClick();
+                    ref.read(notificationSettingsProvider.notifier).setEveningReminder(value);
+                  }
                 : null,
           ),
           SwitchListTile(
@@ -242,7 +247,10 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text('Celebrate streak milestones (7, 30, 100 days)', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.milestonesEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
-                ? (value) => ref.read(notificationSettingsProvider.notifier).setMilestones(value)
+                ? (value) {
+                    HapticFeedback.selectionClick();
+                    ref.read(notificationSettingsProvider.notifier).setMilestones(value);
+                  }
                 : null,
           ),
           SwitchListTile(
@@ -251,7 +259,10 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: Text('Show achievements earned today', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.dailySummaryEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
-                ? (value) => ref.read(notificationSettingsProvider.notifier).setDailySummary(value)
+                ? (value) {
+                    HapticFeedback.selectionClick();
+                    ref.read(notificationSettingsProvider.notifier).setDailySummary(value);
+                  }
                 : null,
           ),
           SwitchListTile(
@@ -259,7 +270,10 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Achievement of the Week', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
             subtitle: Text('Notify when new AOTW is available', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.aotwNotificationsEnabled,
-            onChanged: (value) => ref.read(notificationSettingsProvider.notifier).setAotwNotifications(value),
+            onChanged: (value) {
+              HapticFeedback.selectionClick();
+              ref.read(notificationSettingsProvider.notifier).setAotwNotifications(value);
+            },
           ),
           const Divider(),
 

@@ -2057,6 +2057,7 @@ class _FavoriteButtonLarge extends ConsumerWidget {
   }
 
   void _toggleFavorite(BuildContext context, WidgetRef ref, bool isFavorite) {
+    Haptics.medium();
     final game = FavoriteGame(
       gameId: gameId,
       title: title,

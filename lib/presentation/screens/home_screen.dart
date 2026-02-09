@@ -156,7 +156,10 @@ class _HomeTab extends StatelessWidget {
     }
 
     return RefreshIndicator(
-      onRefresh: () async => onRefresh(),
+      onRefresh: () async {
+        Haptics.medium();
+        onRefresh();
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -666,7 +669,10 @@ class _AchievementsTab extends StatelessWidget {
       body: isLoading
           ? _buildShimmerLoading()
           : RefreshIndicator(
-              onRefresh: () async => onRefresh(),
+              onRefresh: () async {
+                Haptics.medium();
+                onRefresh();
+              },
               child: achievements == null || achievements!.isEmpty
                   ? Center(
                       child: Column(
