@@ -155,11 +155,8 @@ class _HomeTab extends StatelessWidget {
       return _buildShimmerLoading();
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        Haptics.medium();
-        onRefresh();
-      },
+    return RetroRefreshIndicator(
+      onRefresh: () async => onRefresh(),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -668,11 +665,8 @@ class _AchievementsTab extends StatelessWidget {
       ),
       body: isLoading
           ? _buildShimmerLoading()
-          : RefreshIndicator(
-              onRefresh: () async {
-                Haptics.medium();
-                onRefresh();
-              },
+          : RetroRefreshIndicator(
+              onRefresh: () async => onRefresh(),
               child: achievements == null || achievements!.isEmpty
                   ? Center(
                       child: Column(
