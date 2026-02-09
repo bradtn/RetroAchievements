@@ -9,6 +9,7 @@ import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/game_cache_provider.dart';
 import 'services/widget_service.dart';
 import 'services/notification_service.dart';
+import 'services/background_sync_service.dart';
 
 /// Global navigator key for widget navigation
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -24,12 +25,24 @@ class RetroTrackerApp extends ConsumerStatefulWidget {
 class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   bool _hasRequestedPermission = false;
   bool _hasTriggeredCacheDownload = false;
+  bool _hasTriggeredWidgetSync = false;
 
   @override
   void initState() {
     super.initState();
     // Initialize widget service to handle widget clicks
-    WidgetService.init(onGameSelected: _onWidgetGameSelected);
+    WidgetService.init(
+      onGameSelected: _onWidgetGameSelected,
+      onOpenScreen: _onWidgetOpenScreen,
+    );
+  }
+
+  void _onWidgetOpenScreen(String screen) {
+    // Handle opening specific screens from widgets
+    // Currently only used for streak widget -> calendar
+    if (screen == 'calendar') {
+      // The HomeScreen handles this navigation
+    }
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -89,15 +102,24 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     });
   }
 
+  void _triggerWidgetDataSync() {
+    if (_hasTriggeredWidgetSync) return;
+    _hasTriggeredWidgetSync = true;
+
+    // Sync widget data in the background
+    BackgroundSyncService().syncWidgetDataOnAppOpen();
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
 
-    // Request notification permission and trigger background cache after user is authenticated
+    // Request notification permission and trigger background tasks after user is authenticated
     if (authState.isAuthenticated) {
       _requestNotificationPermission();
       _triggerBackgroundCacheDownload();
+      _triggerWidgetDataSync();
     }
 
     return MaterialApp(

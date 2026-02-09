@@ -12,6 +12,7 @@ class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.retrotracker.retrotracker/widget"
     private var methodChannel: MethodChannel? = null
     private var pendingGameId: Int? = null
+    private var pendingScreen: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -20,10 +21,39 @@ class MainActivity : FlutterActivity() {
         methodChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "updateWidget" -> {
-                    updateWidget()
+                    updateGameTrackerWidget()
                     result.success(true)
                 }
+                "updateAllWidgets" -> {
+                    updateAllWidgets()
+                    result.success(true)
+                }
+                "updateRecentAchievementsWidget" -> {
+                    updateRecentAchievementsWidget()
+                    result.success(true)
+                }
+                "updateStreakWidget" -> {
+                    updateStreakWidget()
+                    result.success(true)
+                }
+                "updateAotwWidget" -> {
+                    updateAotwWidget()
+                    result.success(true)
+                }
+                "updateFriendActivityWidget" -> {
+                    updateFriendActivityWidget()
+                    result.success(true)
+                }
+                "getInitialIntent" -> {
+                    val intentData = mutableMapOf<String, Any?>()
+                    pendingGameId?.let { intentData["game_id"] = it }
+                    pendingScreen?.let { intentData["open_screen"] = it }
+                    result.success(intentData)
+                    pendingGameId = null
+                    pendingScreen = null
+                }
                 "getInitialGameId" -> {
+                    // Legacy support
                     result.success(pendingGameId)
                     pendingGameId = null
                 }
@@ -33,7 +63,7 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // Check if we have a pending game ID from widget click
+        // Check if we have pending data from widget click
         handleIntent(intent)
     }
 
@@ -44,28 +74,72 @@ class MainActivity : FlutterActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val gameId = intent?.getIntExtra("game_id", 0) ?: 0
+        val openScreen = intent?.getStringExtra("open_screen")
+
         if (gameId > 0) {
             pendingGameId = gameId
-            // If Flutter is already running, send the event
             methodChannel?.invokeMethod("onWidgetGameSelected", gameId)
+        } else if (openScreen != null) {
+            pendingScreen = openScreen
+            methodChannel?.invokeMethod("onOpenScreen", openScreen)
         }
     }
 
-    private fun updateWidget() {
+    private fun updateAllWidgets() {
+        updateGameTrackerWidget()
+        updateRecentAchievementsWidget()
+        updateStreakWidget()
+        updateAotwWidget()
+        updateFriendActivityWidget()
+    }
+
+    private fun updateGameTrackerWidget() {
         val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
         val componentName = ComponentName(applicationContext, GameTrackerWidget::class.java)
         val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
 
-        // Update all widgets
         for (appWidgetId in appWidgetIds) {
             GameTrackerWidget.updateWidget(applicationContext, appWidgetManager, appWidgetId)
         }
+    }
 
-        // Also send broadcast for any widgets that might have been missed
-        val broadcastIntent = Intent(applicationContext, GameTrackerWidget::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+    private fun updateRecentAchievementsWidget() {
+        val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+        val componentName = ComponentName(applicationContext, RecentAchievementsWidget::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+
+        for (appWidgetId in appWidgetIds) {
+            RecentAchievementsWidget.updateWidget(applicationContext, appWidgetManager, appWidgetId)
         }
-        sendBroadcast(broadcastIntent)
+    }
+
+    private fun updateStreakWidget() {
+        val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+        val componentName = ComponentName(applicationContext, StreakWidget::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+
+        for (appWidgetId in appWidgetIds) {
+            StreakWidget.updateWidget(applicationContext, appWidgetManager, appWidgetId)
+        }
+    }
+
+    private fun updateAotwWidget() {
+        val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+        val componentName = ComponentName(applicationContext, AotwWidget::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+
+        for (appWidgetId in appWidgetIds) {
+            AotwWidget.updateWidget(applicationContext, appWidgetManager, appWidgetId)
+        }
+    }
+
+    private fun updateFriendActivityWidget() {
+        val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+        val componentName = ComponentName(applicationContext, FriendActivityWidget::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+
+        for (appWidgetId in appWidgetIds) {
+            FriendActivityWidget.updateWidget(applicationContext, appWidgetManager, appWidgetId)
+        }
     }
 }

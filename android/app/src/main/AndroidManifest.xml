@@ -61,7 +61,7 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-2658368978045167~6487046244"/>
 
-        <!-- Home Screen Widget -->
+        <!-- Home Screen Widget - Game Tracker -->
         <receiver
             android:name=".GameTrackerWidget"
             android:exported="true">
@@ -71,6 +71,61 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/game_tracker_widget_info" />
+        </receiver>
+
+        <!-- Home Screen Widget - Recent Achievements -->
+        <receiver
+            android:name=".RecentAchievementsWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.retrotracker.retrotracker.REFRESH_RECENT_ACHIEVEMENTS" />
+                <action android:name="com.retrotracker.retrotracker.RECENT_ACH_NEXT" />
+                <action android:name="com.retrotracker.retrotracker.RECENT_ACH_PREV" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/recent_achievements_widget_info" />
+        </receiver>
+
+        <!-- Home Screen Widget - Streak -->
+        <receiver
+            android:name=".StreakWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.retrotracker.retrotracker.REFRESH_STREAK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/streak_widget_info" />
+        </receiver>
+
+        <!-- Home Screen Widget - Achievement of the Week -->
+        <receiver
+            android:name=".AotwWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.retrotracker.retrotracker.REFRESH_AOTW" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/aotw_widget_info" />
+        </receiver>
+
+        <!-- Home Screen Widget - Friend Activity -->
+        <receiver
+            android:name=".FriendActivityWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.retrotracker.retrotracker.REFRESH_FRIEND_ACTIVITY" />
+                <action android:name="com.retrotracker.retrotracker.FRIEND_ACTIVITY_NEXT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/friend_activity_widget_info" />
         </receiver>
     </application>
 </manifest>

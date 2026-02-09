@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
+import 'widget_service.dart';
 
 class BackgroundSyncService {
   static final BackgroundSyncService _instance = BackgroundSyncService._internal();
@@ -242,6 +244,286 @@ class BackgroundSyncService {
       await prefs.setString('last_known_aotw_id', achievementId);
       await prefs.setString('last_aotw_check_date', todayStr);
 
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  /// Sync all widget data on app open
+  Future<void> syncWidgetDataOnAppOpen() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Get stored credentials
+    final username = prefs.getString('ra_username');
+    final apiKey = prefs.getString('ra_api_key');
+
+    if (username == null || apiKey == null) return;
+
+    // Check if enough time has passed since last sync (30 minutes minimum)
+    final lastSyncTime = prefs.getInt('last_widget_sync_time') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - lastSyncTime < 1800000) return; // 30 minutes
+
+    try {
+      final dio = Dio(BaseOptions(
+        baseUrl: 'https://retroachievements.org/API/',
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+
+      // Sync recent achievements
+      await _syncRecentAchievementsWidget(dio, username, apiKey, prefs);
+
+      // Sync streak data
+      await _syncStreakWidget(prefs);
+
+      // Sync AOTW
+      await _syncAotwWidget(dio, username, apiKey, prefs);
+
+      // Sync friend activity
+      await _syncFriendActivityWidget(dio, username, apiKey, prefs);
+
+      // Update all widgets
+      await WidgetService.updateAllWidgets();
+
+      await prefs.setInt('last_widget_sync_time', now);
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  Future<void> _syncRecentAchievementsWidget(
+    Dio dio,
+    String username,
+    String apiKey,
+    SharedPreferences prefs,
+  ) async {
+    try {
+      final response = await dio.get(
+        'API_GetUserSummary.php',
+        queryParameters: {
+          'z': username,
+          'y': apiKey,
+          'u': username,
+          'g': 5,
+          'a': 10,
+        },
+      );
+
+      if (response.statusCode != 200 || response.data == null) return;
+
+      final data = response.data as Map<String, dynamic>;
+      final recentAch = data['RecentAchievements'];
+      List<dynamic> achievements = [];
+
+      if (recentAch is List) {
+        achievements = recentAch;
+      } else if (recentAch is Map) {
+        achievements = recentAch.values.toList();
+      }
+
+      // Flatten if nested
+      if (achievements.isNotEmpty && achievements.first is Map) {
+        final first = achievements.first as Map;
+        if (first.values.isNotEmpty && first.values.first is Map) {
+          achievements = first.values.map((v) => v as Map<String, dynamic>).toList();
+        }
+      }
+
+      final widgetData = <Map<String, dynamic>>[];
+      final now = DateTime.now();
+
+      for (final ach in achievements.take(5)) {
+        if (ach is! Map) continue;
+
+        final dateStr = ach['Date']?.toString() ?? ach['DateEarned']?.toString() ?? '';
+        String timestamp = '';
+        if (dateStr.isNotEmpty) {
+          try {
+            final date = DateTime.parse(dateStr);
+            final diff = now.difference(date);
+            if (diff.inMinutes < 60) {
+              timestamp = '${diff.inMinutes}m ago';
+            } else if (diff.inHours < 24) {
+              timestamp = '${diff.inHours}h ago';
+            } else if (diff.inDays < 7) {
+              timestamp = '${diff.inDays}d ago';
+            } else {
+              timestamp = '${date.month}/${date.day}';
+            }
+          } catch (_) {}
+        }
+
+        widgetData.add({
+          'title': ach['Title']?.toString() ?? 'Achievement',
+          'gameTitle': ach['GameTitle']?.toString() ?? 'Unknown Game',
+          'consoleName': ach['ConsoleName']?.toString() ?? '',
+          'points': ach['Points'] ?? 0,
+          'hardcore': (ach['HardcoreMode'] ?? 0) == 1,
+          'timestamp': timestamp,
+          'achievementIcon': ach['BadgeName'] != null
+              ? '/Badge/${ach['BadgeName']}.png'
+              : '',
+          'gameIcon': ach['GameIcon']?.toString() ?? '',
+        });
+      }
+
+      await prefs.setString('widget_recent_achievements', jsonEncode(widgetData));
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  Future<void> _syncStreakWidget(SharedPreferences prefs) async {
+    try {
+      final currentStreak = prefs.getInt('last_known_streak') ?? 0;
+      final bestStreak = prefs.getInt('best_known_streak') ?? currentStreak;
+
+      await prefs.setInt('widget_current_streak', currentStreak);
+      await prefs.setInt('widget_best_streak', bestStreak);
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  Future<void> _syncAotwWidget(
+    Dio dio,
+    String username,
+    String apiKey,
+    SharedPreferences prefs,
+  ) async {
+    try {
+      final response = await dio.get(
+        'API_GetAchievementOfTheWeek.php',
+        queryParameters: {
+          'z': username,
+          'y': apiKey,
+        },
+      );
+
+      if (response.statusCode != 200 || response.data == null) return;
+
+      final data = response.data as Map<String, dynamic>;
+      final achievement = data['Achievement'] as Map<String, dynamic>?;
+      final game = data['Game'] as Map<String, dynamic>?;
+      final console = data['Console'] as Map<String, dynamic>?;
+
+      await prefs.setString('widget_aotw_title', achievement?['Title']?.toString() ?? '');
+      await prefs.setString('widget_aotw_game', game?['Title']?.toString() ?? '');
+      await prefs.setString('widget_aotw_console', console?['Name']?.toString() ?? '');
+      await prefs.setInt('widget_aotw_points', achievement?['Points'] ?? 0);
+      await prefs.setInt('widget_aotw_game_id', game?['ID'] ?? 0);
+
+      final badgeName = achievement?['BadgeName']?.toString() ?? '';
+      await prefs.setString('widget_aotw_achievement_icon',
+          badgeName.isNotEmpty ? '/Badge/$badgeName.png' : '');
+      await prefs.setString('widget_aotw_game_icon', game?['ImageIcon']?.toString() ?? '');
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  Future<void> _syncFriendActivityWidget(
+    Dio dio,
+    String username,
+    String apiKey,
+    SharedPreferences prefs,
+  ) async {
+    try {
+      final response = await dio.get(
+        'API_GetUsersIFollow.php',
+        queryParameters: {
+          'z': username,
+          'y': apiKey,
+        },
+      );
+
+      if (response.statusCode != 200 || response.data == null) return;
+
+      final following = response.data as List<dynamic>;
+      if (following.isEmpty) return;
+
+      final widgetData = <Map<String, dynamic>>[];
+      final now = DateTime.now();
+
+      for (final user in following.take(5)) {
+        if (user is! Map) continue;
+        final friendUsername = user['User']?.toString();
+        if (friendUsername == null) continue;
+
+        try {
+          final friendResponse = await dio.get(
+            'API_GetUserSummary.php',
+            queryParameters: {
+              'z': username,
+              'y': apiKey,
+              'u': friendUsername,
+              'g': 1,
+              'a': 3,
+            },
+          );
+
+          if (friendResponse.statusCode != 200 || friendResponse.data == null) continue;
+
+          final friendData = friendResponse.data as Map<String, dynamic>;
+          final recentAch = friendData['RecentAchievements'];
+          List<dynamic> achievements = [];
+
+          if (recentAch is List) {
+            achievements = recentAch;
+          } else if (recentAch is Map) {
+            achievements = recentAch.values.toList();
+          }
+
+          if (achievements.isNotEmpty && achievements.first is Map) {
+            final first = achievements.first as Map;
+            if (first.values.isNotEmpty && first.values.first is Map) {
+              achievements = first.values.map((v) => v as Map<String, dynamic>).toList();
+            }
+          }
+
+          for (final ach in achievements.take(1)) {
+            if (ach is! Map) continue;
+
+            final dateStr = ach['Date']?.toString() ?? ach['DateEarned']?.toString() ?? '';
+            String timestamp = '';
+            if (dateStr.isNotEmpty) {
+              try {
+                final date = DateTime.parse(dateStr);
+                final diff = now.difference(date);
+                if (diff.inMinutes < 60) {
+                  timestamp = '${diff.inMinutes}m';
+                } else if (diff.inHours < 24) {
+                  timestamp = '${diff.inHours}h';
+                } else {
+                  timestamp = '${diff.inDays}d';
+                }
+              } catch (_) {}
+            }
+
+            widgetData.add({
+              'username': friendUsername,
+              'userAvatar': user['UserPic']?.toString() ?? '/UserPic/$friendUsername.png',
+              'achievementTitle': ach['Title']?.toString() ?? 'Achievement',
+              'gameTitle': ach['GameTitle']?.toString() ?? 'Unknown Game',
+              'timestamp': timestamp,
+              'achievementIcon': ach['BadgeName'] != null
+                  ? '/Badge/${ach['BadgeName']}.png'
+                  : '',
+              'gameIcon': ach['GameIcon']?.toString() ?? '',
+            });
+          }
+
+          if (widgetData.length >= 3) break;
+
+          // Rate limiting
+          await Future.delayed(const Duration(milliseconds: 200));
+        } catch (e) {
+          continue;
+        }
+      }
+
+      await prefs.setString('widget_friend_activity', jsonEncode(widgetData));
     } catch (e) {
       // Silently fail
     }
