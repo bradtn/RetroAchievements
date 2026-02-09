@@ -399,7 +399,7 @@ class _TappableCardState extends State<TappableCard>
   void _onTapDown(TapDownDetails details) {
     _controller.forward();
     if (widget.enableHaptics) {
-      HapticFeedback.lightImpact();
+      Haptics.light();
     }
   }
 
@@ -413,7 +413,7 @@ class _TappableCardState extends State<TappableCard>
 
   void _handleLongPress() {
     if (widget.enableHaptics) {
-      HapticFeedback.mediumImpact();
+      Haptics.medium();
     }
     widget.onLongPress?.call();
   }
@@ -1638,6 +1638,7 @@ class Haptics {
 // ============ CUSTOM REFRESH INDICATOR ============
 
 /// Custom pull-to-refresh indicator with retro gaming theme
+/// Uses amber/gold color scheme for a distinctive retro look
 class RetroRefreshIndicator extends StatelessWidget {
   final Widget child;
   final Future<void> Function() onRefresh;
@@ -1653,17 +1654,18 @@ class RetroRefreshIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final indicatorColor = color ?? theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
 
     return RefreshIndicator(
       onRefresh: () async {
         Haptics.medium();
         await onRefresh();
       },
-      color: indicatorColor,
-      backgroundColor: theme.cardColor,
+      // Distinctive amber/gold color
+      color: color ?? Colors.amber,
+      backgroundColor: isDark ? const Color(0xFF2D2D2D) : Colors.white,
       strokeWidth: 3,
-      displacement: 60,
+      displacement: 50,
       child: child,
     );
   }
