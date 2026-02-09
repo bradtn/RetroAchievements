@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
-import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
-import 'game_detail_screen.dart';
+import 'calendar/calendar_helpers.dart';
+import 'calendar/calendar_widgets.dart';
+
+export 'calendar/calendar_helpers.dart';
+export 'calendar/calendar_widgets.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -135,7 +137,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               child: streakState.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : streakState.error != null
-                      ? _buildErrorView(streakState.error!)
+                      ? CalendarErrorView(
+                          error: streakState.error!,
+                          onRetry: _loadMyData,
+                        )
                       : RefreshIndicator(
                           onRefresh: () async {
                             if (_viewingUsername != null) {
@@ -147,24 +152,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildErrorView(String error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-          const SizedBox(height: 16),
-          Text(error, style: TextStyle(color: context.subtitleColor)),
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: _loadMyData,
-            child: const Text('View My Calendar'),
-          ),
-        ],
       ),
     );
   }
@@ -186,10 +173,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         SliverToBoxAdapter(child: _buildCalendar(streakState)),
 
         // Legend
-        SliverToBoxAdapter(
+        const SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _buildLegend(),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: CalendarLegend(),
           ),
         ),
 
@@ -197,21 +184,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
         // Selected day achievements
         SliverToBoxAdapter(
-          child: _buildDayHeader(achievements),
+          child: DayHeader(
+            selectedDate: _selectedDate,
+            achievementCount: achievements.length,
+          ),
         ),
 
         // Achievement list
         if (achievements.isEmpty)
-          SliverFillRemaining(
+          const SliverFillRemaining(
             hasScrollBody: false,
-            child: _buildEmptyDay(),
+            child: EmptyDayView(),
           )
         else
           SliverPadding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 16),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
-                (ctx, i) => _AchievementTile(achievement: achievements[i]),
+                (ctx, i) => CalendarAchievementTile(achievement: achievements[i]),
                 childCount: achievements.length,
               ),
             ),
@@ -224,7 +214,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return Row(
       children: [
         Expanded(
-          child: _StreakCard(
+          child: StreakCard(
             title: 'Current Streak',
             value: streakState.currentStreak,
             icon: Icons.local_fire_department,
@@ -237,7 +227,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StreakCard(
+          child: StreakCard(
             title: 'Best Streak',
             value: streakState.bestStreak,
             icon: Icons.emoji_events,
@@ -282,7 +272,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _formatMonth(_focusedMonth),
+                      formatMonth(_focusedMonth),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -365,13 +355,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
               final date = DateTime(_focusedMonth.year, _focusedMonth.month, dayOffset + 1);
               final count = _getCountForDate(date, streakState);
-              final isSelected = _isSameDay(date, _selectedDate);
-              final isToday = _isSameDay(date, DateTime.now());
+              final isSelected = isSameDay(date, _selectedDate);
+              final isToday = isSameDay(date, DateTime.now());
               final isFuture = date.isAfter(DateTime.now());
 
               return GestureDetector(
                 onTap: isFuture ? null : () => setState(() => _selectedDate = date),
-                child: _CalendarDay(
+                child: CalendarDay(
                   day: dayOffset + 1,
                   activityCount: count,
                   isSelected: isSelected,
@@ -383,76 +373,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLegend() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _LegendItem(
-          color: Theme.of(context).brightness == Brightness.light
-              ? Colors.grey.shade200
-              : Colors.grey.shade800,
-          label: 'None',
-        ),
-        const SizedBox(width: 12),
-        _LegendItem(color: Colors.green.shade300, label: '1-2'),
-        const SizedBox(width: 12),
-        _LegendItem(color: Colors.green.shade500, label: '3-5'),
-        const SizedBox(width: 12),
-        _LegendItem(color: Colors.green.shade700, label: '6+'),
-      ],
-    );
-  }
-
-  Widget _buildDayHeader(List<dynamic> achievements) {
-    final dateStr = _formatDate(_selectedDate);
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Text(
-            dateStr,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: achievements.isNotEmpty
-                  ? Colors.green.withValues(alpha: 0.2)
-                  : Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${achievements.length} unlock${achievements.length == 1 ? '' : 's'}',
-              style: TextStyle(
-                color: achievements.isNotEmpty ? Colors.green : context.subtitleColor,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyDay() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.event_busy, size: 48, color: Colors.grey[600]),
-          const SizedBox(height: 16),
-          Text(
-            'No achievements on this day',
-            style: TextStyle(color: context.subtitleColor),
-          ),
-        ],
-      ),
     );
   }
 
@@ -537,8 +457,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     itemBuilder: (context, index) {
                       final isSelected = index == selectedMonthIndex;
                       final isFuture = selectedYear == now.year && index > now.month - 1;
-                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
                       return GestureDetector(
                         onTap: isFuture ? null : () => setModalState(() => selectedMonthIndex = index),
@@ -553,7 +471,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            months[index],
+                            monthNamesShort[index],
                             style: TextStyle(
                               color: isSelected
                                   ? Colors.white
@@ -594,330 +512,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           },
         );
       },
-    );
-  }
-
-  String _formatMonth(DateTime date) {
-    final months = ['January', 'February', 'March', 'April', 'May', 'June',
-                    'July', 'August', 'September', 'October', 'November', 'December'];
-    return '${months[date.month - 1]} ${date.year}';
-  }
-
-  String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-}
-
-class _StreakCard extends StatelessWidget {
-  final String title;
-  final int value;
-  final IconData icon;
-  final Color color;
-  final String subtitle;
-  final bool showFlame;
-
-  const _StreakCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.subtitle,
-    this.showFlame = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: 0.8),
-              color.withValues(alpha: 0.6),
-            ],
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (showFlame && value > 0)
-                  AnimatedStreakFlame(streakDays: value, size: 20)
-                else
-                  Icon(icon, color: Colors.white, size: 20),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  '$value',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  value == 1 ? 'day' : 'days',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
-            Text(
-              subtitle,
-              style: const TextStyle(color: Colors.white60, fontSize: 10),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CalendarDay extends StatelessWidget {
-  final int day;
-  final int activityCount;
-  final bool isSelected;
-  final bool isToday;
-  final bool isFuture;
-
-  const _CalendarDay({
-    required this.day,
-    required this.activityCount,
-    required this.isSelected,
-    required this.isToday,
-    required this.isFuture,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    if (isSelected) {
-      bgColor = Theme.of(context).colorScheme.primary;
-    } else if (isFuture) {
-      bgColor = Colors.transparent;
-    } else if (activityCount == 0) {
-      bgColor = Theme.of(context).brightness == Brightness.light
-          ? Colors.grey.shade200
-          : Colors.grey.shade800;
-    } else if (activityCount <= 2) {
-      bgColor = Colors.green.shade300;
-    } else if (activityCount <= 5) {
-      bgColor = Colors.green.shade500;
-    } else {
-      bgColor = Colors.green.shade700;
-    }
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: isToday && !isSelected
-            ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
-            : null,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '$day',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? Colors.white
-                  : isFuture
-                      ? Colors.grey
-                      : (activityCount > 0 ? Colors.white : null),
-            ),
-          ),
-          if (activityCount > 0 && !isSelected)
-            Text(
-              '$activityCount',
-              style: const TextStyle(
-                fontSize: 8,
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendItem({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, color: context.subtitleColor),
-        ),
-      ],
-    );
-  }
-}
-
-class _AchievementTile extends StatelessWidget {
-  final dynamic achievement;
-
-  const _AchievementTile({required this.achievement});
-
-  String _formatTime(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return '';
-    try {
-      var date = DateTime.parse(dateStr);
-      date = DateTime.utc(date.year, date.month, date.day, date.hour, date.minute, date.second).toLocal();
-      final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-      final amPm = date.hour >= 12 ? 'PM' : 'AM';
-      final minute = date.minute.toString().padLeft(2, '0');
-      return '$hour:$minute $amPm';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final title = achievement['Title'] ?? 'Achievement';
-    final description = achievement['Description'] ?? '';
-    final points = achievement['Points'] ?? 0;
-    final badgeName = achievement['BadgeName'] ?? '';
-    final gameTitle = achievement['GameTitle'] ?? '';
-    final gameId = achievement['GameID'];
-    final dateStr = achievement['Date'] ?? achievement['DateEarned'] ?? '';
-    final formattedTime = _formatTime(dateStr);
-    final hardcoreMode = achievement['HardcoreMode'] == 1 ||
-                         achievement['HardcoreMode'] == true ||
-                         achievement['Hardcore'] == 1 ||
-                         achievement['Hardcore'] == true ||
-                         achievement['DateEarnedHardcore'] != null;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: gameId != null ? () {
-          Haptics.light();
-          final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
-          if (id > 0) {
-            Navigator.push(
-              context,
-              SlidePageRoute(
-                page: GameDetailScreen(gameId: id, gameTitle: gameTitle),
-              ),
-            );
-          }
-        } : null,
-        borderRadius: BorderRadius.circular(12),
-        child: ListTile(
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: CachedNetworkImage(
-              imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => Container(
-                width: 48,
-                height: 48,
-                color: Colors.grey[800],
-                child: const Icon(Icons.emoji_events),
-              ),
-            ),
-          ),
-          title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                description,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: context.subtitleColor, fontSize: 12),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.stars, size: 12, color: Colors.amber[400]),
-                  const SizedBox(width: 4),
-                  Text('$points pts', style: TextStyle(color: Colors.amber[400], fontSize: 11)),
-                  if (hardcoreMode) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'HC',
-                        style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                  if (formattedTime.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Icon(Icons.access_time, size: 10, color: Colors.grey[500]),
-                    const SizedBox(width: 2),
-                    Text(formattedTime, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                gameTitle,
-                style: TextStyle(color: context.subtitleColor, fontSize: 11),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-          isThreeLine: true,
-        ),
-      ),
     );
   }
 }
