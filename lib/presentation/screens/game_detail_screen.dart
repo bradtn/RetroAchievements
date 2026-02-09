@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../data/cache/game_cache.dart';
@@ -269,20 +270,57 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ),
                     ),
                     Flexible(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          color: titleColor,
-                          fontSize: 14,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 4,
-                              color: Colors.black.withOpacity(shadowOpacity),
-                            ),
-                          ],
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: collapseRatio > 0.5 ? 0 : 12,
+                          vertical: collapseRatio > 0.5 ? 0 : 8,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        decoration: collapseRatio > 0.5
+                            ? null
+                            : BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF6366F1).withOpacity(0.85),
+                                    const Color(0xFF8B5CF6).withOpacity(0.85),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF6366F1).withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                        child: AutoSizeText(
+                          title,
+                          style: TextStyle(
+                            color: titleColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            height: 1.2,
+                            shadows: collapseRatio > 0.5
+                                ? null
+                                : [
+                                    Shadow(
+                                      blurRadius: 2,
+                                      color: Colors.black.withOpacity(0.5),
+                                    ),
+                                  ],
+                          ),
+                          maxLines: 1,
+                          minFontSize: 10,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ],

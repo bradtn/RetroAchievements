@@ -53,6 +53,7 @@ dependencies:
 
   # In-App Purchases
   in_app_purchase: ^3.1.13
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:

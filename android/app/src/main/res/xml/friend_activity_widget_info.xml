@@ -8,5 +8,6 @@
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="3600000"
     android:widgetCategory="home_screen"
+    android:label="@string/widget_friend_activity_label"
     android:description="@string/widget_friend_activity_desc"
     android:previewImage="@mipmap/ic_launcher" />

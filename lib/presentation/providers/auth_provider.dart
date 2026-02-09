@@ -116,13 +116,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final profile = await _apiDataSource.getUserProfile(username);
 
       if (profile != null) {
-        // Save credentials securely
-        await _secureStorage.write(key: _keyUsername, value: username);
+        // Verify the returned username matches what was entered (case-insensitive)
+        final returnedUsername = profile['User']?.toString() ?? '';
+        if (returnedUsername.toLowerCase() != username.toLowerCase()) {
+          _apiDataSource.clearCredentials();
+          state = state.copyWith(
+            status: AuthStatus.unauthenticated,
+            error: 'Username mismatch. Please enter YOUR RetroAchievements username.',
+          );
+          return false;
+        }
+
+        // Save credentials securely using the exact username from RA
+        await _secureStorage.write(key: _keyUsername, value: returnedUsername);
         await _secureStorage.write(key: _keyApiKey, value: apiKey);
 
         state = AuthState(
           status: AuthStatus.authenticated,
-          username: username,
+          username: returnedUsername,
         );
         return true;
       } else {

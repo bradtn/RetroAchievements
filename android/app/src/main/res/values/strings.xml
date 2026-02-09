@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RetroTracker</string>
-    <string name="widget_description">Track your pinned game\'s achievement progress on your home screen</string>
-    <string name="widget_recent_achievements_desc">See your most recent achievement unlocks with game info and points</string>
+
+    <!-- Widget Labels (shown in widget picker) -->
+    <string name="widget_game_tracker_label">Game Progress</string>
+    <string name="widget_recent_achievements_label">Recent Achievements</string>
+    <string name="widget_streak_label">Daily Streak</string>
+    <string name="widget_aotw_label">Achievement of the Week</string>
+    <string name="widget_friend_activity_label">Friend Activity</string>
+
+    <!-- Widget Descriptions -->
+    <string name="widget_description">Track your pinned game\'s achievement progress</string>
+    <string name="widget_recent_achievements_desc">See your most recent achievement unlocks</string>
     <string name="widget_streak_desc">Display your current daily achievement streak</string>
-    <string name="widget_aotw_desc">Featured Achievement of the Week from RetroAchievements</string>
-    <string name="widget_friend_activity_desc">See recent achievement unlocks from friends you follow</string>
+    <string name="widget_aotw_desc">Featured Achievement of the Week</string>
+    <string name="widget_friend_activity_desc">Recent unlocks from friends you follow</string>
 </resources>

@@ -1,8 +1,16 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
 import 'widget_service.dart';
+
+/// Secure storage for credentials
+const _secureStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(
+    encryptedSharedPreferences: true,
+  ),
+);
 
 class BackgroundSyncService {
   static final BackgroundSyncService _instance = BackgroundSyncService._internal();
@@ -38,11 +46,11 @@ class BackgroundSyncService {
     final notificationsEnabled = prefs.getBool('streak_notifications_enabled') ?? true;
     if (!notificationsEnabled) return;
 
-    // Get stored credentials
-    final username = prefs.getString('ra_username');
-    final apiKey = prefs.getString('ra_api_key');
+    // Get stored credentials from secure storage
+    final username = await _secureStorage.read(key: 'ra_username');
+    final apiKey = await _secureStorage.read(key: 'ra_api_key');
 
-    if (username == null || apiKey == null) return;
+    if (username == null || apiKey == null || username.isEmpty || apiKey.isEmpty) return;
 
     // Get previous streak data
     final previousStreak = prefs.getInt('last_known_streak') ?? 0;
@@ -190,11 +198,11 @@ class BackgroundSyncService {
     final aotwNotificationsEnabled = prefs.getBool('aotw_notifications_enabled') ?? true;
     if (!aotwNotificationsEnabled) return;
 
-    // Get stored credentials
-    final username = prefs.getString('ra_username');
-    final apiKey = prefs.getString('ra_api_key');
+    // Get stored credentials from secure storage
+    final username = await _secureStorage.read(key: 'ra_username');
+    final apiKey = await _secureStorage.read(key: 'ra_api_key');
 
-    if (username == null || apiKey == null) return;
+    if (username == null || apiKey == null || username.isEmpty || apiKey.isEmpty) return;
 
     // Only check once per day
     final lastCheckDate = prefs.getString('last_aotw_check_date');
@@ -253,16 +261,21 @@ class BackgroundSyncService {
   Future<void> syncWidgetDataOnAppOpen() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Get stored credentials
-    final username = prefs.getString('ra_username');
-    final apiKey = prefs.getString('ra_api_key');
+    // Get stored credentials from secure storage
+    final username = await _secureStorage.read(key: 'ra_username');
+    final apiKey = await _secureStorage.read(key: 'ra_api_key');
 
-    if (username == null || apiKey == null) return;
+    if (username == null || apiKey == null || username.isEmpty || apiKey.isEmpty) return;
+
+    // Check if this is first sync (no cached widget data) - always sync if so
+    final hasWidgetData = prefs.getString('widget_recent_achievements') != null;
 
     // Check if enough time has passed since last sync (30 minutes minimum)
     final lastSyncTime = prefs.getInt('last_widget_sync_time') ?? 0;
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (now - lastSyncTime < 1800000) return; // 30 minutes
+
+    // Skip if we have data AND less than 30 minutes have passed
+    if (hasWidgetData && now - lastSyncTime < 1800000) return;
 
     try {
       final dio = Dio(BaseOptions(
@@ -275,7 +288,7 @@ class BackgroundSyncService {
       await _syncRecentAchievementsWidget(dio, username, apiKey, prefs);
 
       // Sync streak data
-      await _syncStreakWidget(prefs);
+      await _syncStreakWidget(dio, username, apiKey, prefs);
 
       // Sync AOTW
       await _syncAotwWidget(dio, username, apiKey, prefs);
@@ -374,13 +387,92 @@ class BackgroundSyncService {
     }
   }
 
-  Future<void> _syncStreakWidget(SharedPreferences prefs) async {
+  Future<void> _syncStreakWidget(
+    Dio dio,
+    String username,
+    String apiKey,
+    SharedPreferences prefs,
+  ) async {
     try {
-      final currentStreak = prefs.getInt('last_known_streak') ?? 0;
-      final bestStreak = prefs.getInt('best_known_streak') ?? currentStreak;
+      // First try cached values
+      var currentStreak = prefs.getInt('last_known_streak') ?? 0;
+      var bestStreak = prefs.getInt('best_known_streak') ?? 0;
+
+      // If no cached streak, calculate from API
+      if (currentStreak == 0) {
+        final today = DateTime.now();
+        final ninetyDaysAgo = today.subtract(const Duration(days: 90));
+        final fromTimestamp = ninetyDaysAgo.millisecondsSinceEpoch ~/ 1000;
+        final toTimestamp = today.millisecondsSinceEpoch ~/ 1000;
+
+        final response = await dio.get(
+          'API_GetAchievementsEarnedBetween.php',
+          queryParameters: {
+            'z': username,
+            'y': apiKey,
+            'u': username,
+            'f': fromTimestamp,
+            't': toTimestamp,
+          },
+        );
+
+        if (response.statusCode == 200 && response.data != null) {
+          final achievements = response.data as List<dynamic>;
+          final activityMap = <String, int>{};
+
+          for (final ach in achievements) {
+            final dateStr = ach['Date'] ?? ach['DateEarned'] ?? '';
+            if (dateStr.toString().isEmpty) continue;
+            try {
+              final date = DateTime.parse(dateStr.toString());
+              final dayKey = '${date.year}-${date.month}-${date.day}';
+              activityMap[dayKey] = (activityMap[dayKey] ?? 0) + 1;
+            } catch (e) {
+              continue;
+            }
+          }
+
+          // Calculate current streak
+          final todayKey = '${today.year}-${today.month}-${today.day}';
+          final yesterday = today.subtract(const Duration(days: 1));
+          final yesterdayKey = '${yesterday.year}-${yesterday.month}-${yesterday.day}';
+
+          if (activityMap.containsKey(todayKey) || activityMap.containsKey(yesterdayKey)) {
+            DateTime checkDate = activityMap.containsKey(todayKey) ? today : yesterday;
+            while (true) {
+              final key = '${checkDate.year}-${checkDate.month}-${checkDate.day}';
+              if (!activityMap.containsKey(key)) break;
+              currentStreak++;
+              checkDate = checkDate.subtract(const Duration(days: 1));
+            }
+          }
+
+          // Calculate best streak
+          final sortedDates = activityMap.keys.map((k) {
+            final parts = k.split('-');
+            return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+          }).toList()..sort((a, b) => b.compareTo(a));
+
+          int tempStreak = 1;
+          bestStreak = currentStreak;
+          for (int i = 1; i < sortedDates.length; i++) {
+            final diff = sortedDates[i - 1].difference(sortedDates[i]).inDays;
+            if (diff == 1) {
+              tempStreak++;
+              if (tempStreak > bestStreak) bestStreak = tempStreak;
+            } else if (diff > 1) {
+              tempStreak = 1;
+            }
+          }
+
+          // Cache for next time
+          await prefs.setInt('last_known_streak', currentStreak);
+          await prefs.setInt('best_known_streak', bestStreak);
+        }
+      }
 
       await prefs.setInt('widget_current_streak', currentStreak);
-      await prefs.setInt('widget_best_streak', bestStreak);
+      await prefs.setInt('widget_best_streak', bestStreak > 0 ? bestStreak : currentStreak);
     } catch (e) {
       // Silently fail
     }

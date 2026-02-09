@@ -21,17 +21,25 @@ class AotwWidget : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         for (appWidgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId)
+            try {
+                updateWidget(context, appWidgetManager, appWidgetId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_REFRESH) {
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = android.content.ComponentName(context, AotwWidget::class.java)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-            onUpdate(context, appWidgetManager, appWidgetIds)
+        try {
+            if (intent.action == ACTION_REFRESH) {
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val componentName = android.content.ComponentName(context, AotwWidget::class.java)
+                val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+                onUpdate(context, appWidgetManager, appWidgetIds)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -46,45 +54,65 @@ class AotwWidget : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_aotw)
 
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            try {
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-            val achievementTitle = prefs.getString("flutter.widget_aotw_title", "No AOTW Available") ?: "No AOTW Available"
-            val gameTitle = prefs.getString("flutter.widget_aotw_game", "") ?: ""
-            val consoleName = prefs.getString("flutter.widget_aotw_console", "") ?: ""
-            val points = prefs.getLong("flutter.widget_aotw_points", 0L).toInt()
-            val achievementIcon = prefs.getString("flutter.widget_aotw_achievement_icon", "") ?: ""
-            val gameIcon = prefs.getString("flutter.widget_aotw_game_icon", "") ?: ""
-            val gameId = prefs.getLong("flutter.widget_aotw_game_id", 0L).toInt()
+                val achievementTitle = prefs.getString("flutter.widget_aotw_title", null)
+                val gameTitle = prefs.getString("flutter.widget_aotw_game", "") ?: ""
+                val consoleName = prefs.getString("flutter.widget_aotw_console", "") ?: ""
+                val points = prefs.getLong("flutter.widget_aotw_points", 0L).toInt()
+                val achievementIcon = prefs.getString("flutter.widget_aotw_achievement_icon", "") ?: ""
+                val gameIcon = prefs.getString("flutter.widget_aotw_game_icon", "") ?: ""
+                val gameId = prefs.getLong("flutter.widget_aotw_game_id", 0L).toInt()
+                val dateRange = prefs.getString("flutter.widget_aotw_date_range", "") ?: ""
+                val totalUnlocks = prefs.getLong("flutter.widget_aotw_unlocks", 0L).toInt()
 
-            views.setTextViewText(R.id.achievement_title, achievementTitle)
-            views.setTextViewText(R.id.game_title, gameTitle)
-            views.setTextViewText(R.id.console_chip, consoleName)
-            views.setTextViewText(R.id.points_chip, if (points > 0) "$points pts" else "")
+                if (achievementTitle.isNullOrEmpty()) {
+                    views.setTextViewText(R.id.achievement_title, "Open app to sync")
+                    views.setTextViewText(R.id.game_title, "AOTW will appear here")
+                    views.setTextViewText(R.id.console_chip, "")
+                    views.setTextViewText(R.id.points_chip, "")
+                    views.setTextViewText(R.id.date_range, "")
+                    views.setTextViewText(R.id.unlocks_count, "")
+                } else {
+                    views.setTextViewText(R.id.achievement_title, achievementTitle)
+                    views.setTextViewText(R.id.game_title, gameTitle)
+                    views.setTextViewText(R.id.console_chip, consoleName)
+                    views.setTextViewText(R.id.points_chip, if (points > 0) "$points pts" else "")
+                    views.setTextViewText(R.id.date_range, dateRange)
+                    views.setTextViewText(R.id.unlocks_count, if (totalUnlocks > 0) "$totalUnlocks unlocks" else "")
 
-            // Load achievement icon
-            if (achievementIcon.isNotEmpty()) {
-                loadImageAsync(achievementIcon, views, R.id.achievement_icon, context, appWidgetManager, appWidgetId)
-            }
+                    // Load achievement icon
+                    if (achievementIcon.isNotEmpty()) {
+                        loadImageAsync(achievementIcon, views, R.id.achievement_icon, context, appWidgetManager, appWidgetId)
+                    }
 
-            // Load game icon
-            if (gameIcon.isNotEmpty()) {
-                loadImageAsync(gameIcon, views, R.id.game_icon, context, appWidgetManager, appWidgetId)
-            }
-
-            // Click to open game
-            val intent = Intent(context, MainActivity::class.java).apply {
-                if (gameId > 0) {
-                    putExtra("game_id", gameId)
+                    // Load game icon
+                    if (gameIcon.isNotEmpty()) {
+                        loadImageAsync(gameIcon, views, R.id.game_icon, context, appWidgetManager, appWidgetId)
+                    }
                 }
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+                // Click to open game
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    if (gameId > 0) {
+                        putExtra("game_id", gameId)
+                    }
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val pendingIntent = PendingIntent.getActivity(
+                    context,
+                    appWidgetId + 2000,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+
+            } catch (e: Exception) {
+                views.setTextViewText(R.id.achievement_title, "Open app to sync")
+                views.setTextViewText(R.id.game_title, "")
+                e.printStackTrace()
             }
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                appWidgetId + 2000,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

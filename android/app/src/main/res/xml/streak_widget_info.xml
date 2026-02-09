@@ -8,5 +8,6 @@
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="43200000"
     android:widgetCategory="home_screen"
+    android:label="@string/widget_streak_label"
     android:description="@string/widget_streak_desc"
     android:previewImage="@mipmap/ic_launcher" />
