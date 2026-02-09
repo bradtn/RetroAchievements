@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
+import '../../core/animations.dart';
 import '../../services/notification_service.dart';
 import '../../services/background_sync_service.dart';
 
@@ -202,6 +203,25 @@ class SettingsScreen extends ConsumerWidget {
             onTap: premium.isPremium
                 ? () => _showThemeDialog(context, ref, themeMode)
                 : () => _showPremiumRequired(context),
+          ),
+
+          const Divider(),
+
+          // Preferences
+          _SectionTitle('Preferences'),
+          SwitchListTile(
+            secondary: Icon(Icons.vibration, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Haptic Feedback', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Vibration on taps and actions', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            value: Haptics.isEnabled,
+            onChanged: (value) async {
+              Haptics.setEnabled(value);
+              if (value) Haptics.selection(); // Demo the haptic feedback
+              // Persist the setting
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('haptics_enabled', value);
+              (context as Element).markNeedsBuild();
+            },
           ),
 
           const Divider(),

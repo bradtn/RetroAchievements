@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
+import 'core/animations.dart';
 import 'services/notification_service.dart';
 import 'services/background_sync_service.dart';
 import 'services/ad_service.dart';
@@ -8,6 +10,10 @@ import 'services/purchase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load user preferences
+  final prefs = await SharedPreferences.getInstance();
+  Haptics.setEnabled(prefs.getBool('haptics_enabled') ?? true);
 
   // Initialize AdMob
   await AdService().initialize();
