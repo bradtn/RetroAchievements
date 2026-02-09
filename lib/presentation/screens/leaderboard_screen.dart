@@ -74,14 +74,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Top 10 List
+                  // Top 10 List with shuffle animation
                   if (_topUsers != null && _topUsers!.isNotEmpty)
-                    ...List.generate(_topUsers!.length, (i) {
-                      return _LeaderboardTile(
-                        rank: i + 1,
-                        user: _topUsers![i],
-                      );
-                    })
+                    _AnimatedLeaderboardList(users: _topUsers!)
                   else
                     const Center(child: Text('No leaderboard data')),
                 ],
@@ -247,6 +242,189 @@ class _LeaderboardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final username = user['1'] ?? 'Unknown';
+    final points = user['2'] ?? 0;
+    final truePoints = user['3'] ?? 0;
+
+    Color? rankColor;
+    IconData? rankIcon;
+    if (rank == 1) {
+      rankColor = Colors.amber;
+      rankIcon = Icons.looks_one;
+    } else if (rank == 2) {
+      rankColor = Colors.grey.shade400;
+      rankIcon = Icons.looks_two;
+    } else if (rank == 3) {
+      rankColor = Colors.orange.shade700;
+      rankIcon = Icons.looks_3;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProfileScreen(username: username),
+            ),
+          );
+        },
+        leading: rank <= 3
+            ? Icon(rankIcon, color: rankColor, size: 32)
+            : CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.grey.shade800,
+                child: Text(
+                  '$rank',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedNetworkImage(
+                imageUrl: 'https://retroachievements.org/UserPic/$username.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey.shade700,
+                  child: Text(username[0].toUpperCase()),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                username,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(left: 44),
+          child: Row(
+            children: [
+              Icon(Icons.stars, size: 14, color: Colors.amber[400]),
+              const SizedBox(width: 4),
+              Text('$points'),
+              const SizedBox(width: 12),
+              Icon(Icons.military_tech, size: 14, color: Colors.purple[300]),
+              const SizedBox(width: 4),
+              Text('$truePoints'),
+            ],
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+      ),
+    );
+  }
+}
+
+/// Animated leaderboard list with staggered float-in effect
+class _AnimatedLeaderboardList extends StatefulWidget {
+  final List<dynamic> users;
+
+  const _AnimatedLeaderboardList({required this.users});
+
+  @override
+  State<_AnimatedLeaderboardList> createState() => _AnimatedLeaderboardListState();
+}
+
+class _AnimatedLeaderboardListState extends State<_AnimatedLeaderboardList>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _slideAnimations;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<double>> _scaleAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controllers = List.generate(
+      widget.users.length,
+      (i) => AnimationController(
+        duration: const Duration(milliseconds: 600),
+        vsync: this,
+      ),
+    );
+
+    _slideAnimations = _controllers.map((c) =>
+      Tween<double>(begin: 1.0, end: 0.0).animate(
+        CurvedAnimation(parent: c, curve: Curves.easeOutBack),
+      ),
+    ).toList();
+
+    _fadeAnimations = _controllers.map((c) =>
+      Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: c, curve: const Interval(0.0, 0.6, curve: Curves.easeOut)),
+      ),
+    ).toList();
+
+    _scaleAnimations = _controllers.map((c) =>
+      Tween<double>(begin: 0.8, end: 1.0).animate(
+        CurvedAnimation(parent: c, curve: Curves.easeOutBack),
+      ),
+    ).toList();
+
+    // Stagger the animations
+    _startStaggeredAnimation();
+  }
+
+  void _startStaggeredAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    for (int i = 0; i < _controllers.length; i++) {
+      if (!mounted) return;
+      _controllers[i].forward();
+      await Future.delayed(const Duration(milliseconds: 80));
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(widget.users.length, (index) {
+        final user = widget.users[index];
+        final rank = index + 1;
+
+        return AnimatedBuilder(
+          animation: _controllers[index],
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(_slideAnimations[index].value * 100, 0),
+              child: Transform.scale(
+                scale: _scaleAnimations[index].value,
+                child: Opacity(
+                  opacity: _fadeAnimations[index].value,
+                  child: child,
+                ),
+              ),
+            );
+          },
+          child: _buildLeaderboardTile(context, rank, user),
+        );
+      }),
+    );
+  }
+
+  Widget _buildLeaderboardTile(BuildContext context, int rank, dynamic user) {
     final username = user['1'] ?? 'Unknown';
     final points = user['2'] ?? 0;
     final truePoints = user['3'] ?? 0;

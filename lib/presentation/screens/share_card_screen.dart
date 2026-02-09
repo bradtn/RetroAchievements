@@ -161,7 +161,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
   }
 
   Widget _buildProfileCard() {
-    final username = widget.data['User'] ?? 'Player';
+    final username = widget.data['Username'] ?? widget.data['User'] ?? 'Player';
     final points = widget.data['TotalPoints'] ?? 0;
     final truePoints = widget.data['TotalTruePoints'] ?? 0;
     final rank = widget.data['Rank'] ?? '-';
