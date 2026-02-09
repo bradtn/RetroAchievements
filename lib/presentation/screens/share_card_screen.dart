@@ -385,6 +385,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     final badgeName = widget.data['BadgeName'] ?? '';
     final gameTitle = widget.data['GameTitle'] ?? '';
     final gameIcon = widget.data['GameIcon'] ?? '';
+    final consoleName = widget.data['ConsoleName'] ?? widget.data['consoleName'] ?? '';
     final username = widget.data['Username'] ?? '';
     final userPic = widget.data['UserPic'] ?? '';
     final isEarned = widget.data['IsEarned'] == true;
@@ -426,16 +427,29 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                 const SizedBox(width: 8),
               if (gameTitle.isNotEmpty)
                 Flexible(
-                  child: Text(
-                    gameTitle,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    children: [
+                      Text(
+                        gameTitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (consoleName.isNotEmpty)
+                        Text(
+                          consoleName,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                    ],
                   ),
                 ),
             ],

@@ -631,6 +631,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                         numDistinctPlayers: numDistinctPlayers is int ? numDistinctPlayers : int.tryParse(numDistinctPlayers.toString()) ?? 0,
                         gameTitle: title,
                         gameIcon: imageIcon,
+                        consoleName: console,
                         username: username,
                         userPic: userPic is String ? userPic : '',
                       ),
@@ -1241,6 +1242,7 @@ class _AchievementTile extends ConsumerWidget {
   final int numDistinctPlayers;
   final String? gameTitle;
   final String? gameIcon;
+  final String? consoleName;
   final String? username;
   final String? userPic;
 
@@ -1249,6 +1251,7 @@ class _AchievementTile extends ConsumerWidget {
     this.numDistinctPlayers = 0,
     this.gameTitle,
     this.gameIcon,
+    this.consoleName,
     this.username,
     this.userPic,
   });
@@ -1975,6 +1978,7 @@ class _AchievementTile extends ConsumerWidget {
                                     'BadgeName': badgeName,
                                     'GameTitle': gameTitle ?? '',
                                     'GameIcon': gameIcon ?? '',
+                                    'ConsoleName': consoleName ?? '',
                                     'Username': username ?? '',
                                     'UserPic': fetchedUserPic ?? '',
                                     'IsEarned': isEarned,

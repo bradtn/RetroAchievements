@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/premium_gate.dart';
+import 'game_detail_screen.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -30,8 +32,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final username = ref.read(authProvider).username;
 
     if (username != null) {
-      // Load a large batch of recent achievements
-      final achievements = await api.getRecentAchievements(username, count: 500);
+      // Use API that returns HardcoreMode field
+      // Get achievements from last 365 days
+      final now = DateTime.now();
+      final oneYearAgo = now.subtract(const Duration(days: 365));
+      final achievements = await api.getAchievementsEarnedBetween(username, oneYearAgo, now);
       setState(() {
         _achievements = achievements;
         _isLoading = false;
@@ -44,11 +49,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     final grouped = <DateTime, List<dynamic>>{};
     for (final ach in _achievements!) {
-      final dateStr = ach['Date'] ?? ach['DateEarned'];
-      if (dateStr == null) continue;
+      // Try all possible date field names from the API
+      final dateStr = ach['Date'] ?? ach['DateEarned'] ?? ach['DateEarnedHardcore'] ?? ach['DateAwarded'];
+      if (dateStr == null || dateStr.toString().isEmpty) continue;
 
       try {
-        final dt = DateTime.parse(dateStr);
+        // RA API returns dates in UTC but without 'Z' suffix
+        // Parse as UTC then convert to local for proper day grouping
+        var dt = DateTime.parse(dateStr.toString());
+        // Treat as UTC and convert to local time
+        dt = DateTime.utc(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second).toLocal();
         final dateOnly = DateTime(dt.year, dt.month, dt.day);
         grouped.putIfAbsent(dateOnly, () => []).add(ach);
       } catch (_) {}
@@ -78,16 +88,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         icon: Icons.calendar_month,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  // Calendar
-                  _buildCalendar(),
-                  const Divider(height: 1),
-                  // Selected day achievements
-                  Expanded(
-                    child: _buildDayDetail(),
-                  ),
-                ],
+            : RetroRefreshIndicator(
+                onRefresh: _loadAchievements,
+                child: CustomScrollView(
+                  slivers: [
+                    // Calendar
+                    SliverToBoxAdapter(child: _buildCalendar()),
+                    const SliverToBoxAdapter(child: Divider(height: 1)),
+                    // Selected day achievements
+                    SliverFillRemaining(
+                      child: _buildDayDetail(),
+                    ),
+                  ],
+                ),
               ),
       ),
     );
@@ -186,32 +199,31 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         : null,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         '${dayOffset + 1}',
                         style: TextStyle(
                           color: isSelected ? Colors.white : null,
                           fontWeight: isToday ? FontWeight.bold : null,
+                          fontSize: 14,
                         ),
                       ),
                       if (count > 0)
-                        Positioned(
-                          bottom: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.white : Colors.green,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '$count',
-                              style: TextStyle(
-                                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -312,11 +324,31 @@ class _AchievementTile extends StatelessWidget {
     final points = achievement['Points'] ?? 0;
     final badgeName = achievement['BadgeName'] ?? '';
     final gameTitle = achievement['GameTitle'] ?? '';
-    final hardcoreMode = achievement['HardcoreMode'] == 1;
+    final gameId = achievement['GameID'];
+    // Check various possible hardcore field names and values
+    final hardcoreMode = achievement['HardcoreMode'] == 1 ||
+                         achievement['HardcoreMode'] == true ||
+                         achievement['Hardcore'] == 1 ||
+                         achievement['Hardcore'] == true ||
+                         achievement['DateEarnedHardcore'] != null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
+      child: InkWell(
+        onTap: gameId != null ? () {
+          Haptics.light();
+          final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+          if (id > 0) {
+            Navigator.push(
+              context,
+              SlidePageRoute(
+                page: GameDetailScreen(gameId: id, gameTitle: gameTitle),
+              ),
+            );
+          }
+        } : null,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: CachedNetworkImage(
@@ -372,6 +404,7 @@ class _AchievementTile extends StatelessWidget {
           ],
         ),
         isThreeLine: true,
+        ),
       ),
     );
   }

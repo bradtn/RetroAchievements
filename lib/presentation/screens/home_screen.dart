@@ -54,16 +54,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final username = ref.read(authProvider).username;
 
     if (username != null) {
+      // Use API that returns HardcoreMode field for achievements
+      final now = DateTime.now();
+      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+
       final results = await Future.wait([
         api.getUserProfile(username),
         api.getRecentlyPlayedGames(username),
-        api.getRecentAchievements(username, count: 20),
+        api.getAchievementsEarnedBetween(username, thirtyDaysAgo, now),
       ]);
+
+      // Limit to 20 most recent and sort by date descending
+      var achievements = results[2] as List<dynamic>?;
+      if (achievements != null && achievements.isNotEmpty) {
+        achievements = List<dynamic>.from(achievements);
+        achievements.sort((a, b) {
+          final dateA = a['Date'] ?? '';
+          final dateB = b['Date'] ?? '';
+          return dateB.compareTo(dateA);
+        });
+        if (achievements.length > 20) {
+          achievements = achievements.sublist(0, 20);
+        }
+      }
 
       setState(() {
         _profile = results[0] as Map<String, dynamic>?;
         _recentGames = results[1] as List<dynamic>?;
-        _recentAchievements = results[2] as List<dynamic>?;
+        _recentAchievements = achievements;
         _isLoading = false;
       });
 
@@ -848,10 +866,32 @@ class _AchievementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badgeUrl = 'https://retroachievements.org/Badge/${achievement['BadgeName']}.png';
+    final gameId = achievement['GameID'];
+    final gameTitle = achievement['GameTitle'] ?? '';
+    // Check various possible hardcore field names and values
+    final hardcoreMode = achievement['HardcoreMode'] == 1 ||
+                         achievement['HardcoreMode'] == true ||
+                         achievement['Hardcore'] == 1 ||
+                         achievement['Hardcore'] == true ||
+                         achievement['DateEarnedHardcore'] != null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
+      child: InkWell(
+        onTap: gameId != null ? () {
+          Haptics.light();
+          final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+          if (id > 0) {
+            Navigator.push(
+              context,
+              SlidePageRoute(
+                page: GameDetailScreen(gameId: id, gameTitle: gameTitle),
+              ),
+            );
+          }
+        } : null,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: CachedNetworkImage(
@@ -882,13 +922,42 @@ class _AchievementTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
-            Text(
-              '${achievement['Points'] ?? 0} points • ${achievement['GameTitle'] ?? ''}',
-              style: TextStyle(color: Colors.amber[400], fontSize: 12),
+            Row(
+              children: [
+                Icon(Icons.stars, size: 12, color: Colors.amber[400]),
+                const SizedBox(width: 4),
+                Text(
+                  '${achievement['Points'] ?? 0} pts',
+                  style: TextStyle(color: Colors.amber[400], fontSize: 12),
+                ),
+                if (hardcoreMode) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'HC',
+                      style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    achievement['GameTitle'] ?? '',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         isThreeLine: true,
+        ),
       ),
     );
   }
