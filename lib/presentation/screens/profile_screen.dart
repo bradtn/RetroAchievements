@@ -249,32 +249,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final rankRaw = _rankData?['Rank'] ?? _rankData?['rank'] ?? 0;
     final rank = rankRaw is int ? rankRaw : int.tryParse(rankRaw?.toString() ?? '') ?? 0;
 
+    final pointsInt = points is int ? points : int.tryParse(points.toString()) ?? 0;
+    final truePointsInt = truePoints is int ? truePoints : int.tryParse(truePoints.toString()) ?? 0;
+
     return Row(
       children: [
         Expanded(
-          child: _StatCard(
+          child: _AnimatedStatCard(
             icon: Icons.stars,
-            value: _formatNumber(points),
+            targetValue: pointsInt,
             label: 'Points',
             color: Colors.amber,
+            delay: 0,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _StatCard(
+          child: _AnimatedStatCard(
             icon: Icons.military_tech,
-            value: _formatNumber(truePoints),
+            targetValue: truePointsInt,
             label: 'True Points',
             color: Colors.purple,
+            delay: 100,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _StatCard(
+          child: _AnimatedStatCard(
             icon: Icons.leaderboard,
-            value: rank > 0 ? '#$rank' : '-',
+            targetValue: rank,
             label: 'Rank',
             color: Colors.blue,
+            delay: 200,
+            isRank: true,
           ),
         ),
       ],
@@ -700,6 +707,113 @@ class _StatCard extends StatelessWidget {
             ),
             Text(
               label,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[400]
+                    : Colors.grey[600],
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Animated stat card with count-up ticker effect
+class _AnimatedStatCard extends StatefulWidget {
+  final IconData icon;
+  final int targetValue;
+  final String label;
+  final Color color;
+  final int delay;
+  final bool isRank;
+
+  const _AnimatedStatCard({
+    required this.icon,
+    required this.targetValue,
+    required this.label,
+    required this.color,
+    this.delay = 0,
+    this.isRank = false,
+  });
+
+  @override
+  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
+}
+
+class _AnimatedStatCardState extends State<_AnimatedStatCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+
+    // Start animation after delay
+    Future.delayed(Duration(milliseconds: widget.delay + 300), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _formatNumber(int value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return value.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Icon(widget.icon, color: widget.color, size: 24),
+            const SizedBox(height: 8),
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                final currentValue = (_animation.value * widget.targetValue).round();
+                String displayValue;
+
+                if (widget.isRank) {
+                  displayValue = widget.targetValue > 0 ? '#$currentValue' : '-';
+                } else {
+                  displayValue = _formatNumber(currentValue);
+                }
+
+                return Text(
+                  displayValue,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: widget.color,
+                  ),
+                );
+              },
+            ),
+            Text(
+              widget.label,
               style: TextStyle(
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.grey[400]
