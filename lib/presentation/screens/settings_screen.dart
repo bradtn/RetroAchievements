@@ -9,7 +9,7 @@ import '../../services/notification_service.dart';
 import '../../services/background_sync_service.dart';
 
 const String _appVersion = '1.0.0';
-const String _developerEmail = 'your.email@gmail.com'; // TODO: Replace with your email
+const String _developerEmail = 'retrotrackerdev@gmail.com';
 
 // Provider for notification settings
 final notificationSettingsProvider = StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((ref) {

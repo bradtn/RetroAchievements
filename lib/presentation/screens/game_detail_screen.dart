@@ -49,11 +49,23 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTop = false;
 
+  // Track if page transition is complete to avoid shimmer jank
+  bool _transitionComplete = false;
+
   @override
   void initState() {
     super.initState();
-    _loadGame();
     _scrollController.addListener(_onScroll);
+    // Defer loading until after the page transition completes (250ms)
+    // This prevents API calls and setState during the slide animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) {
+          setState(() => _transitionComplete = true);
+          _loadGame();
+        }
+      });
+    });
   }
 
   @override
@@ -850,6 +862,37 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Widget _buildLoadingShimmer() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final placeholderColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+
+    // Use static placeholders during page transition to avoid animation jank,
+    // then switch to shimmer after transition completes
+    if (!_transitionComplete) {
+      return CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(color: placeholderColor),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  color: placeholderColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return CustomScrollView(
       slivers: [
         // Shimmer app bar
