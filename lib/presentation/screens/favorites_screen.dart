@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../core/animations.dart';
 import '../providers/favorites_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -25,27 +26,11 @@ class FavoritesScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.star_border, size: 80, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              'No Favorites Yet',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Star games you want to track and they\'ll appear here',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.subtitleColor),
-            ),
-          ],
-        ),
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.star_outline,
+      title: 'No Favorites Yet',
+      subtitle: 'Star games you want to track and they\'ll appear here',
+      iconColor: Colors.amber,
     );
   }
 

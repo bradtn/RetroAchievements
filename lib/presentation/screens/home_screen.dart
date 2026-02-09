@@ -668,27 +668,16 @@ class _AchievementsTab extends StatelessWidget {
           : RetroRefreshIndicator(
               onRefresh: () async => onRefresh(),
               child: achievements == null || achievements!.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.emoji_events_outlined,
-                            size: 64,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No achievements yet',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Start playing to earn achievements!',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                          ),
-                        ],
-                      ),
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 100),
+                        EmptyStateWidget(
+                          icon: Icons.emoji_events_outlined,
+                          title: 'No achievements yet',
+                          subtitle: 'Start playing to earn achievements!',
+                          iconColor: Colors.amber,
+                        ),
+                      ],
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
