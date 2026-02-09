@@ -778,7 +778,7 @@ class MilestoneCard extends StatelessWidget {
     final username = data['username'] ?? 'Player';
     final userPic = data['userPic'] ?? '';
     final iconCode = data['iconCode'] as int? ?? Icons.emoji_events.codePoint;
-    final colorValue = data['colorValue'] as int? ?? Colors.amber.value;
+    final colorValue = data['colorValue'] as int? ?? Colors.amber.toARGB32();
     final milestoneColor = Color(colorValue);
     final isEarned = data['isEarned'] == true;
     final currentValue = data['currentValue'] as int? ?? 0;
@@ -978,7 +978,7 @@ class RAAwardCard extends StatelessWidget {
     final awardedAt = data['awardedAt'] ?? '';
     final username = data['username'] ?? 'Player';
     final userPic = data['userPic'] ?? '';
-    final colorValue = data['colorValue'] as int? ?? Colors.amber.value;
+    final colorValue = data['colorValue'] as int? ?? Colors.amber.toARGB32();
     final awardColor = Color(colorValue);
 
     return Column(

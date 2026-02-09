@@ -376,19 +376,21 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Choose Theme'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: AppThemeMode.values.map((mode) => RadioListTile<AppThemeMode>(
-            title: Text(_themeName(mode)),
-            value: mode,
-            groupValue: current,
-            onChanged: (v) {
-              if (v != null) {
-                ref.read(themeProvider.notifier).setTheme(v);
-                Navigator.pop(ctx);
-              }
-            },
-          )).toList(),
+        content: RadioGroup<AppThemeMode>(
+          groupValue: current,
+          onChanged: (v) {
+            if (v != null) {
+              ref.read(themeProvider.notifier).setTheme(v);
+              Navigator.pop(ctx);
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: AppThemeMode.values.map((mode) => RadioListTile<AppThemeMode>(
+              title: Text(_themeName(mode)),
+              value: mode,
+            )).toList(),
+          ),
         ),
       ),
     );

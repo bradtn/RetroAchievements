@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme_utils.dart';
 import '../../../core/animations.dart';
 import '../../providers/favorites_provider.dart';
+import 'game_detail_helpers.dart';
+
+export 'game_detail_helpers.dart';
 
 class GameFilterChip extends StatelessWidget {
   final String label;
@@ -341,6 +344,314 @@ class AnimatedRarityDistributionState extends State<AnimatedRarityDistribution>
         Text(
           '$name ($count)',
           style: TextStyle(fontSize: 10, color: context.subtitleColor),
+        ),
+      ],
+    );
+  }
+}
+
+
+class UserGameRankCard extends StatelessWidget {
+  final Map<String, dynamic> rankData;
+
+  const UserGameRankCard({super.key, required this.rankData});
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = rankData['Rank'] ?? rankData['UserRank'] ?? 0;
+    final score = rankData['Score'] ?? rankData['TotalScore'] ?? 0;
+    final totalRanked = rankData['TotalRanked'] ?? rankData['NumEntries'] ?? 0;
+
+    if (rank == 0 && score == 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.amber.withValues(alpha: 0.15),
+            Colors.orange.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '#$rank',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your Rank',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  totalRanked > 0
+                      ? 'Rank $rank of $totalRanked players'
+                      : 'Rank #$rank',
+                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.stars, size: 14, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  '$score',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class SortMenuButton extends StatelessWidget {
+  final AchievementSort currentSort;
+  final ValueChanged<AchievementSort> onSortChanged;
+
+  const SortMenuButton({
+    super.key,
+    required this.currentSort,
+    required this.onSortChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<AchievementSort>(
+      onSelected: onSortChanged,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[600]!),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.sort, size: 14),
+            const SizedBox(width: 4),
+            Text(getSortLabel(currentSort), style: const TextStyle(fontSize: 11)),
+          ],
+        ),
+      ),
+      itemBuilder: (ctx) => [
+        _buildSortItem(AchievementSort.normal, 'Default'),
+        _buildSortItem(AchievementSort.points, 'Points'),
+        _buildSortItem(AchievementSort.rarity, 'Rarity'),
+        _buildSortItem(AchievementSort.title, 'Title'),
+      ],
+    );
+  }
+
+  PopupMenuItem<AchievementSort> _buildSortItem(AchievementSort value, String label) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          if (currentSort == value) const Icon(Icons.check, size: 18) else const SizedBox(width: 18),
+          const SizedBox(width: 8),
+          Text(label),
+        ],
+      ),
+    );
+  }
+}
+
+
+class NoMissableMessage extends StatelessWidget {
+  const NoMissableMessage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          Icon(Icons.info_outline, size: 48, color: Colors.grey[600]),
+          const SizedBox(height: 16),
+          Text(
+            'No missable achievements found',
+            style: TextStyle(color: context.subtitleColor, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This game may not have any achievements marked as missable by the developers.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.subtitleColor, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class GameDetailShimmer extends StatelessWidget {
+  final bool transitionComplete;
+
+  const GameDetailShimmer({super.key, required this.transitionComplete});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final placeholderColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+
+    if (!transitionComplete) {
+      return CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(color: placeholderColor),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  color: placeholderColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          expandedHeight: 200,
+          pinned: true,
+          flexibleSpace: FlexibleSpaceBar(
+            background: ShimmerCard(
+              height: 200,
+              borderRadius: 0,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ShimmerCard(height: 180),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ShimmerCard(height: 40, width: 150),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: ShimmerAchievementTile(),
+            ),
+            childCount: 8,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+class AchievementStatsRow extends StatelessWidget {
+  final int numAwarded;
+  final int totalAchievements;
+  final int earnedPoints;
+  final int totalPoints;
+  final int filteredCount;
+
+  const AchievementStatsRow({
+    super.key,
+    required this.numAwarded,
+    required this.totalAchievements,
+    required this.earnedPoints,
+    required this.totalPoints,
+    required this.filteredCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '$numAwarded/$totalAchievements',
+            style: const TextStyle(color: Colors.green, fontSize: 11),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star, size: 12, color: Colors.amber[700]),
+              const SizedBox(width: 3),
+              Text(
+                '$earnedPoints/$totalPoints pts',
+                style: TextStyle(color: Colors.amber[700], fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        Text(
+          'Showing $filteredCount',
+          style: TextStyle(color: context.subtitleColor, fontSize: 11),
         ),
       ],
     );
