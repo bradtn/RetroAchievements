@@ -41,6 +41,7 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^17.0.0
   timezone: ^0.9.2
+  flutter_timezone: ^3.0.1
 
   # Animations
   shimmer: ^3.0.0

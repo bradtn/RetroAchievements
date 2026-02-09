@@ -21,7 +21,6 @@ import 'calendar_screen.dart';
 import 'share_card_screen.dart';
 import 'game_search_screen.dart';
 import 'milestones_screen.dart';
-import 'streaks_screen.dart';
 import 'live_feed_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -413,13 +412,6 @@ class _ExploreTabState extends State<_ExploreTab> with TickerProviderStateMixin 
         title: 'Awards',
         color: Colors.purple,
         onTap: () => Navigator.push(context, SlidePageRoute(page: const MilestonesScreen())),
-      ),
-      _ExploreItem(
-        icon: Icons.local_fire_department,
-        title: 'Streaks',
-        color: Colors.deepOrange,
-        isFireIcon: true,
-        onTap: () => Navigator.push(context, SlidePageRoute(page: const StreaksScreen())),
       ),
       _ExploreItem(
         icon: Icons.star,
@@ -823,22 +815,51 @@ class _GameListTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      game['ConsoleName'] ?? '',
-                      style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                    ),
                     const SizedBox(height: 6),
-                    if (total > 0) ...[
-                      AnimatedProgressBar(
-                        progress: progress,
-                        color: Theme.of(context).colorScheme.primary,
-                        height: 6,
+                    // Console chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$earned / $total achievements',
-                        style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                      child: Text(
+                        game['ConsoleName'] ?? '',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (total > 0) ...[
+                      Row(
+                        children: [
+                          // Achievement chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.emoji_events, size: 10, color: Colors.green),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '$earned/$total',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ] else
                       Text(

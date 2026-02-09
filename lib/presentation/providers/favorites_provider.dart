@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/datasources/ra_api_datasource.dart';
+import 'auth_provider.dart';
 
 /// A favorite game entry
 class FavoriteGame {
@@ -11,8 +13,11 @@ class FavoriteGame {
   final String consoleName;
   final int numAchievements;
   final int earnedAchievements;
+  final int totalPoints;
+  final int earnedPoints;
   final DateTime addedAt;
   final bool isPinned; // For widget
+  final bool fromWishlist; // Synced from RA wishlist
 
   FavoriteGame({
     required this.gameId,
@@ -21,8 +26,11 @@ class FavoriteGame {
     required this.consoleName,
     required this.numAchievements,
     required this.earnedAchievements,
+    this.totalPoints = 0,
+    this.earnedPoints = 0,
     required this.addedAt,
     this.isPinned = false,
+    this.fromWishlist = false,
   });
 
   double get progress => numAchievements > 0 ? earnedAchievements / numAchievements : 0;
@@ -35,8 +43,11 @@ class FavoriteGame {
     'consoleName': consoleName,
     'numAchievements': numAchievements,
     'earnedAchievements': earnedAchievements,
+    'totalPoints': totalPoints,
+    'earnedPoints': earnedPoints,
     'addedAt': addedAt.toIso8601String(),
     'isPinned': isPinned,
+    'fromWishlist': fromWishlist,
   };
 
   factory FavoriteGame.fromJson(Map<String, dynamic> json) => FavoriteGame(
@@ -46,8 +57,11 @@ class FavoriteGame {
     consoleName: json['consoleName'] ?? '',
     numAchievements: json['numAchievements'] ?? 0,
     earnedAchievements: json['earnedAchievements'] ?? 0,
+    totalPoints: json['totalPoints'] ?? 0,
+    earnedPoints: json['earnedPoints'] ?? 0,
     addedAt: DateTime.tryParse(json['addedAt'] ?? '') ?? DateTime.now(),
     isPinned: json['isPinned'] ?? false,
+    fromWishlist: json['fromWishlist'] ?? false,
   );
 
   FavoriteGame copyWith({
@@ -57,8 +71,11 @@ class FavoriteGame {
     String? consoleName,
     int? numAchievements,
     int? earnedAchievements,
+    int? totalPoints,
+    int? earnedPoints,
     DateTime? addedAt,
     bool? isPinned,
+    bool? fromWishlist,
   }) => FavoriteGame(
     gameId: gameId ?? this.gameId,
     title: title ?? this.title,
@@ -66,8 +83,11 @@ class FavoriteGame {
     consoleName: consoleName ?? this.consoleName,
     numAchievements: numAchievements ?? this.numAchievements,
     earnedAchievements: earnedAchievements ?? this.earnedAchievements,
+    totalPoints: totalPoints ?? this.totalPoints,
+    earnedPoints: earnedPoints ?? this.earnedPoints,
     addedAt: addedAt ?? this.addedAt,
     isPinned: isPinned ?? this.isPinned,
+    fromWishlist: fromWishlist ?? this.fromWishlist,
   );
 }
 
@@ -95,8 +115,13 @@ class FavoritesState {
 class FavoritesNotifier extends StateNotifier<FavoritesState> {
   static const _storageKey = 'favorite_games';
   static const _widgetChannel = MethodChannel('com.retrotracker.retrotracker/widget');
+  final RAApiDataSource? _api;
+  final String? _username;
 
-  FavoritesNotifier() : super(FavoritesState()) {
+  FavoritesNotifier({RAApiDataSource? api, String? username})
+      : _api = api,
+        _username = username,
+        super(FavoritesState()) {
     _load();
   }
 
@@ -113,6 +138,61 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
       }
     } else {
       state = state.copyWith(isLoading: false);
+    }
+
+    // Sync wishlist after loading local favorites
+    if (_api != null && _username != null) {
+      syncFromWishlist();
+    }
+  }
+
+  /// Sync games from RA wishlist into favorites
+  Future<void> syncFromWishlist() async {
+    final api = _api;
+    final username = _username;
+    if (api == null || username == null) return;
+
+    try {
+      final wishlist = await api.getUserWantToPlayList(username);
+      if (wishlist == null || wishlist.isEmpty) return;
+
+      bool hasChanges = false;
+      final currentFavorites = List<FavoriteGame>.from(state.favorites);
+
+      for (final game in wishlist) {
+        final gameId = game['ID'] ?? game['GameID'];
+        if (gameId == null) continue;
+
+        final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+        if (id == 0) continue;
+
+        // Skip if already in favorites
+        if (currentFavorites.any((f) => f.gameId == id)) continue;
+
+        // Add to favorites with fromWishlist flag
+        final favorite = FavoriteGame(
+          gameId: id,
+          title: game['Title'] ?? 'Unknown Game',
+          imageIcon: game['ImageIcon'] ?? '',
+          consoleName: game['ConsoleName'] ?? '',
+          numAchievements: game['AchievementCount'] ?? game['NumAchievements'] ?? 0,
+          earnedAchievements: 0,
+          totalPoints: game['PointsTotal'] ?? game['Points'] ?? 0,
+          earnedPoints: 0,
+          addedAt: DateTime.now(),
+          fromWishlist: true,
+        );
+
+        currentFavorites.add(favorite);
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        state = state.copyWith(favorites: currentFavorites);
+        await _save();
+      }
+    } catch (e) {
+      // Silently fail - wishlist sync is optional
     }
   }
 
@@ -176,13 +256,15 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
     }
   }
 
-  Future<void> updateProgress(int gameId, int earned, int total) async {
+  Future<void> updateProgress(int gameId, int earned, int total, {int? totalPoints, int? earnedPoints}) async {
     final index = state.favorites.indexWhere((f) => f.gameId == gameId);
     if (index == -1) return;
 
     final updated = state.favorites[index].copyWith(
       earnedAchievements: earned,
       numAchievements: total,
+      totalPoints: totalPoints,
+      earnedPoints: earnedPoints,
     );
     final newList = [...state.favorites];
     newList[index] = updated;
@@ -207,5 +289,7 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
 }
 
 final favoritesProvider = StateNotifierProvider<FavoritesNotifier, FavoritesState>((ref) {
-  return FavoritesNotifier();
+  final api = ref.watch(apiDataSourceProvider);
+  final authState = ref.watch(authProvider);
+  return FavoritesNotifier(api: api, username: authState.username);
 });

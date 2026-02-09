@@ -51,15 +51,30 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     if (_hasTriggeredCacheDownload) return;
     _hasTriggeredCacheDownload = true;
 
-    // Use a small delay to let the app fully initialize first
-    Future.delayed(const Duration(seconds: 2), () {
+    // Wait for disk cache to be checked before deciding to build
+    _waitForCacheLoadThenBuildIfNeeded();
+  }
+
+  Future<void> _waitForCacheLoadThenBuildIfNeeded() async {
+    // Wait up to 5 seconds for disk cache to load
+    for (int i = 0; i < 50; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
       final cacheState = ref.read(gameCacheProvider);
-      // Only build cache if it's empty and not already loading
-      if (cacheState.games.isEmpty && !cacheState.isLoading) {
-        // Fire and forget - runs in background
-        ref.read(gameCacheProvider.notifier).buildCache();
+
+      if (cacheState.hasLoadedFromDisk) {
+        // Disk cache has been checked - only build if empty
+        if (cacheState.games.isEmpty && !cacheState.isLoading) {
+          ref.read(gameCacheProvider.notifier).buildCache();
+        }
+        return;
       }
-    });
+    }
+
+    // Timeout - check anyway
+    final cacheState = ref.read(gameCacheProvider);
+    if (cacheState.games.isEmpty && !cacheState.isLoading) {
+      ref.read(gameCacheProvider.notifier).buildCache();
+    }
   }
 
   void _onWidgetGameSelected(int gameId) {

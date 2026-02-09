@@ -12,6 +12,7 @@ class StreakState {
   final int currentStreak;
   final int bestStreak;
   final Map<DateTime, int> activityMap; // date -> achievement count
+  final Map<DateTime, List<dynamic>> achievementsByDate; // date -> achievements list
   final DateTime? lastActivityDate;
   final bool isLoading;
   final bool isLoadingMonth;
@@ -23,6 +24,7 @@ class StreakState {
     this.currentStreak = 0,
     this.bestStreak = 0,
     this.activityMap = const {},
+    this.achievementsByDate = const {},
     this.lastActivityDate,
     this.isLoading = false,
     this.isLoadingMonth = false,
@@ -35,6 +37,7 @@ class StreakState {
     int? currentStreak,
     int? bestStreak,
     Map<DateTime, int>? activityMap,
+    Map<DateTime, List<dynamic>>? achievementsByDate,
     DateTime? lastActivityDate,
     bool? isLoading,
     bool? isLoadingMonth,
@@ -46,6 +49,7 @@ class StreakState {
       currentStreak: currentStreak ?? this.currentStreak,
       bestStreak: bestStreak ?? this.bestStreak,
       activityMap: activityMap ?? this.activityMap,
+      achievementsByDate: achievementsByDate ?? this.achievementsByDate,
       lastActivityDate: lastActivityDate ?? this.lastActivityDate,
       isLoading: isLoading ?? this.isLoading,
       isLoadingMonth: isLoadingMonth ?? this.isLoadingMonth,
@@ -108,8 +112,9 @@ class StreakNotifier extends StateNotifier<StreakState> {
         return;
       }
 
-      // Build activity map from achievements
+      // Build activity map and achievements by date
       final activityMap = <DateTime, int>{};
+      final achievementsByDate = <DateTime, List<dynamic>>{};
       DateTime? lastActivityDate;
       final loadedMonths = <String>{};
 
@@ -129,6 +134,7 @@ class StreakNotifier extends StateNotifier<StreakState> {
           final date = DateTime.parse(dateStr);
           final dayOnly = DateTime(date.year, date.month, date.day);
           activityMap[dayOnly] = (activityMap[dayOnly] ?? 0) + 1;
+          achievementsByDate.putIfAbsent(dayOnly, () => []).add(ach);
 
           if (lastActivityDate == null || dayOnly.isAfter(lastActivityDate)) {
             lastActivityDate = dayOnly;
@@ -146,6 +152,7 @@ class StreakNotifier extends StateNotifier<StreakState> {
         currentStreak: currentStreak,
         bestStreak: bestStreak,
         activityMap: activityMap,
+        achievementsByDate: achievementsByDate,
         lastActivityDate: lastActivityDate,
         isLoading: false,
         lastUpdated: DateTime.now(),
@@ -184,8 +191,11 @@ class StreakNotifier extends StateNotifier<StreakState> {
         return;
       }
 
-      // Merge with existing activity map
+      // Merge with existing activity map and achievements
       final activityMap = Map<DateTime, int>.from(state.activityMap);
+      final achievementsByDate = Map<DateTime, List<dynamic>>.from(
+        state.achievementsByDate.map((k, v) => MapEntry(k, List<dynamic>.from(v))),
+      );
 
       for (final ach in achievements) {
         final dateStr = ach['Date'] ?? ach['DateEarned'] ?? '';
@@ -195,6 +205,7 @@ class StreakNotifier extends StateNotifier<StreakState> {
           final date = DateTime.parse(dateStr);
           final dayOnly = DateTime(date.year, date.month, date.day);
           activityMap[dayOnly] = (activityMap[dayOnly] ?? 0) + 1;
+          achievementsByDate.putIfAbsent(dayOnly, () => []).add(ach);
         } catch (e) {
           // Skip invalid dates
         }
@@ -204,6 +215,7 @@ class StreakNotifier extends StateNotifier<StreakState> {
 
       state = state.copyWith(
         activityMap: activityMap,
+        achievementsByDate: achievementsByDate,
         loadedMonths: loadedMonths,
         isLoadingMonth: false,
       );

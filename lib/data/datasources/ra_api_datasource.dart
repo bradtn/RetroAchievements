@@ -7,9 +7,27 @@ class RAApiDataSource {
 
   RAApiDataSource({Dio? dio}) : _dio = dio ?? Dio(BaseOptions(
     baseUrl: 'https://retroachievements.org/API/',
-    connectTimeout: const Duration(seconds: 30),
+    connectTimeout: const Duration(seconds: 20),
     receiveTimeout: const Duration(seconds: 30),
   ));
+
+  /// Retry helper for transient failures
+  Future<T?> _withRetry<T>(Future<T?> Function() request, {int maxRetries = 2}) async {
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        final result = await request();
+        if (result != null) return result;
+        // If null result and we have retries left, wait and try again
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (attempt + 1)));
+        }
+      } catch (e) {
+        if (attempt == maxRetries) return null;
+        await Future.delayed(Duration(milliseconds: 300 * (attempt + 1)));
+      }
+    }
+    return null;
+  }
 
   void setCredentials(String username, String apiKey) {
     _username = username;
@@ -33,21 +51,23 @@ class RAApiDataSource {
 
   /// Get user profile
   Future<Map<String, dynamic>?> getUserProfile(String username) async {
-    try {
-      final response = await _dio.get(
-        'API_GetUserProfile.php',
-        queryParameters: {
-          ..._authParams(),
-          'u': username,
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data as Map<String, dynamic>;
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetUserProfile.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': username,
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return response.data as Map<String, dynamic>;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get user summary with recent games and achievements
@@ -73,86 +93,92 @@ class RAApiDataSource {
 
   /// Get recently played games
   Future<List<dynamic>?> getRecentlyPlayedGames(String username, {int count = 10}) async {
-    try {
-      final response = await _dio.get(
-        'API_GetUserRecentlyPlayedGames.php',
-        queryParameters: {
-          ..._authParams(),
-          'u': username,
-          'c': count,
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data as List<dynamic>;
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetUserRecentlyPlayedGames.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': username,
+            'c': count,
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return response.data as List<dynamic>;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get game info with user progress
   Future<Map<String, dynamic>?> getGameInfoWithProgress(int gameId) async {
-    try {
-      final response = await _dio.get(
-        'API_GetGameInfoAndUserProgress.php',
-        queryParameters: {
-          ..._authParams(),
-          'u': _username,
-          'g': gameId,
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data as Map<String, dynamic>;
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetGameInfoAndUserProgress.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': _username,
+            'g': gameId,
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return response.data as Map<String, dynamic>;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get user's recent achievements using UserSummary endpoint
   /// The RecentAchievements endpoint only returns last X minutes, so we use Summary instead
   Future<List<dynamic>?> getRecentAchievements(String username, {int count = 50}) async {
-    try {
-      final response = await _dio.get(
-        'API_GetUserSummary.php',
-        queryParameters: {
-          ..._authParams(),
-          'u': username,
-          'g': 5, // number of recent games
-          'a': count, // number of recent achievements
-        },
-      );
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetUserSummary.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': username,
+            'g': 5, // number of recent games
+            'a': count, // number of recent achievements
+          },
+        );
 
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        if (data is Map<String, dynamic>) {
-          final recentAch = data['RecentAchievements'];
-          List<dynamic> achievements = [];
+        if (response.statusCode == 200 && response.data != null) {
+          final data = response.data;
+          if (data is Map<String, dynamic>) {
+            final recentAch = data['RecentAchievements'];
+            List<dynamic> achievements = [];
 
-          if (recentAch is List) {
-            achievements = recentAch;
-          } else if (recentAch is Map) {
-            achievements = recentAch.values.toList();
-          }
-
-          // Handle nested structure where first item contains all achievements
-          if (achievements.isNotEmpty && achievements.first is Map) {
-            final first = achievements.first as Map;
-            if (first.values.isNotEmpty && first.values.first is Map) {
-              // Flatten - achievements are nested inside
-              achievements = first.values.map((v) => v as Map<String, dynamic>).toList();
+            if (recentAch is List) {
+              achievements = recentAch;
+            } else if (recentAch is Map) {
+              achievements = recentAch.values.toList();
             }
-          }
 
-          return achievements;
+            // Handle nested structure where first item contains all achievements
+            if (achievements.isNotEmpty && achievements.first is Map) {
+              final first = achievements.first as Map;
+              if (first.values.isNotEmpty && first.values.first is Map) {
+                // Flatten - achievements are nested inside
+                achievements = first.values.map((v) => v as Map<String, dynamic>).toList();
+              }
+            }
+
+            return achievements;
+          }
         }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get user awards/badges
@@ -211,39 +237,43 @@ class RAApiDataSource {
 
   /// Get all consoles
   Future<List<dynamic>?> getConsoles() async {
-    try {
-      final response = await _dio.get(
-        'API_GetConsoleIDs.php',
-        queryParameters: _authParams(),
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data as List<dynamic>;
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetConsoleIDs.php',
+          queryParameters: _authParams(),
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return response.data as List<dynamic>;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get games for a console
   Future<List<dynamic>?> getGameList(int consoleId, {bool onlyWithAchievements = true}) async {
-    try {
-      final response = await _dio.get(
-        'API_GetGameList.php',
-        queryParameters: {
-          ..._authParams(),
-          'i': consoleId,
-          'f': onlyWithAchievements ? 1 : 0,
-          'h': 1, // include hashes
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data as List<dynamic>;
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetGameList.php',
+          queryParameters: {
+            ..._authParams(),
+            'i': consoleId,
+            'f': onlyWithAchievements ? 1 : 0,
+            'h': 1, // include hashes
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return response.data as List<dynamic>;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get game info (without user progress)
@@ -302,21 +332,23 @@ class RAApiDataSource {
 
   /// Get user rank and score
   Future<Map<String, dynamic>?> getUserRankAndScore(String username) async {
-    try {
-      final response = await _dio.get(
-        'API_GetUserRankAndScore.php',
-        queryParameters: {
-          ..._authParams(),
-          'u': username,
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data as Map<String, dynamic>;
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetUserRankAndScore.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': username,
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return response.data as Map<String, dynamic>;
+        }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    });
   }
 
   /// Get game ranking for user
@@ -576,5 +608,32 @@ class RAApiDataSource {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Get user's "Want to Play" list (wishlist)
+  Future<List<dynamic>?> getUserWantToPlayList(String username) async {
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetUserWantToPlayList.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': username,
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          // API returns { Count, Total, Results: [...] }
+          final data = response.data;
+          if (data is Map<String, dynamic>) {
+            return data['Results'] as List<dynamic>? ?? [];
+          } else if (data is List) {
+            return data;
+          }
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    });
   }
 }

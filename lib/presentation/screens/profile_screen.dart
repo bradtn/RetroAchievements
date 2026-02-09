@@ -412,17 +412,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    maxLines: 2,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                   ),
-                  Text(
-                    '$numAchieved / $numTotal',
-                    style: TextStyle(fontSize: 10, color: context.subtitleColor),
+                  const SizedBox(height: 4),
+                  // Console chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Text(
+                      consoleName,
+                      style: const TextStyle(color: Colors.blue, fontSize: 8, fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Achievement chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Text(
+                      '$numAchieved/$numTotal',
+                      style: const TextStyle(color: Colors.green, fontSize: 8, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),

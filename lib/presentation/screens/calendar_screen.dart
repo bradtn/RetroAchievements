@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
+import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
 import 'game_detail_screen.dart';
 
@@ -15,98 +16,240 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
-  List<dynamic>? _achievements;
-  bool _isLoading = true;
+  final _usernameController = TextEditingController();
+  String? _viewingUsername;
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedMonth = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _loadAchievements();
-  }
-
-  Future<void> _loadAchievements() async {
-    setState(() => _isLoading = true);
-    final api = ref.read(apiDataSourceProvider);
     final username = ref.read(authProvider).username;
-
     if (username != null) {
-      // Use API that returns HardcoreMode field
-      // Get achievements from last 365 days
-      final now = DateTime.now();
-      final oneYearAgo = now.subtract(const Duration(days: 365));
-      final achievements = await api.getAchievementsEarnedBetween(username, oneYearAgo, now);
-      setState(() {
-        _achievements = achievements;
-        _isLoading = false;
-      });
+      _viewingUsername = username;
+      Future.microtask(() => ref.read(streakProvider.notifier).loadStreaks(username));
     }
   }
 
-  Map<DateTime, List<dynamic>> _groupByDate() {
-    if (_achievements == null) return {};
-
-    final grouped = <DateTime, List<dynamic>>{};
-    for (final ach in _achievements!) {
-      // Try all possible date field names from the API
-      final dateStr = ach['Date'] ?? ach['DateEarned'] ?? ach['DateEarnedHardcore'] ?? ach['DateAwarded'];
-      if (dateStr == null || dateStr.toString().isEmpty) continue;
-
-      try {
-        // RA API returns dates in UTC but without 'Z' suffix
-        // Parse as UTC then convert to local for proper day grouping
-        var dt = DateTime.parse(dateStr.toString());
-        // Treat as UTC and convert to local time
-        dt = DateTime.utc(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second).toLocal();
-        final dateOnly = DateTime(dt.year, dt.month, dt.day);
-        grouped.putIfAbsent(dateOnly, () => []).add(ach);
-      } catch (_) {}
-    }
-    return grouped;
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
   }
 
-  List<dynamic> _getAchievementsForDate(DateTime date) {
-    final grouped = _groupByDate();
+  void _searchUser() {
+    final username = _usernameController.text.trim();
+    if (username.isNotEmpty) {
+      setState(() => _viewingUsername = username);
+      ref.read(streakProvider.notifier).loadStreaks(username);
+    }
+  }
+
+  void _loadMyData() {
+    final username = ref.read(authProvider).username;
+    if (username != null) {
+      _usernameController.clear();
+      setState(() => _viewingUsername = username);
+      ref.read(streakProvider.notifier).loadStreaks(username);
+    }
+  }
+
+  List<dynamic> _getAchievementsForDate(DateTime date, StreakState streakState) {
     final dateOnly = DateTime(date.year, date.month, date.day);
-    return grouped[dateOnly] ?? [];
+    return streakState.achievementsByDate[dateOnly] ?? [];
   }
 
-  int _getCountForDate(DateTime date) {
-    return _getAchievementsForDate(date).length;
+  int _getCountForDate(DateTime date, StreakState streakState) {
+    return streakState.activityMap[DateTime(date.year, date.month, date.day)] ?? 0;
   }
 
   @override
   Widget build(BuildContext context) {
+    final streakState = ref.watch(streakProvider);
+    final myUsername = ref.read(authProvider).username;
+    final isViewingMyself = _viewingUsername == myUsername;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Achievement Calendar'),
       ),
       body: PremiumGate(
         featureName: 'Achievement Calendar',
-        description: 'View your achievement history on a calendar. See what you unlocked on any day.',
+        description: 'Track your streaks and view achievement history on a calendar.',
         icon: Icons.calendar_month,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : RetroRefreshIndicator(
-                onRefresh: _loadAchievements,
-                child: CustomScrollView(
-                  slivers: [
-                    // Calendar
-                    SliverToBoxAdapter(child: _buildCalendar()),
-                    const SliverToBoxAdapter(child: Divider(height: 1)),
-                    // Selected day achievements
-                    SliverFillRemaining(
-                      child: _buildDayDetail(),
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        hintText: 'View another user...',
+                        prefixIcon: const Icon(Icons.person_search, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                      onSubmitted: (_) => _searchUser(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: streakState.isLoading ? null : _searchUser,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                    child: const Text('View'),
+                  ),
+                ],
+              ),
+            ),
+
+            // Show who we're viewing if not ourselves
+            if (!isViewingMyself && _viewingUsername != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Chip(
+                      avatar: const Icon(Icons.person, size: 16),
+                      label: Text('Viewing: $_viewingUsername'),
+                      onDeleted: _loadMyData,
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      visualDensity: VisualDensity.compact,
                     ),
                   ],
                 ),
               ),
+
+            // Content
+            Expanded(
+              child: streakState.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : streakState.error != null
+                      ? _buildErrorView(streakState.error!)
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            if (_viewingUsername != null) {
+                              await ref.read(streakProvider.notifier).loadStreaks(_viewingUsername!);
+                            }
+                          },
+                          child: _buildContent(streakState),
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCalendar() {
+  Widget _buildErrorView(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+          const SizedBox(height: 16),
+          Text(error, style: TextStyle(color: context.subtitleColor)),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: _loadMyData,
+            child: const Text('View My Calendar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(StreakState streakState) {
+    final achievements = _getAchievementsForDate(_selectedDate, streakState);
+
+    return CustomScrollView(
+      slivers: [
+        // Streak cards
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _buildStreakCards(streakState),
+          ),
+        ),
+
+        // Calendar
+        SliverToBoxAdapter(child: _buildCalendar(streakState)),
+
+        // Legend
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: _buildLegend(),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: Divider(height: 1)),
+
+        // Selected day achievements
+        SliverToBoxAdapter(
+          child: _buildDayHeader(achievements),
+        ),
+
+        // Achievement list
+        if (achievements.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _buildEmptyDay(),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) => _AchievementTile(achievement: achievements[i]),
+                childCount: achievements.length,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStreakCards(StreakState streakState) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StreakCard(
+            title: 'Current Streak',
+            value: streakState.currentStreak,
+            icon: Icons.local_fire_department,
+            color: streakState.isStreakActive ? Colors.orange : Colors.grey,
+            subtitle: streakState.isStreakActive
+                ? (streakState.hasActivityToday ? 'Active today!' : 'Play today!')
+                : 'Start a streak!',
+            showFlame: streakState.isStreakActive,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StreakCard(
+            title: 'Best Streak',
+            value: streakState.bestStreak,
+            icon: Icons.emoji_events,
+            color: Colors.amber,
+            subtitle: '${DateTime.now().year} record',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendar(StreakState streakState) {
     final daysInMonth = DateUtils.getDaysInMonth(_focusedMonth.year, _focusedMonth.month);
     final firstDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
     final startingWeekday = firstDayOfMonth.weekday % 7; // Sunday = 0
@@ -115,33 +258,72 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       children: [
         // Month navigation
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
-                  setState(() {
-                    _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
-                  });
+                  final newMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+                  setState(() => _focusedMonth = newMonth);
+                  if (_viewingUsername != null) {
+                    ref.read(streakProvider.notifier).loadMonth(
+                      _viewingUsername!,
+                      newMonth.year,
+                      newMonth.month,
+                    );
+                  }
                 },
               ),
-              Text(
-                _formatMonth(_focusedMonth),
-                style: Theme.of(context).textTheme.titleLarge,
+              GestureDetector(
+                onTap: _showMonthYearPicker,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatMonth(_focusedMonth),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_drop_down, size: 20, color: context.subtitleColor),
+                    if (streakState.isLoadingMonth)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: context.subtitleColor,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed: () {
-                  setState(() {
-                    _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
-                  });
-                },
+                onPressed: _focusedMonth.isBefore(DateTime(DateTime.now().year, DateTime.now().month))
+                    ? () {
+                        final newMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+                        setState(() => _focusedMonth = newMonth);
+                        if (_viewingUsername != null) {
+                          ref.read(streakProvider.notifier).loadMonth(
+                            _viewingUsername!,
+                            newMonth.year,
+                            newMonth.month,
+                          );
+                        }
+                      }
+                    : null,
               ),
             ],
           ),
         ),
+
         // Day headers
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -154,6 +336,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -161,7 +344,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 .toList(),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+
         // Calendar grid
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -180,55 +364,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               }
 
               final date = DateTime(_focusedMonth.year, _focusedMonth.month, dayOffset + 1);
-              final count = _getCountForDate(date);
+              final count = _getCountForDate(date, streakState);
               final isSelected = _isSameDay(date, _selectedDate);
               final isToday = _isSameDay(date, DateTime.now());
+              final isFuture = date.isAfter(DateTime.now());
 
               return GestureDetector(
-                onTap: () => setState(() => _selectedDate = date),
-                child: Container(
-                  margin: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : count > 0
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : null,
-                    border: isToday
-                        ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
-                        : null,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '${dayOffset + 1}',
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : null,
-                          fontWeight: isToday ? FontWeight.bold : null,
-                          fontSize: 14,
-                        ),
-                      ),
-                      if (count > 0)
-                        Container(
-                          margin: const EdgeInsets.only(top: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: isSelected ? Colors.white : Colors.green,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '$count',
-                            style: TextStyle(
-                              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                onTap: isFuture ? null : () => setState(() => _selectedDate = date),
+                child: _CalendarDay(
+                  day: dayOffset + 1,
+                  activityCount: count,
+                  isSelected: isSelected,
+                  isToday: isToday,
+                  isFuture: isFuture,
                 ),
               );
             },
@@ -238,60 +386,214 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
-  Widget _buildDayDetail() {
-    final achievements = _getAchievementsForDate(_selectedDate);
-    final dateStr = _formatDate(_selectedDate);
-
-    if (achievements.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_busy, size: 48, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text(
-              'No achievements on $dateStr',
-              style: TextStyle(color: context.subtitleColor),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildLegend() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Text(
-                dateStr,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${achievements.length} unlock${achievements.length == 1 ? '' : 's'}',
-                  style: const TextStyle(color: Colors.green, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
+        _LegendItem(
+          color: Theme.of(context).brightness == Brightness.light
+              ? Colors.grey.shade200
+              : Colors.grey.shade800,
+          label: 'None',
         ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: achievements.length,
-            itemBuilder: (ctx, i) => _AchievementTile(achievement: achievements[i]),
-          ),
-        ),
+        const SizedBox(width: 12),
+        _LegendItem(color: Colors.green.shade300, label: '1-2'),
+        const SizedBox(width: 12),
+        _LegendItem(color: Colors.green.shade500, label: '3-5'),
+        const SizedBox(width: 12),
+        _LegendItem(color: Colors.green.shade700, label: '6+'),
       ],
+    );
+  }
+
+  Widget _buildDayHeader(List<dynamic> achievements) {
+    final dateStr = _formatDate(_selectedDate);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Text(
+            dateStr,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: achievements.isNotEmpty
+                  ? Colors.green.withValues(alpha: 0.2)
+                  : Colors.grey.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${achievements.length} unlock${achievements.length == 1 ? '' : 's'}',
+              style: TextStyle(
+                color: achievements.isNotEmpty ? Colors.green : context.subtitleColor,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyDay() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_busy, size: 48, color: Colors.grey[600]),
+          const SizedBox(height: 16),
+          Text(
+            'No achievements on this day',
+            style: TextStyle(color: context.subtitleColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMonthYearPicker() {
+    int selectedYear = _focusedMonth.year;
+    int selectedMonthIndex = _focusedMonth.month - 1;
+    final now = DateTime.now();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.fromLTRB(
+                16, 16, 16,
+                16 + MediaQuery.of(context).viewPadding.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Text(
+                    'Select Month & Year',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Year selector
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: selectedYear > 2000
+                            ? () => setModalState(() => selectedYear--)
+                            : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$selectedYear',
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: selectedYear < now.year
+                            ? () => setModalState(() => selectedYear++)
+                            : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Month grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      childAspectRatio: 2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (context, index) {
+                      final isSelected = index == selectedMonthIndex;
+                      final isFuture = selectedYear == now.year && index > now.month - 1;
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                      return GestureDetector(
+                        onTap: isFuture ? null : () => setModalState(() => selectedMonthIndex = index),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : isFuture
+                                    ? Colors.grey.withValues(alpha: 0.2)
+                                    : Colors.grey.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            months[index],
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : isFuture ? Colors.grey : null,
+                              fontWeight: isSelected ? FontWeight.bold : null,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        final newMonth = DateTime(selectedYear, selectedMonthIndex + 1);
+                        Navigator.pop(context);
+                        setState(() {
+                          _focusedMonth = newMonth;
+                          _selectedDate = newMonth;
+                        });
+                        if (_viewingUsername != null) {
+                          ref.read(streakProvider.notifier).loadMonth(
+                            _viewingUsername!,
+                            newMonth.year,
+                            newMonth.month,
+                          );
+                        }
+                      },
+                      child: const Text('Go to Month'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -312,6 +614,194 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 }
 
+class _StreakCard extends StatelessWidget {
+  final String title;
+  final int value;
+  final IconData icon;
+  final Color color;
+  final String subtitle;
+  final bool showFlame;
+
+  const _StreakCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.subtitle,
+    this.showFlame = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: 0.8),
+              color.withValues(alpha: 0.6),
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (showFlame && value > 0)
+                  AnimatedStreakFlame(streakDays: value, size: 20)
+                else
+                  Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '$value',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  value == 1 ? 'day' : 'days',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+            Text(
+              subtitle,
+              style: const TextStyle(color: Colors.white60, fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CalendarDay extends StatelessWidget {
+  final int day;
+  final int activityCount;
+  final bool isSelected;
+  final bool isToday;
+  final bool isFuture;
+
+  const _CalendarDay({
+    required this.day,
+    required this.activityCount,
+    required this.isSelected,
+    required this.isToday,
+    required this.isFuture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor;
+    if (isSelected) {
+      bgColor = Theme.of(context).colorScheme.primary;
+    } else if (isFuture) {
+      bgColor = Colors.transparent;
+    } else if (activityCount == 0) {
+      bgColor = Theme.of(context).brightness == Brightness.light
+          ? Colors.grey.shade200
+          : Colors.grey.shade800;
+    } else if (activityCount <= 2) {
+      bgColor = Colors.green.shade300;
+    } else if (activityCount <= 5) {
+      bgColor = Colors.green.shade500;
+    } else {
+      bgColor = Colors.green.shade700;
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        border: isToday && !isSelected
+            ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+            : null,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$day',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? Colors.white
+                  : isFuture
+                      ? Colors.grey
+                      : (activityCount > 0 ? Colors.white : null),
+            ),
+          ),
+          if (activityCount > 0 && !isSelected)
+            Text(
+              '$activityCount',
+              style: const TextStyle(
+                fontSize: 8,
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: context.subtitleColor),
+        ),
+      ],
+    );
+  }
+}
+
 class _AchievementTile extends StatelessWidget {
   final dynamic achievement;
 
@@ -321,7 +811,6 @@ class _AchievementTile extends StatelessWidget {
     if (dateStr == null || dateStr.isEmpty) return '';
     try {
       var date = DateTime.parse(dateStr);
-      // Treat as UTC and convert to local
       date = DateTime.utc(date.year, date.month, date.day, date.hour, date.minute, date.second).toLocal();
       final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
       final amPm = date.hour >= 12 ? 'PM' : 'AM';
@@ -342,7 +831,6 @@ class _AchievementTile extends StatelessWidget {
     final gameId = achievement['GameID'];
     final dateStr = achievement['Date'] ?? achievement['DateEarned'] ?? '';
     final formattedTime = _formatTime(dateStr);
-    // Check various possible hardcore field names and values
     final hardcoreMode = achievement['HardcoreMode'] == 1 ||
                          achievement['HardcoreMode'] == true ||
                          achievement['Hardcore'] == 1 ||
@@ -366,71 +854,68 @@ class _AchievementTile extends StatelessWidget {
         } : null,
         borderRadius: BorderRadius.circular(12),
         child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: CachedNetworkImage(
+              imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
               width: 48,
               height: 48,
-              color: Colors.grey[800],
-              child: const Icon(Icons.emoji_events),
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => Container(
+                width: 48,
+                height: 48,
+                color: Colors.grey[800],
+                child: const Icon(Icons.emoji_events),
+              ),
             ),
           ),
-        ),
-        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.subtitleColor, fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.stars, size: 12, color: Colors.amber[400]),
-                const SizedBox(width: 4),
-                Text('$points pts', style: TextStyle(color: Colors.amber[400], fontSize: 11)),
-                if (hardcoreMode) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
+          title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.subtitleColor, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.stars, size: 12, color: Colors.amber[400]),
+                  const SizedBox(width: 4),
+                  Text('$points pts', style: TextStyle(color: Colors.amber[400], fontSize: 11)),
+                  if (hardcoreMode) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'HC',
+                        style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    child: const Text(
-                      'HC',
-                      style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  ],
+                  if (formattedTime.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.access_time, size: 10, color: Colors.grey[500]),
+                    const SizedBox(width: 2),
+                    Text(formattedTime, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+                  ],
                 ],
-                if (formattedTime.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.access_time, size: 10, color: Colors.grey[500]),
-                  const SizedBox(width: 2),
-                  Text(
-                    formattedTime,
-                    style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              gameTitle,
-              style: TextStyle(color: context.subtitleColor, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        isThreeLine: true,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                gameTitle,
+                style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          isThreeLine: true,
         ),
       ),
     );

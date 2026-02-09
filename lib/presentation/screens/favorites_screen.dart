@@ -334,18 +334,19 @@ class _FavoriteCard extends StatelessWidget {
           child: Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Game icon
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: CachedNetworkImage(
                       imageUrl: 'https://retroachievements.org${game.imageIcon}',
-                      width: 56,
-                      height: 56,
+                      width: 64,
+                      height: 64,
                       fit: BoxFit.cover,
                       errorWidget: (_, __, ___) => Container(
-                        width: 56,
-                        height: 56,
+                        width: 64,
+                        height: 64,
                         color: Colors.grey[800],
                         child: const Icon(Icons.games),
                       ),
@@ -357,15 +358,110 @@ class _FavoriteCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          game.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        // Title row with wishlist badge
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                game.title,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          game.consoleName,
-                          style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                        const SizedBox(height: 4),
+                        // Console and wishlist badges
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                game.consoleName,
+                                style: const TextStyle(color: Colors.blue, fontSize: 10, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            if (game.fromWishlist)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.bookmark, size: 10, color: Colors.purple),
+                                    SizedBox(width: 2),
+                                    Text(
+                                      'Wishlist',
+                                      style: TextStyle(color: Colors.purple, fontSize: 10, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Stats row
+                        Row(
+                          children: [
+                            // Achievement chip
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.emoji_events, size: 12, color: Colors.green),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${game.earnedAchievements}/${game.numAchievements}',
+                                    style: const TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Points chip
+                            if (game.totalPoints > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.stars, size: 12, color: Colors.amber[600]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${game.earnedPoints}/${game.totalPoints} pts',
+                                      style: TextStyle(
+                                        color: Colors.amber[600],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -376,24 +472,15 @@ class _FavoriteCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               // Progress bar
-              Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: game.progress,
-                        minHeight: 8,
-                        backgroundColor: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${game.earnedAchievements}/${game.numAchievements}',
-                    style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                  ),
-                ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: game.progress,
+                  minHeight: 6,
+                  backgroundColor: Theme.of(context).brightness == Brightness.light
+                      ? Colors.grey[300]
+                      : Colors.grey[700],
+                ),
               ),
               const SizedBox(height: 8),
               // Actions
@@ -405,19 +492,31 @@ class _FavoriteCard extends StatelessWidget {
                       onPressed: onUnpin,
                       icon: const Icon(Icons.push_pin, size: 16),
                       label: const Text('Unpin'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.amber),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.amber,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     )
                   else if (onPin != null)
                     TextButton.icon(
                       onPressed: onPin,
                       icon: const Icon(Icons.push_pin_outlined, size: 16),
-                      label: const Text('Pin to Widget'),
+                      label: const Text('Pin'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ),
                   TextButton.icon(
                     onPressed: onRemove,
                     icon: const Icon(Icons.delete_outline, size: 16),
                     label: const Text('Remove'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),

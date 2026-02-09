@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -27,8 +28,17 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // Initialize timezone
+    // Initialize timezone database
     tz_data.initializeTimeZones();
+
+    // Get the device's local timezone and set it
+    try {
+      final String timezoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezoneName));
+    } catch (e) {
+      // Fallback to UTC if timezone detection fails
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
 
     // Android settings
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -200,6 +210,42 @@ class NotificationService {
       streakReminderNotificationId,
       'Don\'t Forget Your Streak! 🔥',
       'You have a $currentStreak-day streak. Play today to keep it going!',
+      scheduledDate,
+      _getNotificationDetails(),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  // Schedule daily summary for 9 PM
+  Future<void> scheduleDailySummaryNotification({
+    required int achievementsToday,
+    required int currentStreak,
+  }) async {
+    if (achievementsToday == 0) return;
+
+    // Schedule for 9 PM local time
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      21, // 9 PM
+      0,
+    );
+
+    // If it's already past 9 PM, don't schedule (too late for today)
+    if (scheduledDate.isBefore(now)) return;
+
+    final message = 'You earned $achievementsToday achievement${achievementsToday == 1 ? '' : 's'} today! '
+        '${currentStreak > 0 ? 'Streak: $currentStreak days 🔥' : ''}';
+
+    await _notifications.zonedSchedule(
+      dailySummaryNotificationId,
+      'Today\'s Progress 🎮',
+      message,
       scheduledDate,
       _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

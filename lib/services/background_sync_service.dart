@@ -151,12 +151,12 @@ class BackgroundSyncService {
         await prefs.setInt('last_milestone_notified', 0);
       }
 
-      // Show daily summary if user earned achievements today (once per day)
+      // Schedule daily summary for 9 PM if user earned achievements today
       final dailySummaryEnabled = prefs.getBool('daily_summary_enabled') ?? true;
       if (dailySummaryEnabled && achievementsToday > 0) {
         final lastSummaryDate = prefs.getString('last_summary_date');
         if (lastSummaryDate != todayStr) {
-          await notificationService.showDailySummaryNotification(
+          await notificationService.scheduleDailySummaryNotification(
             achievementsToday: achievementsToday,
             currentStreak: currentStreak,
           );

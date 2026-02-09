@@ -11,6 +11,7 @@ final gameCacheProvider = StateNotifierProvider<GameCacheNotifier, GameCacheStat
 class GameCacheState {
   final List<CachedGame> games;
   final bool isLoading;
+  final bool hasLoadedFromDisk; // Track if we've checked disk cache
   final double progress;
   final String? error;
   final DateTime? lastUpdated;
@@ -18,6 +19,7 @@ class GameCacheState {
   GameCacheState({
     this.games = const [],
     this.isLoading = false,
+    this.hasLoadedFromDisk = false,
     this.progress = 0,
     this.error,
     this.lastUpdated,
@@ -26,6 +28,7 @@ class GameCacheState {
   GameCacheState copyWith({
     List<CachedGame>? games,
     bool? isLoading,
+    bool? hasLoadedFromDisk,
     double? progress,
     String? error,
     DateTime? lastUpdated,
@@ -33,6 +36,7 @@ class GameCacheState {
     return GameCacheState(
       games: games ?? this.games,
       isLoading: isLoading ?? this.isLoading,
+      hasLoadedFromDisk: hasLoadedFromDisk ?? this.hasLoadedFromDisk,
       progress: progress ?? this.progress,
       error: error,
       lastUpdated: lastUpdated ?? this.lastUpdated,
@@ -101,10 +105,15 @@ class GameCacheNotifier extends StateNotifier<GameCacheState> {
           lastUpdated: lastUpdatedMs != null
               ? DateTime.fromMillisecondsSinceEpoch(lastUpdatedMs)
               : null,
+          hasLoadedFromDisk: true,
         );
+      } else {
+        // No cache found, but we've checked
+        state = state.copyWith(hasLoadedFromDisk: true);
       }
     } catch (e) {
-      // Ignore cache load errors
+      // Error loading cache, but we've checked
+      state = state.copyWith(hasLoadedFromDisk: true);
     }
   }
 
@@ -131,8 +140,10 @@ class GameCacheNotifier extends StateNotifier<GameCacheState> {
       }).toList();
 
       final List<CachedGame> allGames = [];
+      final List<Map<String, dynamic>> failedConsoles = [];
       int completed = 0;
 
+      // First pass - fetch all consoles with delay to avoid rate limiting
       for (final console in gamingConsoles) {
         final consoleId = console['ID'] as int;
         final consoleName = console['Name'] as String? ?? 'Unknown';
@@ -140,10 +151,9 @@ class GameCacheNotifier extends StateNotifier<GameCacheState> {
         try {
           final games = await api.getGameList(consoleId, onlyWithAchievements: true);
 
-          if (games != null) {
+          if (games != null && games.isNotEmpty) {
             for (final game in games) {
               final numAch = game['NumAchievements'] ?? 0;
-              // Only include games that have achievements
               if (numAch > 0) {
                 allGames.add(CachedGame(
                   id: game['ID'] ?? 0,
@@ -155,13 +165,57 @@ class GameCacheNotifier extends StateNotifier<GameCacheState> {
                 ));
               }
             }
+          } else {
+            // Mark for retry
+            failedConsoles.add(console);
           }
         } catch (e) {
-          // Continue with next console on error
+          failedConsoles.add(console);
         }
 
         completed++;
-        state = state.copyWith(progress: completed / gamingConsoles.length);
+        state = state.copyWith(progress: completed / (gamingConsoles.length + failedConsoles.length));
+
+        // Small delay to avoid rate limiting
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      // Retry failed consoles with longer delays
+      if (failedConsoles.isNotEmpty) {
+        await Future.delayed(const Duration(seconds: 2)); // Wait before retries
+
+        for (final console in failedConsoles) {
+          final consoleId = console['ID'] as int;
+          final consoleName = console['Name'] as String? ?? 'Unknown';
+
+          try {
+            final games = await api.getGameList(consoleId, onlyWithAchievements: true);
+
+            if (games != null) {
+              for (final game in games) {
+                final numAch = game['NumAchievements'] ?? 0;
+                if (numAch > 0) {
+                  allGames.add(CachedGame(
+                    id: game['ID'] ?? 0,
+                    title: game['Title'] ?? '',
+                    consoleName: consoleName,
+                    consoleId: consoleId,
+                    imageIcon: game['ImageIcon'] ?? '',
+                    numAchievements: numAch,
+                  ));
+                }
+              }
+            }
+          } catch (e) {
+            // Give up on this console
+          }
+
+          completed++;
+          state = state.copyWith(progress: completed / (gamingConsoles.length + failedConsoles.length));
+
+          // Longer delay for retries
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
 
       // Sort by title

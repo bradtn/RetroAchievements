@@ -265,7 +265,7 @@ class _GameTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
+      child: InkWell(
         onTap: () {
           Navigator.push(
             context,
@@ -277,46 +277,91 @@ class _GameTile extends StatelessWidget {
             ),
           );
         },
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: 'https://retroachievements.org${game.imageIcon}',
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(
-              width: 48,
-              height: 48,
-              color: Colors.grey[800],
-              child: const Icon(Icons.games),
-            ),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedNetworkImage(
+                  imageUrl: 'https://retroachievements.org${game.imageIcon}',
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    width: 56,
+                    height: 56,
+                    color: Colors.grey[800],
+                    child: const Icon(Icons.games),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      game.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        // Console chip
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            game.consoleName,
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        // Achievement chip
+                        if (game.numAchievements > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.emoji_events, size: 10, color: Colors.green),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${game.numAchievements}',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 20),
+            ],
           ),
         ),
-        title: Text(
-          game.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Row(
-          children: [
-            Expanded(
-              child: Text(
-                game.consoleName,
-                style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (game.numAchievements > 0) ...[
-              Icon(Icons.emoji_events, size: 12, color: Colors.amber[400]),
-              const SizedBox(width: 4),
-              Text(
-                '${game.numAchievements}',
-                style: TextStyle(color: context.subtitleColor, fontSize: 12),
-              ),
-            ],
-          ],
-        ),
-        trailing: const Icon(Icons.chevron_right, size: 20),
       ),
     );
   }

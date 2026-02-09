@@ -273,7 +273,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                         title,
                         style: TextStyle(
                           color: titleColor,
-                          fontSize: 16,
+                          fontSize: 14,
                           shadows: [
                             Shadow(
                               blurRadius: 4,
@@ -281,7 +281,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                             ),
                           ],
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -393,6 +393,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     consoleName: console,
                     numAchievements: numAchievements,
                     earnedAchievements: numAwarded,
+                    totalPoints: totalPoints,
+                    earnedPoints: earnedPoints,
                   ),
                 ),
               ],
@@ -432,17 +434,87 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(console, style: TextStyle(color: context.subtitleColor)),
-                              const SizedBox(height: 8),
+                              // Console chip
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  console,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               if (numAchievements > 0) ...[
+                                // Achievement chip
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.emoji_events, size: 14, color: Colors.green),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '$numAwarded/$numAchievements',
+                                            style: const TextStyle(
+                                              color: Colors.green,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Points chip
+                                    if (totalPoints > 0)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.stars, size: 14, color: Colors.amber[600]),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '$earnedPoints/$totalPoints pts',
+                                              style: TextStyle(
+                                                color: Colors.amber[600],
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
                                 LinearProgressIndicator(
                                   value: progress,
-                                  backgroundColor: Colors.grey[700],
+                                  backgroundColor: Theme.of(context).brightness == Brightness.light
+                                      ? Colors.grey[300]
+                                      : Colors.grey[700],
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '$numAwarded / $numAchievements achievements ($completion)',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  completion,
+                                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
                                 ),
                               ] else
                                 Text(
@@ -1967,6 +2039,8 @@ class _FavoriteButtonLarge extends ConsumerWidget {
   final String consoleName;
   final int numAchievements;
   final int earnedAchievements;
+  final int totalPoints;
+  final int earnedPoints;
 
   const _FavoriteButtonLarge({
     required this.gameId,
@@ -1975,6 +2049,8 @@ class _FavoriteButtonLarge extends ConsumerWidget {
     required this.consoleName,
     required this.numAchievements,
     required this.earnedAchievements,
+    required this.totalPoints,
+    required this.earnedPoints,
   });
 
   @override
@@ -2011,6 +2087,8 @@ class _FavoriteButtonLarge extends ConsumerWidget {
       consoleName: consoleName,
       numAchievements: numAchievements,
       earnedAchievements: earnedAchievements,
+      totalPoints: totalPoints,
+      earnedPoints: earnedPoints,
       addedAt: DateTime.now(),
     );
     ref.read(favoritesProvider.notifier).toggleFavorite(game);
