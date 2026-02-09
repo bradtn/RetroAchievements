@@ -75,6 +75,9 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
           ? _buildAmoledTheme()
           : _buildDarkTheme(),
       themeMode: _getThemeMode(themeMode),
+      // Smooth theme transition animation
+      themeAnimationDuration: const Duration(milliseconds: 300),
+      themeAnimationCurve: Curves.easeInOut,
       home: authState.isAuthenticated
           ? const HomeScreen()
           : const LoginScreen(),
