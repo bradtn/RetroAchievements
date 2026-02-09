@@ -317,6 +317,21 @@ class _AchievementTile extends StatelessWidget {
 
   const _AchievementTile({required this.achievement});
 
+  String _formatTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      var date = DateTime.parse(dateStr);
+      // Treat as UTC and convert to local
+      date = DateTime.utc(date.year, date.month, date.day, date.hour, date.minute, date.second).toLocal();
+      final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+      final amPm = date.hour >= 12 ? 'PM' : 'AM';
+      final minute = date.minute.toString().padLeft(2, '0');
+      return '$hour:$minute $amPm';
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = achievement['Title'] ?? 'Achievement';
@@ -325,6 +340,8 @@ class _AchievementTile extends StatelessWidget {
     final badgeName = achievement['BadgeName'] ?? '';
     final gameTitle = achievement['GameTitle'] ?? '';
     final gameId = achievement['GameID'];
+    final dateStr = achievement['Date'] ?? achievement['DateEarned'] ?? '';
+    final formattedTime = _formatTime(dateStr);
     // Check various possible hardcore field names and values
     final hardcoreMode = achievement['HardcoreMode'] == 1 ||
                          achievement['HardcoreMode'] == true ||
@@ -380,8 +397,8 @@ class _AchievementTile extends StatelessWidget {
                 Icon(Icons.stars, size: 12, color: Colors.amber[400]),
                 const SizedBox(width: 4),
                 Text('$points pts', style: TextStyle(color: Colors.amber[400], fontSize: 11)),
-                const SizedBox(width: 8),
-                if (hardcoreMode)
+                if (hardcoreMode) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
@@ -393,13 +410,23 @@ class _AchievementTile extends StatelessWidget {
                       style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold),
                     ),
                   ),
-                const Spacer(),
-                Text(
-                  gameTitle,
-                  style: TextStyle(color: context.subtitleColor, fontSize: 11),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
+                if (formattedTime.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.access_time, size: 10, color: Colors.grey[500]),
+                  const SizedBox(width: 2),
+                  Text(
+                    formattedTime,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                  ),
+                ],
               ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              gameTitle,
+              style: TextStyle(color: context.subtitleColor, fontSize: 11),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

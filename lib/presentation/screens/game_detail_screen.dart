@@ -1040,115 +1040,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final total = achievements.length;
     if (total == 0) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? Colors.grey.shade100
-            : Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              const Icon(Icons.bar_chart, size: 16, color: Colors.purple),
-              const SizedBox(width: 6),
-              Text(
-                'Rarity Distribution',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: context.subtitleColor,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$numDistinctPlayers players',
-                style: TextStyle(fontSize: 10, color: context.subtitleColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Stacked bar chart
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              height: 24,
-              child: Row(
-                children: [
-                  if (ultraRareCount > 0)
-                    Expanded(
-                      flex: ultraRareCount,
-                      child: Container(
-                        color: Colors.red,
-                        child: Center(
-                          child: ultraRareCount >= 3 ? Text(
-                            '$ultraRareCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ) : null,
-                        ),
-                      ),
-                    ),
-                  if (rareCount > 0)
-                    Expanded(
-                      flex: rareCount,
-                      child: Container(
-                        color: Colors.purple,
-                        child: Center(
-                          child: rareCount >= 3 ? Text(
-                            '$rareCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ) : null,
-                        ),
-                      ),
-                    ),
-                  if (uncommonCount > 0)
-                    Expanded(
-                      flex: uncommonCount,
-                      child: Container(
-                        color: Colors.blue,
-                        child: Center(
-                          child: uncommonCount >= 3 ? Text(
-                            '$uncommonCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ) : null,
-                        ),
-                      ),
-                    ),
-                  if (commonCount > 0)
-                    Expanded(
-                      flex: commonCount,
-                      child: Container(
-                        color: Colors.grey,
-                        child: Center(
-                          child: commonCount >= 3 ? Text(
-                            '$commonCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ) : null,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Legend with counts
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            children: [
-              _buildRarityLegendItem(Icons.diamond, Colors.red, 'Ultra Rare', '<5%', ultraRareCount),
-              _buildRarityLegendItem(Icons.star, Colors.purple, 'Rare', '<15%', rareCount),
-              _buildRarityLegendItem(Icons.hexagon, Colors.blue, 'Uncommon', '<40%', uncommonCount),
-              _buildRarityLegendItem(Icons.circle, Colors.grey, 'Common', '40%+', commonCount),
-            ],
-          ),
-        ],
-      ),
+    return _AnimatedRarityDistribution(
+      ultraRareCount: ultraRareCount,
+      rareCount: rareCount,
+      uncommonCount: uncommonCount,
+      commonCount: commonCount,
+      numDistinctPlayers: numDistinctPlayers,
     );
   }
 
@@ -2464,6 +2361,211 @@ class _LeaderboardDetailDialogState extends ConsumerState<_LeaderboardDetailDial
           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
+    );
+  }
+}
+
+/// Animated rarity distribution chart
+class _AnimatedRarityDistribution extends StatefulWidget {
+  final int ultraRareCount;
+  final int rareCount;
+  final int uncommonCount;
+  final int commonCount;
+  final int numDistinctPlayers;
+
+  const _AnimatedRarityDistribution({
+    required this.ultraRareCount,
+    required this.rareCount,
+    required this.uncommonCount,
+    required this.commonCount,
+    required this.numDistinctPlayers,
+  });
+
+  @override
+  State<_AnimatedRarityDistribution> createState() => _AnimatedRarityDistributionState();
+}
+
+class _AnimatedRarityDistributionState extends State<_AnimatedRarityDistribution>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    // Start animation after a small delay for smoother page load
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.ultraRareCount + widget.rareCount + widget.uncommonCount + widget.commonCount;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.light
+            ? Colors.grey.shade100
+            : Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              const Icon(Icons.bar_chart, size: 16, color: Colors.purple),
+              const SizedBox(width: 6),
+              Text(
+                'Rarity Distribution',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: context.subtitleColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${widget.numDistinctPlayers} players',
+                style: TextStyle(fontSize: 10, color: context.subtitleColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Animated stacked bar chart
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  height: 24,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxWidth = constraints.maxWidth;
+                      final animValue = _animation.value;
+
+                      return Stack(
+                        children: [
+                          // Background
+                          Container(
+                            width: maxWidth,
+                            color: Colors.grey.withValues(alpha: 0.2),
+                          ),
+                          // Animated bars
+                          Row(
+                            children: [
+                              if (widget.ultraRareCount > 0)
+                                _buildAnimatedBar(
+                                  width: (widget.ultraRareCount / total) * maxWidth * animValue,
+                                  color: Colors.red,
+                                  count: widget.ultraRareCount,
+                                  animValue: animValue,
+                                ),
+                              if (widget.rareCount > 0)
+                                _buildAnimatedBar(
+                                  width: (widget.rareCount / total) * maxWidth * animValue,
+                                  color: Colors.purple,
+                                  count: widget.rareCount,
+                                  animValue: animValue,
+                                ),
+                              if (widget.uncommonCount > 0)
+                                _buildAnimatedBar(
+                                  width: (widget.uncommonCount / total) * maxWidth * animValue,
+                                  color: Colors.blue,
+                                  count: widget.uncommonCount,
+                                  animValue: animValue,
+                                ),
+                              if (widget.commonCount > 0)
+                                _buildAnimatedBar(
+                                  width: (widget.commonCount / total) * maxWidth * animValue,
+                                  color: Colors.grey,
+                                  count: widget.commonCount,
+                                  animValue: animValue,
+                                ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          // Legend with counts
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              _buildLegendItem(Icons.diamond, Colors.red, 'Ultra Rare', '<5%', widget.ultraRareCount),
+              _buildLegendItem(Icons.star, Colors.purple, 'Rare', '<15%', widget.rareCount),
+              _buildLegendItem(Icons.hexagon, Colors.blue, 'Uncommon', '<40%', widget.uncommonCount),
+              _buildLegendItem(Icons.circle, Colors.grey, 'Common', '40%+', widget.commonCount),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedBar({
+    required double width,
+    required Color color,
+    required int count,
+    required double animValue,
+  }) {
+    return Container(
+      width: width,
+      height: 24,
+      color: color,
+      child: Center(
+        child: animValue > 0.7 && count >= 3
+            ? Opacity(
+                opacity: ((animValue - 0.7) / 0.3).clamp(0.0, 1.0),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(IconData icon, Color color, String name, String percent, int count) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10, color: color),
+        const SizedBox(width: 3),
+        Text(
+          '$name ($count)',
+          style: TextStyle(fontSize: 10, color: context.subtitleColor),
+        ),
+      ],
     );
   }
 }

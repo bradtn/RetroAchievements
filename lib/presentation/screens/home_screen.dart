@@ -863,11 +863,36 @@ class _AchievementTile extends StatelessWidget {
 
   const _AchievementTile({required this.achievement});
 
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      var date = DateTime.parse(dateStr);
+      // Treat as UTC and convert to local
+      date = DateTime.utc(date.year, date.month, date.day, date.hour, date.minute, date.second).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays == 1) return 'Yesterday';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+
+      // Format as date
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[date.month - 1]} ${date.day}';
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final badgeUrl = 'https://retroachievements.org/Badge/${achievement['BadgeName']}.png';
     final gameId = achievement['GameID'];
     final gameTitle = achievement['GameTitle'] ?? '';
+    final dateStr = achievement['Date'] ?? achievement['DateEarned'] ?? '';
+    final formattedDate = _formatDate(dateStr);
     // Check various possible hardcore field names and values
     final hardcoreMode = achievement['HardcoreMode'] == 1 ||
                          achievement['HardcoreMode'] == true ||
@@ -944,15 +969,22 @@ class _AchievementTile extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    achievement['GameTitle'] ?? '',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
+                if (formattedDate.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.access_time, size: 10, color: Colors.grey[500]),
+                  const SizedBox(width: 2),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 11),
                   ),
-                ),
+                ],
               ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              gameTitle,
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
