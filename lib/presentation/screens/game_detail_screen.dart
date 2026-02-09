@@ -235,7 +235,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               final shadowOpacity = (1.0 - collapseRatio).clamp(0.0, 1.0);
 
               return FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 56, right: 16, bottom: 16),
+                titlePadding: const EdgeInsets.only(left: 56, right: 16, bottom: 10),
                 title: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -243,11 +243,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     Opacity(
                       opacity: collapseRatio,
                       child: Container(
-                        width: 24,
-                        height: 24,
-                        margin: const EdgeInsets.only(right: 8),
+                        width: 36,
+                        height: 36,
+                        margin: const EdgeInsets.only(right: 10),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(6),
                           boxShadow: collapseRatio > 0.5 ? null : [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.3),
@@ -256,13 +256,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(6),
                           child: CachedNetworkImage(
                             imageUrl: 'https://retroachievements.org$imageIcon',
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) => Container(
                               color: Colors.deepPurple,
-                              child: const Icon(Icons.games, size: 14, color: Colors.white),
+                              child: const Icon(Icons.games, size: 20, color: Colors.white),
                             ),
                           ),
                         ),
