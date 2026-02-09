@@ -2206,3 +2206,271 @@ class _AnimatedStreakFlameState extends State<AnimatedStreakFlame>
     );
   }
 }
+
+// ============ ACHIEVEMENT UNLOCK TOAST ============
+
+/// Shows an achievement unlock toast notification at the top of the screen
+class AchievementToast {
+  static OverlayEntry? _currentOverlay;
+
+  /// Show an achievement unlock toast
+  static void show(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required int points,
+    String? imageUrl,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    // Remove any existing toast
+    _currentOverlay?.remove();
+
+    final overlay = Overlay.of(context);
+
+    _currentOverlay = OverlayEntry(
+      builder: (context) => _AchievementToastWidget(
+        title: title,
+        description: description,
+        points: points,
+        imageUrl: imageUrl,
+        duration: duration,
+        onDismiss: () {
+          _currentOverlay?.remove();
+          _currentOverlay = null;
+        },
+      ),
+    );
+
+    overlay.insert(_currentOverlay!);
+    Haptics.success();
+  }
+
+  /// Dismiss the current toast
+  static void dismiss() {
+    _currentOverlay?.remove();
+    _currentOverlay = null;
+  }
+}
+
+class _AchievementToastWidget extends StatefulWidget {
+  final String title;
+  final String description;
+  final int points;
+  final String? imageUrl;
+  final Duration duration;
+  final VoidCallback onDismiss;
+
+  const _AchievementToastWidget({
+    required this.title,
+    required this.description,
+    required this.points,
+    this.imageUrl,
+    required this.duration,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_AchievementToastWidget> createState() => _AchievementToastWidgetState();
+}
+
+class _AchievementToastWidgetState extends State<_AchievementToastWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    ));
+
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _controller.forward();
+
+    // Auto dismiss after duration
+    Future.delayed(widget.duration, () {
+      if (mounted) {
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() async {
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 16,
+      left: 16,
+      right: 16,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: GestureDetector(
+            onTap: _dismiss,
+            onVerticalDragEnd: (details) {
+              if (details.primaryVelocity! < 0) {
+                _dismiss();
+              }
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.amber.shade700, Colors.orange.shade800],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Achievement icon/image
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: widget.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                widget.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.emoji_events,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.emoji_events,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Text content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.celebration,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'ACHIEVEMENT UNLOCKED',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.description,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Points badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.yellow,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+${widget.points}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
