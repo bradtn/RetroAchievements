@@ -109,7 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   isLoading: _isLoading,
                   onRefresh: _loadData,
                 ),
-                const _ExploreTab(),
+                _ExploreTab(isSelected: _currentIndex == 1),
                 _AchievementsTab(
                   achievements: _recentAchievements,
                   isLoading: _isLoading,
@@ -343,19 +343,43 @@ class _HomeTab extends StatelessWidget {
 
 // ============ EXPLORE TAB ============
 class _ExploreTab extends StatefulWidget {
-  const _ExploreTab();
+  final bool isSelected;
+
+  const _ExploreTab({required this.isSelected});
 
   @override
   State<_ExploreTab> createState() => _ExploreTabState();
 }
 
-class _ExploreTabState extends State<_ExploreTab> {
+class _ExploreTabState extends State<_ExploreTab> with TickerProviderStateMixin {
   bool _hasNewAotw = false;
+  late AnimationController _animationController;
+  bool _hasAnimated = false;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
     _checkForNewAotw();
+  }
+
+  @override
+  void didUpdateWidget(_ExploreTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Trigger animation when tab becomes selected for the first time
+    if (widget.isSelected && !oldWidget.isSelected && !_hasAnimated) {
+      _hasAnimated = true;
+      _animationController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkForNewAotw() async {
@@ -450,15 +474,43 @@ class _ExploreTabState extends State<_ExploreTab> {
       appBar: AppBar(title: const Text('Explore')),
       body: Padding(
         padding: const EdgeInsets.all(12),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.95,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) => _ExploreGridItem(item: items[index]),
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.95,
+              ),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                // If animation complete or hasn't started, show items normally
+                if (!_hasAnimated || _animationController.isCompleted) {
+                  return _ExploreGridItem(item: items[index]);
+                }
+
+                // Staggered animation - each item starts slightly after the previous
+                final itemDelay = index * 0.06; // 60ms stagger per item
+                final itemEnd = (itemDelay + 0.5).clamp(0.0, 1.0); // 500ms animation duration per item
+                final progress = ((_animationController.value - itemDelay) / (itemEnd - itemDelay)).clamp(0.0, 1.0);
+
+                // Scale from 0.6 to 1.0 with bounce
+                final scale = Curves.elasticOut.transform(progress);
+                // Fade from 0 to 1
+                final opacity = Curves.easeOut.transform(progress);
+
+                return Transform.scale(
+                  scale: 0.6 + (0.4 * scale),
+                  child: Opacity(
+                    opacity: opacity,
+                    child: _ExploreGridItem(item: items[index]),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
@@ -499,31 +551,36 @@ class _ExploreGridItem extends StatelessWidget {
       child: Card(
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: item.color.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+            // Centered content
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: item.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _buildIcon(),
                     ),
-                    child: _buildIcon(),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                    const SizedBox(height: 8),
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             // Badges
