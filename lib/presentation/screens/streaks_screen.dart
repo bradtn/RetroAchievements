@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme_utils.dart';
+import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
@@ -196,6 +197,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
             subtitle: streakState.isStreakActive
                 ? (streakState.hasActivityToday ? 'Active today!' : 'Play today to continue!')
                 : 'Start a new streak!',
+            showFlame: streakState.isStreakActive,
           ),
         ),
         const SizedBox(width: 12),
@@ -637,6 +639,7 @@ class _StreakCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String subtitle;
+  final bool showFlame;
 
   const _StreakCard({
     required this.title,
@@ -644,10 +647,13 @@ class _StreakCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.subtitle,
+    this.showFlame = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isMilestone = StreakMilestoneBadge.isMilestone(value);
+
     return Card(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -667,7 +673,10 @@ class _StreakCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: Colors.white, size: 24),
+                if (showFlame && value > 0)
+                  AnimatedStreakFlame(streakDays: value, size: 24)
+                else
+                  Icon(icon, color: Colors.white, size: 24),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -682,13 +691,25 @@ class _StreakCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              '$value',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$value',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (isMilestone) ...[
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: StreakMilestoneBadge(streakDays: value),
+                  ),
+                ],
+              ],
             ),
             Text(
               value == 1 ? 'day' : 'days',
