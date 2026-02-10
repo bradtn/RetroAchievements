@@ -417,11 +417,22 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (picked != null) {
       await ref.read(notificationSettingsProvider.notifier).setReminderTime(picked.hour, picked.minute);
+
+      // Schedule a test notification at the new time
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+      final scheduledTime = await notificationService.scheduleTestAtTime(picked.hour, picked.minute);
+
       if (context.mounted) {
+        final hour = scheduledTime.hour > 12 ? scheduledTime.hour - 12 : (scheduledTime.hour == 0 ? 12 : scheduledTime.hour);
+        final ampm = scheduledTime.hour >= 12 ? 'PM' : 'AM';
+        final min = scheduledTime.minute.toString().padLeft(2, '0');
+        final isToday = scheduledTime.day == DateTime.now().day;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Reminder set for ${settings.copyWith(reminderHour: picked.hour, reminderMinute: picked.minute).formattedReminderTime}'),
-            duration: const Duration(seconds: 2),
+            content: Text('Test notification scheduled for $hour:$min $ampm ${isToday ? "today" : "tomorrow"}'),
+            duration: const Duration(seconds: 3),
           ),
         );
       }

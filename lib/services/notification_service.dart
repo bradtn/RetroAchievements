@@ -231,6 +231,39 @@ class NotificationService {
     );
   }
 
+  // Schedule a test notification at specific time (for testing)
+  Future<DateTime> scheduleTestAtTime(int hour, int minute) async {
+    await cancel(streakReminderNotificationId);
+
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    // If it's already past the scheduled time, schedule for tomorrow
+    if (scheduledDate.isBefore(now) || scheduledDate.difference(now).inSeconds < 30) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    await _notifications.zonedSchedule(
+      streakReminderNotificationId,
+      'Streak Reminder Test 🔥',
+      'This is your scheduled reminder test!',
+      scheduledDate,
+      _getNotificationDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+
+    return scheduledDate;
+  }
+
   // Schedule daily summary for 9 PM
   Future<void> scheduleDailySummaryNotification({
     required int achievementsToday,
