@@ -255,8 +255,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 Flexible(
                   child: Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: collapseRatio > 0.5 ? 0 : 12,
-                      vertical: collapseRatio > 0.5 ? 0 : 8,
+                      horizontal: collapseRatio > 0.5 ? 0 : 10,
+                      vertical: collapseRatio > 0.5 ? 0 : 5,
                     ),
                     decoration: collapseRatio > 0.5
                         ? null
@@ -286,10 +286,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       title,
                       style: TextStyle(
                         color: titleColor,
-                        fontSize: 16,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        height: 1.2,
+                        letterSpacing: 0.3,
+                        height: 1.1,
                         shadows: collapseRatio > 0.5
                             ? null
                             : [
@@ -300,7 +300,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                               ],
                       ),
                       maxLines: 1,
-                      minFontSize: 10,
+                      minFontSize: 11,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                     ),
