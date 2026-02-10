@@ -477,48 +477,51 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _scheduleIn60Seconds(BuildContext context) async {
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-
-    // Check notification permission
-    final notifGranted = await notificationService.requestPermissions();
-    if (!notifGranted) {
+    try {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification permission denied')),
+          const SnackBar(content: Text('Scheduling...'), duration: Duration(seconds: 1)),
         );
       }
-      return;
-    }
 
-    // Check exact alarm permission
-    final canSchedule = await notificationService.canScheduleExactAlarms();
-    if (!canSchedule) {
-      final granted = await notificationService.requestExactAlarmPermission();
-      if (!granted && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enable "Alarms & reminders" permission in app settings'),
-            duration: Duration(seconds: 4),
-          ),
-        );
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+
+      // Check notification permission
+      final notifGranted = await notificationService.requestPermissions();
+      if (!notifGranted) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notification permission denied')),
+          );
+        }
         return;
       }
-    }
 
-    // Schedule for 60 seconds from now
-    await notificationService.scheduleTestInSeconds(60);
+      // Schedule for 60 seconds from now
+      await notificationService.scheduleTestInSeconds(60);
 
-    // Verify it's pending
-    final pending = await notificationService.getPendingNotifications();
+      // Verify it's pending
+      final pending = await notificationService.getPendingNotifications();
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Scheduled in 60 seconds. Pending: ${pending.length} notification(s)'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scheduled! Pending: ${pending.length}. Wait 60 sec...'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
