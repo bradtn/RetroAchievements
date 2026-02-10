@@ -117,6 +117,7 @@ class SettingsScreen extends ConsumerWidget {
                 ? () => _showThemeDialog(context, ref, themeMode)
                 : () => _showPremiumRequired(context),
           ),
+          _AccentColorTile(isDark: isDark, isPremium: premium.isPremium),
 
           const Divider(),
 
@@ -596,5 +597,89 @@ App Info (please don't delete):
         );
       }
     }
+  }
+}
+
+class _AccentColorTile extends ConsumerWidget {
+  final bool isDark;
+  final bool isPremium;
+
+  const _AccentColorTile({required this.isDark, required this.isPremium});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accentColor = ref.watch(accentColorProvider);
+
+    return ListTile(
+      leading: Icon(Icons.color_lens, color: isDark ? Colors.white70 : Colors.grey.shade700),
+      title: Text('Accent Color', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+      subtitle: Row(
+        children: [
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: accentColor.color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white24),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(accentColor.label, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+        ],
+      ),
+      onTap: () => _showAccentColorDialog(context, ref, accentColor),
+    );
+  }
+
+  void _showAccentColorDialog(BuildContext context, WidgetRef ref, AccentColor current) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Choose Accent Color'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: AccentColor.values.map((color) {
+              final isSelected = color == current;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(accentColorProvider.notifier).setAccentColor(color);
+                  Navigator.pop(ctx);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: color.color,
+                    shape: BoxShape.circle,
+                    border: isSelected
+                        ? Border.all(color: Colors.white, width: 3)
+                        : null,
+                    boxShadow: isSelected
+                        ? [BoxShadow(color: color.color.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2)]
+                        : null,
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 28)
+                      : null,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 }

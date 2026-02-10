@@ -7,6 +7,7 @@ import 'presentation/screens/game_detail_screen.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/game_cache_provider.dart';
+import 'presentation/screens/settings/settings_provider.dart';
 import 'services/widget_service.dart';
 import 'services/notification_service.dart';
 import 'services/background_sync_service.dart';
@@ -114,6 +115,7 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
+    final accentColor = ref.watch(accentColorProvider);
 
     // Request notification permission and trigger background tasks after user is authenticated
     if (authState.isAuthenticated) {
@@ -126,10 +128,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       navigatorKey: navigatorKey,
       title: 'RetroTracker',
       debugShowCheckedModeBanner: false,
-      theme: _buildLightTheme(),
+      theme: _buildLightTheme(accentColor.color),
       darkTheme: themeMode == AppThemeMode.amoled
-          ? _buildAmoledTheme()
-          : _buildDarkTheme(),
+          ? _buildAmoledTheme(accentColor.color)
+          : _buildDarkTheme(accentColor.color),
       themeMode: _getThemeMode(themeMode),
       // Smooth theme transition animation
       themeAnimationDuration: const Duration(milliseconds: 300),
@@ -152,15 +154,18 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     }
   }
 
-  ThemeData _buildLightTheme() {
+  ThemeData _buildLightTheme(Color seedColor) {
+    // Create a ColorScheme to get computed shades
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: Brightness.light,
+      surface: const Color(0xFFF5F5F5),
+      surfaceContainerHighest: Colors.white,
+      onSurface: Colors.black87,
+    );
+
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.deepPurple,
-        brightness: Brightness.light,
-        surface: const Color(0xFFF5F5F5), // Slight grey background
-        surfaceContainerHighest: Colors.white,
-        onSurface: Colors.black87,
-      ),
+      colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       // Improve card contrast in light mode
       cardTheme: CardThemeData(
@@ -185,13 +190,13 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return Colors.deepPurple;
+            return colorScheme.primary;
           }
           return Colors.grey.shade400;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return Colors.deepPurple.shade200;
+            return colorScheme.primaryContainer;
           }
           return Colors.grey.shade300;
         }),
@@ -222,16 +227,16 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       // Navigation bar styling
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: Colors.deepPurple.shade100,
+        indicatorColor: colorScheme.primaryContainer,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: Colors.deepPurple.shade700);
+            return IconThemeData(color: colorScheme.primary);
           }
           return IconThemeData(color: Colors.grey.shade600);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return TextStyle(color: Colors.deepPurple.shade700, fontSize: 12);
+            return TextStyle(color: colorScheme.primary, fontSize: 12);
           }
           return TextStyle(color: Colors.grey.shade600, fontSize: 12);
         }),
@@ -258,20 +263,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     );
   }
 
-  ThemeData _buildDarkTheme() {
+  ThemeData _buildDarkTheme(Color seedColor) {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.deepPurple,
+        seedColor: seedColor,
         brightness: Brightness.dark,
       ),
       useMaterial3: true,
     );
   }
 
-  ThemeData _buildAmoledTheme() {
+  ThemeData _buildAmoledTheme(Color seedColor) {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.deepPurple,
+        seedColor: seedColor,
         brightness: Brightness.dark,
         surface: Colors.black,
       ),

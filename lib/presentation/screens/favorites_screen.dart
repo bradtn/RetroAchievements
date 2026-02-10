@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../providers/favorites_provider.dart';
@@ -23,10 +25,14 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   late Animation<double> _emptyIconScale;
   late Animation<double> _emptyContentFade;
   late Animation<Offset> _emptyButtonSlide;
+  bool? _showWishlistInfo; // null = loading, true = show, false = dismissed
+
+  static const String _wishlistInfoDismissedKey = 'wishlist_info_dismissed';
 
   @override
   void initState() {
     super.initState();
+    _loadWishlistInfoState();
     _listAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -75,6 +81,27 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
       context,
       SlidePageRoute(page: const GameSearchScreen()),
     );
+  }
+
+  Future<void> _openWishlistPage() async {
+    final url = Uri.parse('https://retroachievements.org/game-list/play');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _loadWishlistInfoState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getBool(_wishlistInfoDismissedKey) ?? false;
+    if (mounted) {
+      setState(() => _showWishlistInfo = !dismissed);
+    }
+  }
+
+  Future<void> _dismissWishlistInfo() async {
+    setState(() => _showWishlistInfo = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_wishlistInfoDismissedKey, true);
   }
 
   @override
@@ -208,6 +235,15 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         return ListView(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 80 + bottomPadding), // Extra padding for FAB
           children: [
+            // Wishlist info banner
+            if (_showWishlistInfo == true) ...[
+              _buildAnimatedItem(
+                itemIndex++,
+                _buildWishlistInfoBanner(context),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Pinned game (for widget)
             if (pinned != null) ...[
               _buildAnimatedItem(
@@ -301,6 +337,90 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         page: GameDetailScreen(
           gameId: game.gameId,
           gameTitle: game.title,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWishlistInfoBanner(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 20,
+              color: Colors.blue[300],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Wishlist Sync',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.blue[200],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.subtitleColor,
+                        height: 1.4,
+                      ),
+                      children: [
+                        const TextSpan(
+                          text: 'Games from your RetroAchievements wishlist are automatically synced here. '
+                              'The API is read-only, so adding to your wishlist must be done on ',
+                        ),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: _openWishlistPage,
+                            child: Text(
+                              'retroachievements.org',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[300],
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.blue[300],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const TextSpan(text: '.'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: _dismissWishlistInfo,
+              child: Icon(
+                Icons.close,
+                size: 18,
+                color: context.subtitleColor,
+              ),
+            ),
+          ],
         ),
       ),
     );

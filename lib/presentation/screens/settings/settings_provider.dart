@@ -1,6 +1,51 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/background_sync_service.dart';
+
+/// Available accent colors for the app
+enum AccentColor {
+  blue('Blue', Colors.blue),
+  teal('Teal', Colors.teal),
+  cyan('Cyan', Colors.cyan),
+  green('Green', Colors.green),
+  orange('Orange', Colors.orange),
+  amber('Amber', Colors.amber),
+  red('Red', Colors.red),
+  pink('Pink', Colors.pink),
+  purple('Purple', Colors.deepPurple),
+  indigo('Indigo', Colors.indigo);
+
+  final String label;
+  final Color color;
+
+  const AccentColor(this.label, this.color);
+}
+
+class AccentColorNotifier extends StateNotifier<AccentColor> {
+  AccentColorNotifier() : super(AccentColor.blue) {
+    _loadAccentColor();
+  }
+
+  Future<void> _loadAccentColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    final colorName = prefs.getString('accent_color') ?? 'blue';
+    state = AccentColor.values.firstWhere(
+      (c) => c.name == colorName,
+      orElse: () => AccentColor.blue,
+    );
+  }
+
+  Future<void> setAccentColor(AccentColor color) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('accent_color', color.name);
+    state = color;
+  }
+}
+
+final accentColorProvider = StateNotifierProvider<AccentColorNotifier, AccentColor>((ref) {
+  return AccentColorNotifier();
+});
 
 class NotificationSettings {
   final bool streakNotificationsEnabled;
