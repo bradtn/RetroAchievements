@@ -20,6 +20,16 @@
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
+# Flutter Local Notifications - keep Gson TypeToken
+-keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keepattributes Signature
+
+# Flutter Local Notifications plugin
+-keep class com.dexterous.** { *; }
+-dontwarn com.dexterous.**
+
 # Keep model classes (if using reflection)
 -keep class com.retrotracker.retrotracker.** { *; }
 
