@@ -8,4 +8,6 @@ Main features are tracking your daily streak (with reminders so you don't forget
 
 Quick heads up - the RetroAchievements API is honestly kind of limited in what it can do, so there's some stuff I just can't pull off. Did my best with what's available though. Also you'll need to use your own API key from your RA account settings, just how it works.
 
-Not trying to get rich off this, just want something that doesn't suck to use and maybe cover my costs. Happy to hear feedback!
+I'm pretty active with development and always looking to make it better. If you've got ideas, find bugs, or just think something could be done differently I'd genuinely love to hear it. You can reach me here or shoot me an email at [YOUR EMAIL]. Not gonna ignore you or anything, I actually want the feedback.
+
+Not trying to get rich off this, just want something that doesn't suck to use and maybe cover my costs. Happy to hear from you!
