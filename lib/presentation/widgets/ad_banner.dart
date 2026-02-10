@@ -55,9 +55,9 @@ class _AdBannerState extends ConsumerState<AdBanner> {
       return const SizedBox.shrink();
     }
 
-    // Show placeholder while ad is loading
+    // Don't show anything until ad is loaded
     if (!_isAdLoaded || _bannerAd == null) {
-      return const SizedBox(height: 50);
+      return const SizedBox.shrink();
     }
 
     return Container(

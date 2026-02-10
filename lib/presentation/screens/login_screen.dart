@@ -129,43 +129,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const SizedBox(height: 40),
 
-                  // Logo and branding
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.amber.shade600,
-                          Colors.orange.shade700,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.amber.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.emoji_events,
-                      size: 60,
-                      color: Colors.white,
-                    ),
+                  // Logo
+                  Image.asset(
+                    'assets/RetroTrack.png',
+                    width: 280,
                   ),
-                  const SizedBox(height: 24),
-
-                  Text(
-                    'RetroTracker',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
                     'Track your RetroAchievements progress',
                     textAlign: TextAlign.center,

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
+import 'profile_screen.dart';
 
 String _formatDateTime(String? date) {
   if (date == null || date.isEmpty) return '';
@@ -518,6 +519,16 @@ class _UnlockTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 4),
       child: ListTile(
         dense: true,
+        onTap: user.isNotEmpty && user != 'Unknown'
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(username: user),
+                  ),
+                );
+              }
+            : null,
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: CachedNetworkImage(
@@ -559,6 +570,7 @@ class _UnlockTile extends StatelessWidget {
           dateAwarded,
           style: TextStyle(color: context.subtitleColor, fontSize: 12),
         ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
       ),
     );
   }

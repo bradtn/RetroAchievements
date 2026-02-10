@@ -177,38 +177,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
           if (notificationSettings.eveningReminderEnabled && notificationSettings.streakNotificationsEnabled)
             Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showTimePicker(context, ref, notificationSettings),
-                          icon: const Icon(Icons.schedule, size: 18),
-                          label: Text('Set Time (${notificationSettings.formattedReminderTime})'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => _sendTestNotification(context),
-                        icon: const Icon(Icons.notifications_active, size: 18),
-                        label: const Text('Now'),
-                        style: OutlinedButton.styleFrom(foregroundColor: Colors.green),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _scheduleIn60Seconds(context),
-                      icon: const Icon(Icons.timer, size: 18),
-                      label: const Text('Test Scheduled (fires in 60 sec)'),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.only(left: 56, right: 16, bottom: 8),
+              child: OutlinedButton.icon(
+                onPressed: () => _showTimePicker(context, ref, notificationSettings),
+                icon: const Icon(Icons.schedule, size: 18),
+                label: Text('Reminder Time: ${notificationSettings.formattedReminderTime}'),
               ),
             ),
           SwitchListTile(
@@ -363,7 +336,7 @@ class SettingsScreen extends ConsumerWidget {
             const Icon(Icons.star, size: 64, color: Colors.amber),
             const SizedBox(height: 16),
             const Text(
-              'RetroTracker Premium',
+              'RetroTrack Premium',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -454,78 +427,6 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _sendTestNotification(BuildContext context) async {
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-    final granted = await notificationService.requestPermissions();
-    if (granted) {
-      await notificationService.sendTestNotification();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Test notification sent!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification permission denied')),
-        );
-      }
-    }
-  }
-
-  Future<void> _scheduleIn60Seconds(BuildContext context) async {
-    try {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Scheduling...'), duration: Duration(seconds: 1)),
-        );
-      }
-
-      final notificationService = NotificationService();
-      await notificationService.initialize();
-
-      // Check notification permission
-      final notifGranted = await notificationService.requestPermissions();
-      if (!notifGranted) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notification permission denied')),
-          );
-        }
-        return;
-      }
-
-      // Schedule for 60 seconds from now
-      await notificationService.scheduleTestInSeconds(60);
-
-      // Verify it's pending
-      final pending = await notificationService.getPendingNotifications();
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Scheduled! Pending: ${pending.length}. Wait 60 sec...'),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            duration: const Duration(seconds: 5),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   void _confirmLogout(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -551,7 +452,7 @@ class SettingsScreen extends ConsumerWidget {
     final String platform = Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown';
     final String osVersion = Platform.operatingSystemVersion;
 
-    final String subject = Uri.encodeComponent('[RetroTracker] $type');
+    final String subject = Uri.encodeComponent('[RetroTrack] $type');
     final String body = Uri.encodeComponent('''
 Hi,
 

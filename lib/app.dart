@@ -126,7 +126,7 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
 
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'RetroTracker',
+      title: 'RetroTrack',
       debugShowCheckedModeBanner: false,
       theme: _buildLightTheme(accentColor.color),
       darkTheme: themeMode == AppThemeMode.amoled
@@ -264,38 +264,111 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   }
 
   ThemeData _buildDarkTheme(Color seedColor) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: Brightness.dark,
+      surface: const Color(0xFF121212),
+      surfaceContainerHighest: const Color(0xFF1E1E1E),
+    );
+
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seedColor,
-        brightness: Brightness.dark,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: const Color(0xFF1E1E1E),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF121212),
+        surfaceTintColor: Colors.transparent,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF121212),
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: colorScheme.primaryContainer,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF1E1E1E),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Color(0xFF1E1E1E),
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: Color(0xFF1E1E1E),
+        surfaceTintColor: Colors.transparent,
+      ),
+      listTileTheme: const ListTileThemeData(
+        tileColor: Colors.transparent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF1E1E1E),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      chipTheme: const ChipThemeData(
+        backgroundColor: Color(0xFF1E1E1E),
       ),
       useMaterial3: true,
     );
   }
 
   ThemeData _buildAmoledTheme(Color seedColor) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: Brightness.dark,
+      surface: Colors.black,
+      surfaceContainerHighest: const Color(0xFF121212),
+    );
+
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seedColor,
-        brightness: Brightness.dark,
-        surface: Colors.black,
-      ),
+      colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.black,
-      cardTheme: const CardThemeData(
-        color: Color(0xFF121212),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: const Color(0xFF121212),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.transparent,
       ),
-      navigationBarTheme: const NavigationBarThemeData(
+      navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.transparent,
+        indicatorColor: colorScheme.primaryContainer,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Color(0xFF121212),
       ),
       dialogTheme: const DialogThemeData(
+        backgroundColor: Color(0xFF121212),
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: Color(0xFF121212),
+        surfaceTintColor: Colors.transparent,
+      ),
+      listTileTheme: const ListTileThemeData(
+        tileColor: Colors.transparent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF121212),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF121212),
       ),
       useMaterial3: true,

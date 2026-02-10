@@ -233,7 +233,7 @@ class Branding extends StatelessWidget {
         Icon(Icons.videogame_asset, color: Colors.white.withValues(alpha: 0.5), size: 16),
         const SizedBox(width: 6),
         Text(
-          'RetroTracker',
+          'RetroTrack',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.5),
             fontSize: 12,

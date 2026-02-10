@@ -597,7 +597,7 @@ class GoalsSummary extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'RetroTracker Goals',
+              'RetroTrack Goals',
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 16),

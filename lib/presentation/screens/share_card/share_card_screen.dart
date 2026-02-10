@@ -217,33 +217,33 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
     switch (widget.type) {
       case ShareCardType.profile:
         final points = widget.data['TotalPoints'] ?? 0;
-        return 'Check out my RetroAchievements profile! $points points #RetroAchievements #RetroTracker';
+        return 'Check out my RetroAchievements profile! $points points #RetroAchievements #RetroTrack';
       case ShareCardType.game:
         final title = widget.data['Title'] ?? 'Game';
         final earned = widget.data['NumAwardedToUser'] ?? widget.data['NumAchieved'] ?? 0;
         final total = widget.data['NumAchievements'] ?? widget.data['NumPossibleAchievements'] ?? 0;
-        return 'Playing $title - $earned/$total achievements! #RetroAchievements #RetroTracker';
+        return 'Playing $title - $earned/$total achievements! #RetroAchievements #RetroTrack';
       case ShareCardType.achievement:
         final title = widget.data['Title'] ?? 'Achievement';
         final gameTitle = widget.data['GameTitle'] ?? '';
-        return 'Just unlocked "$title" in $gameTitle! #RetroAchievements #RetroTracker';
+        return 'Just unlocked "$title" in $gameTitle! #RetroAchievements #RetroTrack';
       case ShareCardType.comparison:
         final otherProfile = widget.data['otherProfile'] as Map<String, dynamic>? ?? {};
         final otherName = otherProfile['User'] ?? 'Opponent';
-        return 'Check out my comparison vs $otherName on RetroAchievements! #RetroAchievements #RetroTracker';
+        return 'Check out my comparison vs $otherName on RetroAchievements! #RetroAchievements #RetroTrack';
       case ShareCardType.milestone:
         final goalTitle = widget.data['title'] ?? 'Goal';
         final username = widget.data['username'] ?? 'Player';
-        return '$username completed the "$goalTitle" goal! #RetroAchievements #RetroTracker';
+        return '$username completed the "$goalTitle" goal! #RetroAchievements #RetroTrack';
       case ShareCardType.raAward:
         final awardTitle = widget.data['title'] ?? 'Game';
         final awardType = widget.data['awardType'] ?? 'Award';
         final username = widget.data['username'] ?? 'Player';
-        return '$username earned $awardType on $awardTitle! #RetroAchievements #RetroTracker';
+        return '$username earned $awardType on $awardTitle! #RetroAchievements #RetroTrack';
       case ShareCardType.streak:
         final currentStreak = widget.data['currentStreak'] ?? 0;
         final username = widget.data['username'] ?? 'Player';
-        return '$username is on a $currentStreak day streak! #RetroAchievements #RetroTracker';
+        return '$username is on a $currentStreak day streak! #RetroAchievements #RetroTrack';
     }
   }
 }
