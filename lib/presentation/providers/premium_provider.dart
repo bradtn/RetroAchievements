@@ -8,22 +8,30 @@ class PremiumState {
   final bool isPremium;
   final bool isLoading;
   final String? error;
+  final DateTime? purchaseDate;
+  final bool wasRefunded;
 
   const PremiumState({
     this.isPremium = false,
     this.isLoading = false,
     this.error,
+    this.purchaseDate,
+    this.wasRefunded = false,
   });
 
   PremiumState copyWith({
     bool? isPremium,
     bool? isLoading,
     String? error,
+    DateTime? purchaseDate,
+    bool? wasRefunded,
   }) {
     return PremiumState(
       isPremium: isPremium ?? this.isPremium,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      purchaseDate: purchaseDate ?? this.purchaseDate,
+      wasRefunded: wasRefunded ?? this.wasRefunded,
     );
   }
 }
@@ -37,6 +45,7 @@ class PremiumNotifier extends StateNotifier<PremiumState> {
   }
 
   Future<void> _initialize() async {
+    await _purchaseService.initialize();
     await _loadStatus();
 
     // Set up purchase callback
@@ -45,40 +54,62 @@ class PremiumNotifier extends StateNotifier<PremiumState> {
         unlockPremium();
       }
     };
+
+    // Set up refund callback
+    _purchaseService.onPurchaseRefunded = () {
+      _handleRefund();
+    };
   }
 
   Future<void> _loadStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isPremium = prefs.getBool('is_premium') ?? false;
-      state = state.copyWith(isPremium: isPremium);
+      final purchaseDate = await _purchaseService.getPurchaseDate();
+      state = state.copyWith(isPremium: isPremium, purchaseDate: purchaseDate);
     } catch (e) {
       // Stay free
     }
+  }
+
+  /// Handle refund - revoke premium
+  void _handleRefund() {
+    state = state.copyWith(isPremium: false, wasRefunded: true, purchaseDate: null);
   }
 
   /// Unlock premium (after purchase verified)
   Future<void> unlockPremium() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_premium', true);
-    state = state.copyWith(isPremium: true, isLoading: false);
+    state = state.copyWith(
+      isPremium: true,
+      isLoading: false,
+      purchaseDate: DateTime.now(),
+      wasRefunded: false,
+    );
   }
 
-  /// Purchase premium
-  Future<bool> purchasePremium() async {
+  /// Purchase premium with detailed result
+  Future<PurchaseResult> purchasePremiumWithResult() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final success = await _purchaseService.purchasePremium();
-      if (!success) {
-        state = state.copyWith(isLoading: false, error: 'Purchase failed');
+      final result = await _purchaseService.purchasePremiumWithResult();
+      if (!result.success) {
+        state = state.copyWith(isLoading: false, error: result.errorMessage);
       }
       // If successful, the callback will handle unlocking
-      return success;
+      return result;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
+      return PurchaseResult.error(PurchaseErrorType.unknown, e.toString());
     }
+  }
+
+  /// Purchase premium (simple bool for backwards compatibility)
+  Future<bool> purchasePremium() async {
+    final result = await purchasePremiumWithResult();
+    return result.success;
   }
 
   /// Restore purchases
@@ -99,6 +130,17 @@ class PremiumNotifier extends StateNotifier<PremiumState> {
 
   /// Get price string from store
   String get priceString => _purchaseService.premiumPrice;
+
+  /// Check if on sale
+  bool get isOnSale => _purchaseService.isOnSale;
+
+  /// Get original price if on sale
+  String? get originalPrice => _purchaseService.originalPrice;
+
+  /// Clear refund flag after showing message
+  void clearRefundFlag() {
+    state = state.copyWith(wasRefunded: false);
+  }
 }
 
 /// Provider for premium state

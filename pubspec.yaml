@@ -15,6 +15,7 @@ dependencies:
 
   # HTTP & Networking
   dio: ^5.4.0
+  connectivity_plus: ^5.0.2
 
   # Local Storage (simple, works everywhere)
   shared_preferences: ^2.2.2

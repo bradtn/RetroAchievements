@@ -17,9 +17,7 @@ class AdService {
     await MobileAds.instance.initialize();
     _isInitialized = true;
 
-    if (kDebugMode) {
-      print('AdMob initialized');
-    }
+    // AdMob initialized successfully
   }
 
   /// Get the banner ad unit ID

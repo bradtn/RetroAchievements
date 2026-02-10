@@ -4,8 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:confetti/confetti.dart';
+import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
+import '../../services/purchase_service.dart';
 import '../../core/animations.dart';
 import '../../services/notification_service.dart';
 import 'settings/settings_provider.dart';
@@ -101,7 +104,12 @@ class SettingsScreen extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.verified, color: Colors.amber),
               title: Text('Premium Active', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-              subtitle: Text('All features unlocked!', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+              subtitle: Text(
+                premium.purchaseDate != null
+                    ? 'Purchased ${DateFormat.yMMMd().format(premium.purchaseDate!)}'
+                    : 'All features unlocked!',
+                style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+              ),
             ),
 
           const Divider(),
@@ -179,7 +187,7 @@ class SettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(left: 56, right: 16, bottom: 8),
               child: OutlinedButton.icon(
-                onPressed: () => _showTimePicker(context, ref, notificationSettings),
+                onPressed: () => _showTimePickerDialog(context, ref, notificationSettings),
                 icon: const Icon(Icons.schedule, size: 18),
                 label: Text('Reminder Time: ${notificationSettings.formattedReminderTime}'),
               ),
@@ -239,7 +247,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () => _confirmLogout(context, ref),
+            onTap: () => _confirmLogoutDialog(context, ref),
           ),
 
           const Divider(),
@@ -328,76 +336,205 @@ class SettingsScreen extends ConsumerWidget {
   void _showPremiumSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.star, size: 64, color: Colors.amber),
-            const SizedBox(height: 16),
-            const Text(
-              'RetroTrack Premium',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text('One-time purchase. Yours forever.'),
-            const SizedBox(height: 24),
-            const CheckItem('Remove all ads'),
-            const CheckItem('Theme customization'),
-            const CheckItem('Advanced statistics'),
-            const CheckItem('Offline mode'),
-            const CheckItem('Multiple accounts'),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () async {
-                  final success = await ref.read(premiumProvider.notifier).purchasePremium();
-                  if (context.mounted) {
-                    Navigator.pop(ctx);
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Premium unlocked!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Purchase for \$4.99', style: TextStyle(fontSize: 18)),
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                await ref.read(premiumProvider.notifier).restorePurchases();
-                if (context.mounted) {
-                  Navigator.pop(ctx);
-                  final isPremium = ref.read(premiumProvider).isPremium;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(isPremium ? 'Purchase restored!' : 'No previous purchase found'),
-                      backgroundColor: isPremium ? Colors.green : null,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Restore Purchase'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Maybe Later'),
-            ),
-          ],
-        ),
-      ),
+      isScrollControlled: true,
+      builder: (ctx) => _PremiumSheetContent(parentContext: context),
     );
   }
+}
 
-  Future<void> _showTimePicker(BuildContext context, WidgetRef ref, NotificationSettings settings) async {
+/// Premium sheet content as a separate stateful widget for confetti
+class _PremiumSheetContent extends ConsumerStatefulWidget {
+  final BuildContext parentContext;
+
+  const _PremiumSheetContent({required this.parentContext});
+
+  @override
+  ConsumerState<_PremiumSheetContent> createState() => _PremiumSheetContentState();
+}
+
+class _PremiumSheetContentState extends ConsumerState<_PremiumSheetContent> {
+  late ConfettiController _confettiController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handlePurchase() async {
+    setState(() => _isLoading = true);
+
+    final result = await ref.read(premiumProvider.notifier).purchasePremiumWithResult();
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    if (result.success) {
+      // Play confetti
+      _confettiController.play();
+
+      // Wait for confetti then close
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          const SnackBar(
+            content: Text('Premium unlocked! Enjoy all features.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      // Show specific error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.errorMessage ?? 'Purchase failed'),
+          backgroundColor: result.errorType == PurchaseErrorType.paymentCancelled
+              ? null
+              : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleRestore() async {
+    setState(() => _isLoading = true);
+
+    await ref.read(premiumProvider.notifier).restorePurchases();
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    final isPremium = ref.read(premiumProvider).isPremium;
+
+    if (isPremium) {
+      _confettiController.play();
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          const SnackBar(
+            content: Text('Purchase restored!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No previous purchase found')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = ref.read(premiumProvider.notifier);
+    final priceString = notifier.priceString;
+    final isOnSale = notifier.isOnSale;
+    final originalPrice = notifier.originalPrice;
+
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star, size: 64, color: Colors.amber),
+              const SizedBox(height: 16),
+              const Text(
+                'RetroTrack Premium',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text('One-time purchase. Yours forever.'),
+              const SizedBox(height: 24),
+              const CheckItem('Remove all ads'),
+              const CheckItem('Theme customization'),
+              const CheckItem('Home screen widgets'),
+              const CheckItem('AMOLED dark mode'),
+              const CheckItem('Share cards'),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _isLoading ? null : _handlePurchase,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (isOnSale && originalPrice != null) ...[
+                                Text(
+                                  originalPrice,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    decoration: TextDecoration.lineThrough,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Text(
+                                'Purchase for $priceString',
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _isLoading ? null : _handleRestore,
+                child: const Text('Restore Purchase'),
+              ),
+              TextButton(
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Maybe Later'),
+              ),
+            ],
+          ),
+        ),
+        // Confetti
+        ConfettiWidget(
+          confettiController: _confettiController,
+          blastDirectionality: BlastDirectionality.explosive,
+          shouldLoop: false,
+          colors: const [
+            Colors.amber,
+            Colors.orange,
+            Colors.purple,
+            Colors.blue,
+            Colors.green,
+          ],
+          numberOfParticles: 30,
+        ),
+      ],
+    );
+  }
+}
+
+// Top-level helper functions for settings screen
+Future<void> _showTimePickerDialog(BuildContext context, WidgetRef ref, NotificationSettings settings) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: settings.reminderHour, minute: settings.reminderMinute),
@@ -427,7 +564,7 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  void _confirmLogout(BuildContext context, WidgetRef ref) {
+void _confirmLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -448,7 +585,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _sendFeedbackEmail(BuildContext context, String type, String? username) async {
+Future<void> _sendFeedbackEmail(BuildContext context, String type, String? username) async {
     final String platform = Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown';
     final String osVersion = Platform.operatingSystemVersion;
 
@@ -485,7 +622,7 @@ App Info (please don't delete):
     }
   }
 
-  Future<void> _openPlayStore(BuildContext context) async {
+Future<void> _openPlayStore(BuildContext context) async {
     const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.retrotracker.retrotracker';
     final Uri uri = Uri.parse(playStoreUrl);
 
@@ -499,7 +636,6 @@ App Info (please don't delete):
       }
     }
   }
-}
 
 class _AccentColorTile extends ConsumerWidget {
   final bool isDark;
