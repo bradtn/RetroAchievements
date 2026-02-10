@@ -231,6 +231,49 @@ class NotificationService {
     );
   }
 
+  // Schedule notification for X seconds from now (for testing)
+  Future<void> scheduleTestInSeconds(int seconds) async {
+    await cancel(streakReminderNotificationId);
+
+    final scheduledDate = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
+
+    await _notifications.zonedSchedule(
+      streakReminderNotificationId,
+      'Scheduled Test 🔔',
+      'This notification was scheduled $seconds seconds ago!',
+      scheduledDate,
+      _getNotificationDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  // Check pending notifications (for debugging)
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    return await _notifications.pendingNotificationRequests();
+  }
+
+  // Check if exact alarms are permitted (Android 12+)
+  Future<bool> canScheduleExactAlarms() async {
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.canScheduleExactNotifications() ?? false;
+    }
+    return true;
+  }
+
+  // Request exact alarm permission (Android 12+)
+  Future<bool> requestExactAlarmPermission() async {
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.requestExactAlarmsPermission() ?? false;
+    }
+    return true;
+  }
+
   // Schedule a test notification at specific time (for testing)
   Future<DateTime> scheduleTestAtTime(int hour, int minute) async {
     await cancel(streakReminderNotificationId);

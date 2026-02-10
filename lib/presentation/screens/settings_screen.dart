@@ -177,21 +177,35 @@ class SettingsScreen extends ConsumerWidget {
           if (notificationSettings.eveningReminderEnabled && notificationSettings.streakNotificationsEnabled)
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showTimePicker(context, ref, notificationSettings),
-                      icon: const Icon(Icons.schedule, size: 18),
-                      label: Text('Change Time (${notificationSettings.formattedReminderTime})'),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showTimePicker(context, ref, notificationSettings),
+                          icon: const Icon(Icons.schedule, size: 18),
+                          label: Text('Set Time (${notificationSettings.formattedReminderTime})'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _sendTestNotification(context),
+                        icon: const Icon(Icons.notifications_active, size: 18),
+                        label: const Text('Now'),
+                        style: OutlinedButton.styleFrom(foregroundColor: Colors.green),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => _sendTestNotification(context),
-                    icon: const Icon(Icons.notifications_active, size: 18),
-                    label: const Text('Test'),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _scheduleIn60Seconds(context),
+                      icon: const Icon(Icons.timer, size: 18),
+                      label: const Text('Test Scheduled (fires in 60 sec)'),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                    ),
                   ),
                 ],
               ),
@@ -459,6 +473,52 @@ class SettingsScreen extends ConsumerWidget {
           const SnackBar(content: Text('Notification permission denied')),
         );
       }
+    }
+  }
+
+  Future<void> _scheduleIn60Seconds(BuildContext context) async {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    // Check notification permission
+    final notifGranted = await notificationService.requestPermissions();
+    if (!notifGranted) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notification permission denied')),
+        );
+      }
+      return;
+    }
+
+    // Check exact alarm permission
+    final canSchedule = await notificationService.canScheduleExactAlarms();
+    if (!canSchedule) {
+      final granted = await notificationService.requestExactAlarmPermission();
+      if (!granted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enable "Alarms & reminders" permission in app settings'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    }
+
+    // Schedule for 60 seconds from now
+    await notificationService.scheduleTestInSeconds(60);
+
+    // Verify it's pending
+    final pending = await notificationService.getPendingNotifications();
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scheduled in 60 seconds. Pending: ${pending.length} notification(s)'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
