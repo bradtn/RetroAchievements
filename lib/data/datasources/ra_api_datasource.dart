@@ -311,6 +311,62 @@ class RAApiDataSource {
     }
   }
 
+  /// GitHub URL for Achievement of the Month data
+  /// This is hosted separately since RA doesn't have an official AotM API
+  static const String _aotmGitHubUrl =
+      'https://raw.githubusercontent.com/bradtn/RetroAchievements/master/aotm.json';
+
+  /// Get Achievement of the Month (fetched from GitHub)
+  /// Always fetches fresh data with cache-busting to ensure latest content
+  Future<List<dynamic>?> getAchievementOfTheMonth() async {
+    try {
+      final githubDio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      ));
+      // Add cache-busting query param to bypass any CDN/proxy caching
+      final cacheBuster = DateTime.now().millisecondsSinceEpoch;
+      final response = await githubDio.get('$_aotmGitHubUrl?cb=$cacheBuster');
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is List) {
+          return response.data as List<dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get the current active Achievement of the Month
+  Future<Map<String, dynamic>?> getCurrentAchievementOfTheMonth() async {
+    final allAotm = await getAchievementOfTheMonth();
+    if (allAotm == null || allAotm.isEmpty) return null;
+
+    final now = DateTime.now().toUtc();
+    for (final aotm in allAotm) {
+      if (aotm is Map<String, dynamic>) {
+        final startStr = aotm['achievementDateStart'] as String?;
+        final endStr = aotm['achievementDateEnd'] as String?;
+        if (startStr != null && endStr != null) {
+          try {
+            final start = DateTime.parse(startStr);
+            final end = DateTime.parse(endStr);
+            if (now.isAfter(start) && now.isBefore(end)) {
+              return aotm;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+    // If no current one found, return the most recent (last in list)
+    return allAotm.last as Map<String, dynamic>?;
+  }
+
   /// Get user points (for rank comparison)
   Future<Map<String, dynamic>?> getUserPoints(String username) async {
     try {

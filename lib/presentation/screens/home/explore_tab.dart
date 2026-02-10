@@ -6,6 +6,7 @@ import '../live_feed_screen.dart';
 import '../milestones/milestones_screen.dart';
 import '../favorites_screen.dart';
 import '../aotw_screen.dart';
+import '../aotm_screen.dart';
 import '../console_browser_screen.dart';
 import '../leaderboard_screen.dart';
 import '../friends_screen.dart';
@@ -23,6 +24,7 @@ class ExploreTab extends StatefulWidget {
 
 class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
   bool _hasNewAotw = false;
+  bool _hasNewAotm = false;
   late AnimationController _animationController;
   bool _hasAnimated = false;
 
@@ -58,6 +60,14 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
 
     if (mounted && lastKnownId.isNotEmpty && lastKnownId != lastViewedId) {
       setState(() => _hasNewAotw = true);
+    }
+
+    // Also check for new AotM
+    final lastKnownAotmId = prefs.getString('last_known_aotm_id') ?? '';
+    final lastViewedAotmId = prefs.getString('last_viewed_aotm_id') ?? '';
+
+    if (mounted && lastKnownAotmId.isNotEmpty && lastKnownAotmId != lastViewedAotmId) {
+      setState(() => _hasNewAotm = true);
     }
   }
 
@@ -97,6 +107,16 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
         onTap: () {
           setState(() => _hasNewAotw = false);
           Navigator.push(context, SlidePageRoute(page: const AchievementOfTheWeekScreen()));
+        },
+      ),
+      _ExploreItem(
+        icon: Icons.calendar_month,
+        title: 'AOTM',
+        color: Colors.deepPurple,
+        showNewBadge: _hasNewAotm,
+        onTap: () {
+          setState(() => _hasNewAotm = false);
+          Navigator.push(context, SlidePageRoute(page: const AchievementOfTheMonthScreen()));
         },
       ),
       _ExploreItem(
