@@ -219,21 +219,24 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               : Colors.white;
 
           return FlexibleSpaceBar(
+            centerTitle: collapseRatio > 0.7,
             titlePadding: EdgeInsets.only(
               left: collapseRatio > 0.7 ? 56 : 16,
               right: 16,
-              bottom: collapseRatio > 0.7 ? 14 : 16,
+              bottom: collapseRatio > 0.7 ? 0 : 16,
             ),
             title: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: collapseRatio > 0.7
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.end,
               children: [
                 // Game icon - only visible when collapsed
                 if (collapseRatio > 0.7)
                   Opacity(
                     opacity: ((collapseRatio - 0.7) / 0.3).clamp(0.0, 1.0),
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       margin: const EdgeInsets.only(right: 10),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
@@ -245,7 +248,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => Container(
                             color: Colors.grey[700],
-                            child: const Icon(Icons.games, size: 16, color: Colors.white),
+                            child: const Icon(Icons.games, size: 14, color: Colors.white),
                           ),
                         ),
                       ),
@@ -257,7 +260,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     title,
                     style: TextStyle(
                       color: titleColor,
-                      fontSize: collapseRatio > 0.7 ? 14 : 18,
+                      fontSize: collapseRatio > 0.7 ? 16 : 18,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.3,
                       height: 1.2,
