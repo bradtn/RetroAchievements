@@ -8,101 +8,14 @@ import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
 import '../../core/animations.dart';
 import '../../services/notification_service.dart';
-import '../../services/background_sync_service.dart';
+import 'settings/settings_provider.dart';
+import 'settings/settings_widgets.dart';
+
+export 'settings/settings_provider.dart';
+export 'settings/settings_widgets.dart';
 
 const String _appVersion = '1.0.0';
 const String _developerEmail = 'retrotrackerdev@gmail.com';
-
-// Provider for notification settings
-final notificationSettingsProvider = StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((ref) {
-  return NotificationSettingsNotifier();
-});
-
-class NotificationSettings {
-  final bool streakNotificationsEnabled;
-  final bool eveningReminderEnabled;
-  final bool milestonesEnabled;
-  final bool dailySummaryEnabled;
-  final bool aotwNotificationsEnabled;
-
-  NotificationSettings({
-    this.streakNotificationsEnabled = true,
-    this.eveningReminderEnabled = true,
-    this.milestonesEnabled = true,
-    this.dailySummaryEnabled = true,
-    this.aotwNotificationsEnabled = true,
-  });
-
-  NotificationSettings copyWith({
-    bool? streakNotificationsEnabled,
-    bool? eveningReminderEnabled,
-    bool? milestonesEnabled,
-    bool? dailySummaryEnabled,
-    bool? aotwNotificationsEnabled,
-  }) {
-    return NotificationSettings(
-      streakNotificationsEnabled: streakNotificationsEnabled ?? this.streakNotificationsEnabled,
-      eveningReminderEnabled: eveningReminderEnabled ?? this.eveningReminderEnabled,
-      milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
-      dailySummaryEnabled: dailySummaryEnabled ?? this.dailySummaryEnabled,
-      aotwNotificationsEnabled: aotwNotificationsEnabled ?? this.aotwNotificationsEnabled,
-    );
-  }
-}
-
-class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
-  NotificationSettingsNotifier() : super(NotificationSettings()) {
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = NotificationSettings(
-      streakNotificationsEnabled: prefs.getBool('streak_notifications_enabled') ?? true,
-      eveningReminderEnabled: prefs.getBool('streak_reminder_enabled') ?? true,
-      milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? true,
-      dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? true,
-      aotwNotificationsEnabled: prefs.getBool('aotw_notifications_enabled') ?? true,
-    );
-  }
-
-  Future<void> setStreakNotifications(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('streak_notifications_enabled', enabled);
-    state = state.copyWith(streakNotificationsEnabled: enabled);
-
-    final backgroundSync = BackgroundSyncService();
-    if (enabled) {
-      await backgroundSync.registerPeriodicTasks();
-    } else {
-      await backgroundSync.cancelAllTasks();
-    }
-  }
-
-  Future<void> setEveningReminder(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('streak_reminder_enabled', enabled);
-    state = state.copyWith(eveningReminderEnabled: enabled);
-  }
-
-  Future<void> setMilestones(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('milestone_notifications_enabled', enabled);
-    state = state.copyWith(milestonesEnabled: enabled);
-  }
-
-  Future<void> setDailySummary(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('daily_summary_enabled', enabled);
-    state = state.copyWith(dailySummaryEnabled: enabled);
-  }
-
-  Future<void> setAotwNotifications(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('aotw_notifications_enabled', enabled);
-    state = state.copyWith(aotwNotificationsEnabled: enabled);
-  }
-}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -194,12 +107,12 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
 
           // Appearance
-          _SectionTitle('Appearance'),
+          const SectionTitle('Appearance'),
           ListTile(
             leading: Icon(Icons.palette, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Theme', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
             subtitle: Text(_themeName(themeMode), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-            trailing: premium.isPremium ? null : _ProBadge(),
+            trailing: premium.isPremium ? null : const ProBadge(),
             onTap: premium.isPremium
                 ? () => _showThemeDialog(context, ref, themeMode)
                 : () => _showPremiumRequired(context),
@@ -208,7 +121,7 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
 
           // Preferences
-          _SectionTitle('Preferences'),
+          const SectionTitle('Preferences'),
           SwitchListTile(
             secondary: Icon(Icons.vibration, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Haptic Feedback', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
@@ -227,7 +140,7 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
 
           // Notifications
-          _SectionTitle('Notifications'),
+          const SectionTitle('Notifications'),
           SwitchListTile(
             secondary: Icon(Icons.notifications_active, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Streak Notifications', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
@@ -298,16 +211,16 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
 
           // Premium Features
-          _SectionTitle('Premium Features'),
-          _FeatureTile(Icons.block, 'Ad-Free', 'No advertisements', !premium.isPremium),
-          _FeatureTile(Icons.analytics, 'Statistics', 'Charts & insights', !premium.isPremium),
-          _FeatureTile(Icons.offline_bolt, 'Offline Mode', 'Cache for offline', !premium.isPremium),
-          _FeatureTile(Icons.people, 'Multi-Account', 'Switch accounts', !premium.isPremium),
+          const SectionTitle('Premium Features'),
+          const FeatureTile(Icons.block, 'Ad-Free', 'No advertisements', true),
+          const FeatureTile(Icons.analytics, 'Statistics', 'Charts & insights', true),
+          const FeatureTile(Icons.offline_bolt, 'Offline Mode', 'Cache for offline', true),
+          const FeatureTile(Icons.people, 'Multi-Account', 'Switch accounts', true),
 
           const Divider(),
 
           // Account
-          _SectionTitle('Account'),
+          const SectionTitle('Account'),
           ListTile(
             leading: Icon(Icons.person, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Logged in as', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
@@ -322,7 +235,7 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
 
           // Support
-          _SectionTitle('Support'),
+          const SectionTitle('Support'),
           ListTile(
             leading: Icon(Icons.bug_report_outlined, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Report a Bug', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
@@ -348,7 +261,7 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
 
           // About
-          _SectionTitle('About'),
+          const SectionTitle('About'),
           ListTile(
             leading: Icon(Icons.info, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Version', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
@@ -419,11 +332,11 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             const Text('One-time purchase. Yours forever.'),
             const SizedBox(height: 24),
-            const _CheckItem('Remove all ads'),
-            const _CheckItem('Theme customization'),
-            const _CheckItem('Advanced statistics'),
-            const _CheckItem('Offline mode'),
-            const _CheckItem('Multiple accounts'),
+            const CheckItem('Remove all ads'),
+            const CheckItem('Theme customization'),
+            const CheckItem('Advanced statistics'),
+            const CheckItem('Offline mode'),
+            const CheckItem('Multiple accounts'),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -533,7 +446,6 @@ App Info (please don't delete):
   }
 
   Future<void> _openPlayStore(BuildContext context) async {
-    // TODO: Replace with your actual Play Store URL
     const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.retrotracker.retrotracker';
     final Uri uri = Uri.parse(playStoreUrl);
 
@@ -546,89 +458,5 @@ App Info (please don't delete):
         );
       }
     }
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _ProBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.amber,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Text('PRO', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-    );
-  }
-}
-
-class _FeatureTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool locked;
-
-  const _FeatureTile(this.icon, this.title, this.subtitle, this.locked);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final subtitleColor = isDark ? Colors.grey[400] : Colors.grey[600];
-
-    return ListTile(
-      leading: Icon(icon, color: locked ? Colors.grey : Colors.green),
-      title: Text(title, style: TextStyle(color: textColor)),
-      subtitle: Text(subtitle, style: TextStyle(color: subtitleColor)),
-      trailing: locked
-          ? const Icon(Icons.lock, size: 18, color: Colors.grey)
-          : const Icon(Icons.check_circle, size: 18, color: Colors.green),
-    );
-  }
-}
-
-class _CheckItem extends StatelessWidget {
-  final String text;
-  const _CheckItem(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 20),
-          const SizedBox(width: 12),
-          Text(
-            text,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-          ),
-        ],
-      ),
-    );
   }
 }

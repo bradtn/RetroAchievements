@@ -7,6 +7,7 @@ import 'game_detail_screen.dart';
 import 'user_compare_screen.dart';
 import 'milestones/milestones_screen.dart';
 import 'share_card/share_card_screen.dart';
+import 'profile/profile_widgets.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String username;
@@ -245,7 +246,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildStatsCards() {
     final points = _profile?['TotalPoints'] ?? 0;
     final truePoints = _profile?['TotalTruePoints'] ?? 0;
-    // Rank comes from separate API call
     final rankRaw = _rankData?['Rank'] ?? _rankData?['rank'] ?? 0;
     final rank = rankRaw is int ? rankRaw : int.tryParse(rankRaw?.toString() ?? '') ?? 0;
 
@@ -255,7 +255,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Row(
       children: [
         Expanded(
-          child: _AnimatedStatCard(
+          child: AnimatedStatCard(
             icon: Icons.stars,
             targetValue: pointsInt,
             label: 'Points',
@@ -265,7 +265,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _AnimatedStatCard(
+          child: AnimatedStatCard(
             icon: Icons.military_tech,
             targetValue: truePointsInt,
             label: 'True Points',
@@ -275,7 +275,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _AnimatedStatCard(
+          child: AnimatedStatCard(
             icon: Icons.leaderboard,
             targetValue: rank,
             label: 'Rank',
@@ -375,81 +375,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final game = _recentGames![i] as Map<String, dynamic>;
           final gameId = game['GameID'] ?? 0;
           final title = game['Title'] ?? 'Unknown';
-          final imageIcon = game['ImageIcon'] ?? '';
-          final consoleName = game['ConsoleName'] ?? '';
-          final numAchieved = game['NumAchieved'] ?? game['NumAwarded'] ?? 0;
-          final numTotal = game['NumPossibleAchievements'] ?? game['AchievementsPossible'] ?? 0;
 
-          return GestureDetector(
-            onTap: () {
-              final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
-              if (id > 0) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GameDetailScreen(gameId: id, gameTitle: title),
-                  ),
-                );
-              }
-            },
-            child: Container(
-              width: 110,
-              margin: EdgeInsets.only(right: i < _recentGames!.length - 1 ? 12 : 0),
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: 'https://retroachievements.org$imageIcon',
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[800],
-                        child: const Icon(Icons.games, size: 32),
-                      ),
+          return Padding(
+            padding: EdgeInsets.only(right: i < _recentGames!.length - 1 ? 12 : 0),
+            child: RecentGameTile(
+              game: game,
+              onTap: () {
+                final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+                if (id > 0) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => GameDetailScreen(gameId: id, gameTitle: title),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  // Console chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: Text(
-                      consoleName,
-                      style: const TextStyle(color: Colors.blue, fontSize: 8, fontWeight: FontWeight.w500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  // Achievement chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: Text(
-                      '$numAchieved/$numTotal',
-                      style: const TextStyle(color: Colors.green, fontSize: 8, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
+                  );
+                }
+              },
             ),
           );
         },
@@ -458,336 +399,135 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildRecentAchievements() {
-    // Show first 5 achievements
     final toShow = _recentAchievements!.take(5).toList();
 
     return Column(
       children: toShow.map((ach) {
         final achievement = ach as Map<String, dynamic>;
-        final title = achievement['Title'] ?? 'Achievement';
-        final description = achievement['Description'] ?? '';
-        final badgeName = achievement['BadgeName'] ?? '';
         final gameTitle = achievement['GameTitle'] ?? '';
         final gameId = achievement['GameID'] ?? 0;
-        final points = achievement['Points'] ?? 0;
-        final dateEarned = achievement['Date'] ?? achievement['DateEarned'] ?? '';
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: InkWell(
-            onTap: () {
-              final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
-              if (id > 0) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GameDetailScreen(gameId: id, gameTitle: gameTitle),
-                  ),
-                );
-              }
-            },
-            onLongPress: () {
-              // Show achievement details on long press
-              showModalBottomSheet(
-                context: context,
-                builder: (ctx) => Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: badgeName.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    width: 64,
-                                    height: 64,
-                                    color: Colors.grey[800],
-                                    child: const Icon(Icons.emoji_events, size: 32),
-                                  ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  gameTitle,
-                                  style: TextStyle(
-                                    color: context.subtitleColor,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (description.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          description,
-                          style: const TextStyle(fontSize: 15),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '$points points',
-                              style: TextStyle(
-                                color: Colors.amber[600],
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Earned ${_formatDate(dateEarned)}',
-                            style: TextStyle(color: context.subtitleColor),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
-                            if (id > 0) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => GameDetailScreen(gameId: id, gameTitle: gameTitle),
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text('View Game'),
-                        ),
-                      ),
-                      SizedBox(height: MediaQuery.of(ctx).viewPadding.bottom),
-                    ],
-                  ),
+        return RecentAchievementTile(
+          achievement: achievement,
+          onTap: () {
+            final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+            if (id > 0) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GameDetailScreen(gameId: id, gameTitle: gameTitle),
                 ),
               );
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: badgeName.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                            width: 44,
-                            height: 44,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => _buildDefaultBadge(),
-                          )
-                        : _buildDefaultBadge(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          gameTitle,
-                          style: TextStyle(fontSize: 12, color: context.subtitleColor),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '$points pts',
-                                style: TextStyle(color: Colors.amber[600], fontSize: 10),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _formatDate(dateEarned),
-                              style: TextStyle(fontSize: 10, color: context.subtitleColor),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: context.subtitleColor),
-                ],
-              ),
-            ),
-          ),
+            }
+          },
+          onLongPress: () => _showAchievementDetails(achievement),
         );
       }).toList(),
     );
   }
 
-  Widget _buildDefaultBadge() {
-    return Container(
-      width: 44,
-      height: 44,
-      color: Colors.grey[800],
-      child: const Icon(Icons.emoji_events, size: 22),
-    );
-  }
+  void _showAchievementDetails(Map<String, dynamic> achievement) {
+    final title = achievement['Title'] ?? 'Achievement';
+    final description = achievement['Description'] ?? '';
+    final badgeName = achievement['BadgeName'] ?? '';
+    final gameTitle = achievement['GameTitle'] ?? '';
+    final gameId = achievement['GameID'] ?? 0;
+    final points = achievement['Points'] ?? 0;
+    final dateEarned = achievement['Date'] ?? achievement['DateEarned'] ?? '';
 
-  String _formatDate(String dateStr) {
-    if (dateStr.isEmpty) return '';
-    try {
-      final date = DateTime.parse(dateStr);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inDays == 0) return 'Today';
-      if (diff.inDays == 1) return 'Yesterday';
-      if (diff.inDays < 7) return '${diff.inDays}d ago';
-      return '${date.month}/${date.day}';
-    } catch (_) {
-      return dateStr;
-    }
-  }
-}
-
-/// Animated stat card with count-up ticker effect
-class _AnimatedStatCard extends StatefulWidget {
-  final IconData icon;
-  final int targetValue;
-  final String label;
-  final Color color;
-  final int delay;
-  final bool isRank;
-
-  const _AnimatedStatCard({
-    required this.icon,
-    required this.targetValue,
-    required this.label,
-    required this.color,
-    this.delay = 0,
-    this.isRank = false,
-  });
-
-  @override
-  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
-}
-
-class _AnimatedStatCardState extends State<_AnimatedStatCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    );
-
-    // Start animation after delay
-    Future.delayed(Duration(milliseconds: widget.delay + 300), () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  String _formatNumber(int value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(widget.icon, color: widget.color, size: 24),
-            const SizedBox(height: 8),
-            AnimatedBuilder(
-              animation: _animation,
-              builder: (context, child) {
-                final currentValue = (_animation.value * widget.targetValue).round();
-                String displayValue;
-
-                if (widget.isRank) {
-                  displayValue = widget.targetValue > 0 ? '#$currentValue' : '-';
-                } else {
-                  displayValue = _formatNumber(currentValue);
-                }
-
-                return Text(
-                  displayValue,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: widget.color,
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: badgeName.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                        )
+                      : const DefaultBadge(size: 64),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        gameTitle,
+                        style: TextStyle(
+                          color: context.subtitleColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
+                ),
+              ],
             ),
-            Text(
-              widget.label,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey[400]
-                    : Colors.grey[600],
-                fontSize: 11,
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(description, style: const TextStyle(fontSize: 15)),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$points points',
+                    style: TextStyle(
+                      color: Colors.amber[600],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Earned ${formatProfileDate(dateEarned)}',
+                  style: TextStyle(color: context.subtitleColor),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+                  if (id > 0) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GameDetailScreen(gameId: id, gameTitle: gameTitle),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('View Game'),
               ),
             ),
+            SizedBox(height: MediaQuery.of(ctx).viewPadding.bottom),
           ],
         ),
       ),

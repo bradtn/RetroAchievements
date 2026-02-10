@@ -183,7 +183,6 @@ class _ExploreItem {
   final bool isPremium;
   final bool showNewBadge;
   final bool hasLiveIndicator;
-  final bool isFireIcon;
 
   const _ExploreItem({
     required this.icon,
@@ -193,7 +192,6 @@ class _ExploreItem {
     this.isPremium = false,
     this.showNewBadge = false,
     this.hasLiveIndicator = false,
-    this.isFireIcon = false,
   });
 }
 
@@ -287,9 +285,6 @@ class _ExploreGridItem extends StatelessWidget {
   }
 
   Widget _buildIcon() {
-    if (item.isFireIcon) {
-      return AnimatedFireIcon(size: 24, color: item.color);
-    }
     if (item.hasLiveIndicator) {
       return Row(
         mainAxisSize: MainAxisSize.min,

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
+import 'stats/stats_widgets.dart';
+
+export 'stats/stats_widgets.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
@@ -347,19 +350,19 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _PointStat(
+                Expanded(child: PointStat(
                   label: 'Hardcore',
                   value: points.toString(),
                   icon: Icons.stars,
                   color: Colors.amber,
                 )),
-                Expanded(child: _PointStat(
+                Expanded(child: PointStat(
                   label: 'True Points',
                   value: truePoints.toString(),
                   icon: Icons.military_tech,
                   color: Colors.purple,
                 )),
-                Expanded(child: _PointStat(
+                Expanded(child: PointStat(
                   label: 'Softcore',
                   value: softcore.toString(),
                   icon: Icons.star_border,
@@ -444,9 +447,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               int earned = 0;
 
               if (gameAwards != null && gameAwards is Map) {
-                earned = (gameAwards['NumPossibleAchievements'] ?? 0) -
-                         (gameAwards['NumAchieved'] ?? gameAwards['NumPossibleAchievements'] ?? 0);
-                // Actually let's calculate properly
                 earned = gameAwards['NumAchieved'] ?? 0;
               }
 
@@ -516,82 +516,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           children: [
             Text('Activity', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
-            _InfoRow(icon: Icons.play_arrow, label: 'Currently', value: richPresence),
-            _InfoRow(icon: Icons.calendar_today, label: 'Member Since', value: _formatDate(memberSince)),
-            _InfoRow(icon: Icons.games, label: 'Last Game ID', value: lastGame?.toString() ?? 'N/A'),
+            InfoRow(icon: Icons.play_arrow, label: 'Currently', value: richPresence),
+            InfoRow(icon: Icons.calendar_today, label: 'Member Since', value: formatStatsDate(memberSince)),
+            InfoRow(icon: Icons.games, label: 'Last Game ID', value: lastGame?.toString() ?? 'N/A'),
           ],
         ),
-      ),
-    );
-  }
-
-  String _formatDate(String? date) {
-    if (date == null || date.isEmpty) return 'Unknown';
-    try {
-      final dt = DateTime.parse(date);
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-    } catch (_) {
-      return date;
-    }
-  }
-}
-
-class _PointStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _PointStat({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.grey),
-          const SizedBox(width: 8),
-          Text('$label: ', style: const TextStyle(color: Colors.grey)),
-          Expanded(
-            child: Text(value, overflow: TextOverflow.ellipsis),
-          ),
-        ],
       ),
     );
   }

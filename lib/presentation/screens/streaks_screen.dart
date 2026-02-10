@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme_utils.dart';
-import '../../core/animations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
+import 'streaks/streaks_widgets.dart';
 
 class StreaksScreen extends ConsumerStatefulWidget {
   const StreaksScreen({super.key});
@@ -66,69 +66,69 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
         description: 'Track your daily gaming streaks. Keep the fire burning and share your progress.',
         icon: Icons.local_fire_department,
         child: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _usernameController,
-                    decoration: InputDecoration(
-                      hintText: 'View any user\'s streaks...',
-                      prefixIcon: const Icon(Icons.person_search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    onSubmitted: (_) => _searchUser(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: streakState.isLoading ? null : _searchUser,
-                  child: const Text('View'),
-                ),
-              ],
-            ),
-          ),
-
-          // Show who we're viewing if not ourselves
-          if (!isViewingMyself && _viewingUsername != null)
+          children: [
+            // Search bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Chip(
-                    avatar: const Icon(Icons.person, size: 16),
-                    label: Text('Viewing: $_viewingUsername'),
-                    onDeleted: _loadMyStreaks,
-                    deleteIcon: const Icon(Icons.close, size: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        hintText: 'View any user\'s streaks...',
+                        prefixIcon: const Icon(Icons.person_search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onSubmitted: (_) => _searchUser(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: streakState.isLoading ? null : _searchUser,
+                    child: const Text('View'),
                   ),
                 ],
               ),
             ),
 
-          // Content
-          Expanded(
-            child: streakState.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : streakState.error != null
-                    ? _buildErrorView(streakState.error!)
-                    : RefreshIndicator(
-                        onRefresh: () async {
-                          if (_viewingUsername != null) {
-                            await ref.read(streakProvider.notifier).loadStreaks(_viewingUsername!);
-                          }
-                        },
-                        child: _buildContent(streakState),
-                      ),
-          ),
-        ],
-      ),
+            // Show who we're viewing if not ourselves
+            if (!isViewingMyself && _viewingUsername != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Chip(
+                      avatar: const Icon(Icons.person, size: 16),
+                      label: Text('Viewing: $_viewingUsername'),
+                      onDeleted: _loadMyStreaks,
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Content
+            Expanded(
+              child: streakState.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : streakState.error != null
+                      ? _buildErrorView(streakState.error!)
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            if (_viewingUsername != null) {
+                              await ref.read(streakProvider.notifier).loadStreaks(_viewingUsername!);
+                            }
+                          },
+                          child: _buildContent(streakState),
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -158,27 +158,16 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
         16 + MediaQuery.of(context).viewPadding.bottom,
       ),
       children: [
-        // Streak summary cards
         _buildStreakCards(streakState),
         const SizedBox(height: 24),
-
-        // Calendar header
         _buildCalendarHeader(),
         const SizedBox(height: 8),
-
-        // Month stats
         _buildMonthStats(streakState),
         const SizedBox(height: 12),
-
-        // Activity calendar
         _buildActivityCalendar(streakState),
         const SizedBox(height: 24),
-
-        // Legend
         _buildLegend(),
         const SizedBox(height: 24),
-
-        // Recent activity stats
         _buildActivityStats(streakState),
       ],
     );
@@ -188,7 +177,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
     return Row(
       children: [
         Expanded(
-          child: _StreakCard(
+          child: StreakCard(
             title: 'Current Streak',
             value: streakState.currentStreak,
             icon: Icons.local_fire_department,
@@ -201,7 +190,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StreakCard(
+          child: StreakCard(
             title: 'Best Streak',
             value: streakState.bestStreak,
             icon: Icons.emoji_events,
@@ -223,10 +212,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
           icon: const Icon(Icons.chevron_left),
           onPressed: () {
             final newMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
-            setState(() {
-              _selectedMonth = newMonth;
-            });
-            // Load this month's data if not already loaded
+            setState(() => _selectedMonth = newMonth);
             if (_viewingUsername != null) {
               ref.read(streakProvider.notifier).loadMonth(
                 _viewingUsername!,
@@ -242,7 +228,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _getMonthName(_selectedMonth),
+                getMonthName(_selectedMonth),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   decoration: TextDecoration.underline,
@@ -270,10 +256,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
           onPressed: _selectedMonth.isBefore(DateTime(DateTime.now().year, DateTime.now().month))
               ? () {
                   final newMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
-                  setState(() {
-                    _selectedMonth = newMonth;
-                  });
-                  // Load this month's data if not already loaded
+                  setState(() => _selectedMonth = newMonth);
                   if (_viewingUsername != null) {
                     ref.read(streakProvider.notifier).loadMonth(
                       _viewingUsername!,
@@ -307,7 +290,6 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Drag handle
                   Container(
                     width: 40,
                     height: 4,
@@ -324,8 +306,6 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Year selector
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -358,8 +338,6 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Month grid
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -395,9 +373,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
                             style: TextStyle(
                               color: isSelected
                                   ? Colors.white
-                                  : isFuture
-                                      ? Colors.grey
-                                      : null,
+                                  : isFuture ? Colors.grey : null,
                               fontWeight: isSelected ? FontWeight.bold : null,
                             ),
                           ),
@@ -406,17 +382,13 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-
-                  // Confirm button
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () {
                         final newMonth = DateTime(selectedYear, selectedMonthIndex + 1);
                         Navigator.pop(context);
-                        setState(() {
-                          _selectedMonth = newMonth;
-                        });
+                        setState(() => _selectedMonth = newMonth);
                         if (_viewingUsername != null) {
                           ref.read(streakProvider.notifier).loadMonth(
                             _viewingUsername!,
@@ -437,16 +409,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
     );
   }
 
-  String _getMonthName(DateTime date) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return '${months[date.month - 1]} ${date.year}';
-  }
-
   Widget _buildMonthStats(StreakState streakState) {
-    // Count achievements for the currently selected month
     int monthAchievements = 0;
     final firstDay = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
     final lastDay = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
@@ -496,7 +459,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
     final firstDayOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
     final lastDayOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
     final daysInMonth = lastDayOfMonth.day;
-    final firstWeekday = firstDayOfMonth.weekday % 7; // Sunday = 0
+    final firstWeekday = firstDayOfMonth.weekday % 7;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -508,7 +471,6 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
       ),
       child: Column(
         children: [
-          // Weekday headers
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -527,8 +489,6 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
                 .toList(),
           ),
           const SizedBox(height: 8),
-
-          // Calendar grid
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -536,7 +496,7 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
               crossAxisCount: 7,
               childAspectRatio: 1,
             ),
-            itemCount: 42, // 6 weeks max
+            itemCount: 42,
             itemBuilder: (context, index) {
               final dayNumber = index - firstWeekday + 1;
 
@@ -546,13 +506,13 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
 
               final date = DateTime(_selectedMonth.year, _selectedMonth.month, dayNumber);
               final activityCount = streakState.activityMap[date] ?? 0;
-              final isToday = _isToday(date);
+              final isTodayDate = isToday(date);
               final isFuture = date.isAfter(DateTime.now());
 
-              return _CalendarDay(
+              return CalendarDay(
                 day: dayNumber,
                 activityCount: activityCount,
-                isToday: isToday,
+                isToday: isTodayDate,
                 isFuture: isFuture,
               );
             },
@@ -562,22 +522,17 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
     );
   }
 
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year && date.month == now.month && date.day == now.day;
-  }
-
   Widget _buildLegend() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _LegendItem(color: Colors.grey.shade300, label: 'No activity'),
+        LegendItem(color: Colors.grey.shade300, label: 'No activity'),
         const SizedBox(width: 16),
-        _LegendItem(color: Colors.green.shade300, label: '1-2'),
+        LegendItem(color: Colors.green.shade300, label: '1-2'),
         const SizedBox(width: 16),
-        _LegendItem(color: Colors.green.shade500, label: '3-5'),
+        LegendItem(color: Colors.green.shade500, label: '3-5'),
         const SizedBox(width: 16),
-        _LegendItem(color: Colors.green.shade700, label: '6+'),
+        LegendItem(color: Colors.green.shade700, label: '6+'),
       ],
     );
   }
@@ -603,230 +558,14 @@ class _StreaksScreenState extends ConsumerState<StreaksScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _StatItem(value: '$totalDays', label: 'Active Days'),
-                _StatItem(value: '$totalAchievements', label: 'Achievements'),
-                _StatItem(value: avgPerDay, label: 'Avg/Day'),
+                StatItem(value: '$totalDays', label: 'Active Days'),
+                StatItem(value: '$totalAchievements', label: 'Achievements'),
+                StatItem(value: avgPerDay, label: 'Avg/Day'),
               ],
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StreakCard extends StatelessWidget {
-  final String title;
-  final int value;
-  final IconData icon;
-  final Color color;
-  final String subtitle;
-  final bool showFlame;
-
-  const _StreakCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.subtitle,
-    this.showFlame = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isMilestone = StreakMilestoneBadge.isMilestone(value);
-
-    return Card(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: 0.8),
-              color.withValues(alpha: 0.6),
-            ],
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (showFlame && value > 0)
-                  AnimatedStreakFlame(streakDays: value, size: 24)
-                else
-                  Icon(icon, color: Colors.white, size: 24),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '$value',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (isMilestone) ...[
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: StreakMilestoneBadge(streakDays: value),
-                  ),
-                ],
-              ],
-            ),
-            Text(
-              value == 1 ? 'day' : 'days',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CalendarDay extends StatelessWidget {
-  final int day;
-  final int activityCount;
-  final bool isToday;
-  final bool isFuture;
-
-  const _CalendarDay({
-    required this.day,
-    required this.activityCount,
-    required this.isToday,
-    required this.isFuture,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    if (isFuture) {
-      bgColor = Colors.transparent;
-    } else if (activityCount == 0) {
-      bgColor = Theme.of(context).brightness == Brightness.light
-          ? Colors.grey.shade200
-          : Colors.grey.shade800;
-    } else if (activityCount <= 2) {
-      bgColor = Colors.green.shade300;
-    } else if (activityCount <= 5) {
-      bgColor = Colors.green.shade500;
-    } else {
-      bgColor = Colors.green.shade700;
-    }
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: isToday
-            ? Border.all(color: Colors.orange, width: 2)
-            : null,
-      ),
-      child: Center(
-        child: Text(
-          '$day',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-            color: isFuture
-                ? Colors.grey
-                : (activityCount > 0 ? Colors.white : null),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendItem({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: context.subtitleColor,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _StatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: context.subtitleColor,
-          ),
-        ),
-      ],
     );
   }
 }
