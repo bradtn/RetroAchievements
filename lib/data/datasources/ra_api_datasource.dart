@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 class RAApiDataSource {
@@ -318,31 +319,67 @@ class RAApiDataSource {
 
   /// Get Achievement of the Month (fetched from GitHub)
   /// Always fetches fresh data with cache-busting to ensure latest content
-  Future<List<dynamic>?> getAchievementOfTheMonth() async {
+  /// Returns tuple of (data, errorMessage) for debugging
+  Future<(List<dynamic>?, String?)> getAchievementOfTheMonthWithError() async {
     try {
       final githubDio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 15),
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-        },
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 20),
+        responseType: ResponseType.plain,
       ));
-      // Add cache-busting query param to bypass any CDN/proxy caching
       final cacheBuster = DateTime.now().millisecondsSinceEpoch;
       final response = await githubDio.get('$_aotmGitHubUrl?cb=$cacheBuster');
       if (response.statusCode == 200 && response.data != null) {
-        if (response.data is List) {
-          return response.data as List<dynamic>;
+        final jsonString = response.data.toString();
+        final decoded = jsonDecode(jsonString);
+        if (decoded is List) {
+          return (decoded, null);
         }
+        return (null, 'Response is not a list: ${decoded.runtimeType}');
       }
-      return null;
+      return (null, 'HTTP ${response.statusCode}');
     } catch (e) {
-      return null;
+      return (null, e.toString());
     }
   }
 
+  Future<List<dynamic>?> getAchievementOfTheMonth() async {
+    final (data, _) = await getAchievementOfTheMonthWithError();
+    return data;
+  }
+
   /// Get the current active Achievement of the Month
+  /// Returns tuple of (data, errorMessage) for debugging
+  Future<(Map<String, dynamic>?, String?)> getCurrentAchievementOfTheMonthWithError() async {
+    final (allAotm, fetchError) = await getAchievementOfTheMonthWithError();
+    if (allAotm == null || allAotm.isEmpty) {
+      return (null, fetchError ?? 'No AotM data available');
+    }
+
+    final now = DateTime.now().toUtc();
+    for (final aotm in allAotm) {
+      if (aotm is Map<String, dynamic>) {
+        final startStr = aotm['achievementDateStart'] as String?;
+        final endStr = aotm['achievementDateEnd'] as String?;
+        if (startStr != null && endStr != null) {
+          try {
+            final start = DateTime.parse(startStr);
+            final end = DateTime.parse(endStr);
+            if (now.isAfter(start) && now.isBefore(end)) {
+              return (aotm, null);
+            }
+          } catch (_) {}
+        }
+      }
+    }
+    // If no current one found, return the most recent (last in list)
+    final last = allAotm.last;
+    if (last is Map<String, dynamic>) {
+      return (last, null);
+    }
+    return (null, 'Could not find valid AotM entry');
+  }
+
   Future<Map<String, dynamic>?> getCurrentAchievementOfTheMonth() async {
     final allAotm = await getAchievementOfTheMonth();
     if (allAotm == null || allAotm.isEmpty) return null;

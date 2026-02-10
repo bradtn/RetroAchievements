@@ -33,12 +33,12 @@ class _AchievementOfTheMonthScreenState
     });
 
     final api = ref.read(apiDataSourceProvider);
-    final data = await api.getCurrentAchievementOfTheMonth();
+    final (data, errorMsg) = await api.getCurrentAchievementOfTheMonthWithError();
 
     setState(() {
       _aotmData = data;
       _isLoading = false;
-      if (data == null) _error = 'Failed to load Achievement of the Month';
+      if (data == null) _error = errorMsg ?? 'Failed to load Achievement of the Month';
     });
 
     // Mark as viewed
@@ -113,7 +113,7 @@ class _AchievementOfTheMonthScreenState
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(12)),
                     gradient: LinearGradient(
-                      colors: [Colors.indigo.shade600, Colors.purple.shade700],
+                      colors: [Colors.deepPurple.shade800, Colors.purple.shade900],
                     ),
                   ),
                   child: Column(
@@ -300,13 +300,13 @@ class _AchievementOfTheMonthScreenState
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.15),
+                          color: Colors.deepPurple,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           consoleName,
                           style: const TextStyle(
-                            color: Colors.blue,
+                            color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -465,13 +465,13 @@ class _SwapCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.purple.withValues(alpha: 0.15),
+                              color: Colors.purple.shade700,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               consoleName,
-                              style: TextStyle(
-                                color: Colors.purple[300],
+                              style: const TextStyle(
+                                color: Colors.white,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w600,
                               ),

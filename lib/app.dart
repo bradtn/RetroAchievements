@@ -155,13 +155,21 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   }
 
   ThemeData _buildLightTheme(Color seedColor) {
-    // Create a ColorScheme to get computed shades
-    final colorScheme = ColorScheme.fromSeed(
+    // Create base scheme then override with vibrant colors
+    final baseScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.light,
       surface: const Color(0xFFF5F5F5),
       surfaceContainerHighest: Colors.white,
       onSurface: Colors.black87,
+    );
+
+    // Use the actual vibrant color instead of the muted seed-generated one
+    final colorScheme = baseScheme.copyWith(
+      primary: seedColor,
+      primaryContainer: HSLColor.fromColor(seedColor).withLightness(0.85).toColor(),
+      secondary: seedColor,
+      tertiary: seedColor,
     );
 
     return ThemeData(
@@ -264,11 +272,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   }
 
   ThemeData _buildDarkTheme(Color seedColor) {
-    final colorScheme = ColorScheme.fromSeed(
+    // Create base scheme then override with vibrant colors
+    final baseScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
       surface: const Color(0xFF121212),
       surfaceContainerHighest: const Color(0xFF1E1E1E),
+    );
+
+    // Use the actual vibrant color instead of the muted seed-generated one
+    final colorScheme = baseScheme.copyWith(
+      primary: seedColor,
+      primaryContainer: HSLColor.fromColor(seedColor).withLightness(0.25).toColor(),
+      secondary: seedColor,
+      tertiary: seedColor,
     );
 
     return ThemeData(
@@ -320,11 +337,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   }
 
   ThemeData _buildAmoledTheme(Color seedColor) {
-    final colorScheme = ColorScheme.fromSeed(
+    // Create base scheme then override with vibrant colors
+    final baseScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
       surface: Colors.black,
       surfaceContainerHighest: const Color(0xFF121212),
+    );
+
+    // Use the actual vibrant color instead of the muted seed-generated one
+    final colorScheme = baseScheme.copyWith(
+      primary: seedColor,
+      primaryContainer: HSLColor.fromColor(seedColor).withLightness(0.25).toColor(),
+      secondary: seedColor,
+      tertiary: seedColor,
     );
 
     return ThemeData(
