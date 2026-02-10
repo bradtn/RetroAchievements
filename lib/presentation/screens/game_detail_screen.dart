@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:auto_size_text/auto_size_text.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../data/cache/game_cache.dart';
@@ -204,13 +203,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   Widget _buildAppBar(String title, String imageIcon, String imageTitle, bool isLightMode) {
     return SliverAppBar(
-      expandedHeight: 200,
+      expandedHeight: 220,
       pinned: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       foregroundColor: isLightMode ? Colors.grey[900] : Colors.white,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final expandedHeight = 200.0;
+          final expandedHeight = 220.0;
           final collapsedHeight = kToolbarHeight + MediaQuery.of(context).padding.top;
           final currentHeight = constraints.maxHeight;
           final collapseRatio = ((expandedHeight - currentHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
@@ -220,90 +219,63 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               : Colors.white;
 
           return FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.only(left: 56, right: 16, bottom: 10),
+            titlePadding: EdgeInsets.only(
+              left: collapseRatio > 0.7 ? 56 : 16,
+              right: 16,
+              bottom: collapseRatio > 0.7 ? 14 : 16,
+            ),
             title: Row(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Opacity(
-                  opacity: collapseRatio,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: collapseRatio > 0.5 ? null : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha:0.3),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: CachedNetworkImage(
-                        imageUrl: 'https://retroachievements.org$imageIcon',
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => Container(
-                          color: Colors.deepPurple,
-                          child: const Icon(Icons.games, size: 20, color: Colors.white),
+                // Game icon - only visible when collapsed
+                if (collapseRatio > 0.7)
+                  Opacity(
+                    opacity: ((collapseRatio - 0.7) / 0.3).clamp(0.0, 1.0),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      margin: const EdgeInsets.only(right: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: CachedNetworkImage(
+                          imageUrl: 'https://retroachievements.org$imageIcon',
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Container(
+                            color: Colors.grey[700],
+                            child: const Icon(Icons.games, size: 16, color: Colors.white),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Flexible(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: collapseRatio > 0.5 ? 0 : 10,
-                      vertical: collapseRatio > 0.5 ? 0 : 5,
-                    ),
-                    decoration: collapseRatio > 0.5
-                        ? null
-                        : BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF6366F1).withValues(alpha:0.85),
-                                const Color(0xFF8B5CF6).withValues(alpha:0.85),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha:0.3),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF6366F1).withValues(alpha:0.4),
+                // Title text
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: titleColor,
+                      fontSize: collapseRatio > 0.7 ? 14 : 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.3,
+                      height: 1.2,
+                      shadows: collapseRatio > 0.7
+                          ? null
+                          : [
+                              Shadow(
                                 blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                color: Colors.black.withValues(alpha: 0.8),
+                              ),
+                              Shadow(
+                                blurRadius: 16,
+                                color: Colors.black.withValues(alpha: 0.5),
                               ),
                             ],
-                          ),
-                    child: AutoSizeText(
-                      title,
-                      style: TextStyle(
-                        color: titleColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                        height: 1.1,
-                        shadows: collapseRatio > 0.5
-                            ? null
-                            : [
-                                Shadow(
-                                  blurRadius: 2,
-                                  color: Colors.black.withValues(alpha:0.5),
-                                ),
-                              ],
-                      ),
-                      maxLines: 1,
-                      minFontSize: 11,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
                     ),
+                    maxLines: collapseRatio > 0.7 ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -311,53 +283,87 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             background: Stack(
               fit: StackFit.expand,
               children: [
+                // Background image
                 if (imageTitle.isNotEmpty)
                   CachedNetworkImage(
                     imageUrl: 'https://retroachievements.org$imageTitle',
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
-                    errorWidget: (_, __, ___) => Container(color: Colors.deepPurple),
+                    errorWidget: (_, __, ___) => Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.grey[900]!,
+                            Colors.grey[800]!,
+                          ],
+                        ),
+                      ),
+                    ),
                   )
                 else
-                  Container(color: Colors.deepPurple),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.grey[900]!,
+                          Colors.grey[800]!,
+                        ],
+                      ),
+                    ),
+                  ),
+                // Gradient overlay for text readability
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withValues(alpha:0.8)],
+                      stops: const [0.0, 0.5, 1.0],
+                      colors: [
+                        Colors.black.withValues(alpha: 0.1),
+                        Colors.black.withValues(alpha: 0.3),
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
                     ),
                   ),
                 ),
+                // Hero game icon (when coming from another screen)
                 if (widget.heroTag != null)
                   Positioned(
                     left: 16,
-                    bottom: 60,
+                    bottom: 56,
                     child: Hero(
                       tag: widget.heroTag!,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha:0.5),
-                              blurRadius: 10,
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           child: CachedNetworkImage(
                             imageUrl: 'https://retroachievements.org$imageIcon',
-                            width: 64,
-                            height: 64,
+                            width: 56,
+                            height: 56,
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) => Container(
-                              width: 64,
-                              height: 64,
+                              width: 56,
+                              height: 56,
                               color: Colors.grey[800],
-                              child: const Icon(Icons.games, size: 32),
+                              child: const Icon(Icons.games, size: 28),
                             ),
                           ),
                         ),
