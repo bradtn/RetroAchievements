@@ -219,16 +219,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               : Colors.white;
 
           return FlexibleSpaceBar(
-            centerTitle: collapseRatio > 0.7,
             titlePadding: EdgeInsets.only(
               left: collapseRatio > 0.7 ? 56 : 16,
               right: 16,
-              bottom: collapseRatio > 0.7 ? 0 : 16,
+              bottom: collapseRatio > 0.7 ? 13 : 16,
             ),
             title: Row(
-              crossAxisAlignment: collapseRatio > 0.7
-                  ? CrossAxisAlignment.center
-                  : CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Game icon - only visible when collapsed
                 if (collapseRatio > 0.7)
