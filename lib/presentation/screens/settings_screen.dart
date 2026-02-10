@@ -165,7 +165,7 @@ class SettingsScreen extends ConsumerWidget {
           SwitchListTile(
             secondary: Icon(Icons.access_time, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Evening Reminder', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('Remind me at 7 PM if I haven\'t played', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            subtitle: Text('Remind me at ${notificationSettings.formattedReminderTime} if I haven\'t played', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.eveningReminderEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
                 ? (value) {
@@ -174,6 +174,28 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 : null,
           ),
+          if (notificationSettings.eveningReminderEnabled && notificationSettings.streakNotificationsEnabled)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showTimePicker(context, ref, notificationSettings),
+                      icon: const Icon(Icons.schedule, size: 18),
+                      label: Text('Change Time (${notificationSettings.formattedReminderTime})'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _sendTestNotification(context),
+                    icon: const Icon(Icons.notifications_active, size: 18),
+                    label: const Text('Test'),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                  ),
+                ],
+              ),
+            ),
           SwitchListTile(
             secondary: Icon(Icons.emoji_events, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Milestone Alerts', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
@@ -385,6 +407,48 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showTimePicker(BuildContext context, WidgetRef ref, NotificationSettings settings) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: settings.reminderHour, minute: settings.reminderMinute),
+      helpText: 'Select Reminder Time',
+    );
+    if (picked != null) {
+      await ref.read(notificationSettingsProvider.notifier).setReminderTime(picked.hour, picked.minute);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reminder set for ${settings.copyWith(reminderHour: picked.hour, reminderMinute: picked.minute).formattedReminderTime}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendTestNotification(BuildContext context) async {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    final granted = await notificationService.requestPermissions();
+    if (granted) {
+      await notificationService.sendTestNotification();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Test notification sent!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notification permission denied')),
+        );
+      }
+    }
   }
 
   void _confirmLogout(BuildContext context, WidgetRef ref) {

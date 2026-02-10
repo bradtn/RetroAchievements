@@ -25,11 +25,17 @@ class BackgroundSyncService {
     // Schedule local notification for evening reminder if user has a streak
     final prefs = await SharedPreferences.getInstance();
     final currentStreak = prefs.getInt('last_known_streak') ?? 0;
+    final reminderHour = prefs.getInt('reminder_hour') ?? 19;
+    final reminderMinute = prefs.getInt('reminder_minute') ?? 0;
 
     if (currentStreak > 0) {
       final notificationService = NotificationService();
       await notificationService.initialize();
-      await notificationService.scheduleEveningReminder(currentStreak);
+      await notificationService.scheduleEveningReminder(
+        currentStreak,
+        hour: reminderHour,
+        minute: reminderMinute,
+      );
     }
   }
 
@@ -177,7 +183,13 @@ class BackgroundSyncService {
       // Schedule evening reminder if user has a streak but hasn't played today
       final reminderEnabled = prefs.getBool('streak_reminder_enabled') ?? true;
       if (reminderEnabled && currentStreak > 0 && !hasActivityToday) {
-        await notificationService.scheduleEveningReminder(currentStreak);
+        final reminderHour = prefs.getInt('reminder_hour') ?? 19;
+        final reminderMinute = prefs.getInt('reminder_minute') ?? 0;
+        await notificationService.scheduleEveningReminder(
+          currentStreak,
+          hour: reminderHour,
+          minute: reminderMinute,
+        );
       }
 
       // Save current streak for next comparison

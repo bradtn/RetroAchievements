@@ -187,21 +187,24 @@ class NotificationService {
   }
 
   // Schedule evening reminder
-  Future<void> scheduleEveningReminder(int currentStreak) async {
+  Future<void> scheduleEveningReminder(int currentStreak, {int hour = 19, int minute = 0}) async {
     if (currentStreak == 0) return;
 
-    // Schedule for 7 PM local time
+    // Cancel any existing reminder first
+    await cancel(streakReminderNotificationId);
+
+    // Schedule for the configured time
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,
       now.month,
       now.day,
-      19, // 7 PM
-      0,
+      hour,
+      minute,
     );
 
-    // If it's already past 7 PM, schedule for tomorrow
+    // If it's already past the scheduled time, schedule for tomorrow
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
@@ -215,6 +218,16 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  // Send test notification immediately
+  Future<void> sendTestNotification() async {
+    await _notifications.show(
+      streakReminderNotificationId,
+      'Test Notification 🔔',
+      'Your streak reminder notifications are working!',
+      _getNotificationDetails(),
     );
   }
 

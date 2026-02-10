@@ -8,6 +8,8 @@ class NotificationSettings {
   final bool milestonesEnabled;
   final bool dailySummaryEnabled;
   final bool aotwNotificationsEnabled;
+  final int reminderHour;
+  final int reminderMinute;
 
   NotificationSettings({
     this.streakNotificationsEnabled = true,
@@ -15,7 +17,16 @@ class NotificationSettings {
     this.milestonesEnabled = true,
     this.dailySummaryEnabled = true,
     this.aotwNotificationsEnabled = true,
+    this.reminderHour = 19,
+    this.reminderMinute = 0,
   });
+
+  String get formattedReminderTime {
+    final hour = reminderHour > 12 ? reminderHour - 12 : (reminderHour == 0 ? 12 : reminderHour);
+    final ampm = reminderHour >= 12 ? 'PM' : 'AM';
+    final min = reminderMinute.toString().padLeft(2, '0');
+    return '$hour:$min $ampm';
+  }
 
   NotificationSettings copyWith({
     bool? streakNotificationsEnabled,
@@ -23,6 +34,8 @@ class NotificationSettings {
     bool? milestonesEnabled,
     bool? dailySummaryEnabled,
     bool? aotwNotificationsEnabled,
+    int? reminderHour,
+    int? reminderMinute,
   }) {
     return NotificationSettings(
       streakNotificationsEnabled: streakNotificationsEnabled ?? this.streakNotificationsEnabled,
@@ -30,6 +43,8 @@ class NotificationSettings {
       milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
       dailySummaryEnabled: dailySummaryEnabled ?? this.dailySummaryEnabled,
       aotwNotificationsEnabled: aotwNotificationsEnabled ?? this.aotwNotificationsEnabled,
+      reminderHour: reminderHour ?? this.reminderHour,
+      reminderMinute: reminderMinute ?? this.reminderMinute,
     );
   }
 }
@@ -47,6 +62,8 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
       milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? true,
       dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? true,
       aotwNotificationsEnabled: prefs.getBool('aotw_notifications_enabled') ?? true,
+      reminderHour: prefs.getInt('reminder_hour') ?? 19,
+      reminderMinute: prefs.getInt('reminder_minute') ?? 0,
     );
   }
 
@@ -85,6 +102,17 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('aotw_notifications_enabled', enabled);
     state = state.copyWith(aotwNotificationsEnabled: enabled);
+  }
+
+  Future<void> setReminderTime(int hour, int minute) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('reminder_hour', hour);
+    await prefs.setInt('reminder_minute', minute);
+    state = state.copyWith(reminderHour: hour, reminderMinute: minute);
+
+    // Reschedule the notification with the new time
+    final backgroundSync = BackgroundSyncService();
+    await backgroundSync.registerPeriodicTasks();
   }
 }
 
