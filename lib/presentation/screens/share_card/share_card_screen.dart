@@ -52,8 +52,60 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         featureName: 'Share Cards',
         description: 'Create beautiful cards to share your achievements, stats, and milestones on social media.',
         icon: Icons.share,
+        preview: _buildPreview(context),
         child: _buildContent(context),
       ),
+    );
+  }
+
+  /// Build a preview of the share card for non-premium users
+  Widget _buildPreview(BuildContext context) {
+    return Column(
+      children: [
+        // Disabled share button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.share),
+              label: const Text('Share Card'),
+            ),
+          ),
+        ),
+        // Card preview (same as actual)
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: _buildCard(),
+            ),
+          ),
+        ),
+        // Style selector preview
+        Container(
+          padding: EdgeInsets.only(
+            top: 12,
+            bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+          ),
+          child: SizedBox(
+            height: 60,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _styles.length,
+              itemBuilder: (ctx, i) => IgnorePointer(
+                child: StyleButton(
+                  style: _styles[i],
+                  isSelected: _selectedStyle == i,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

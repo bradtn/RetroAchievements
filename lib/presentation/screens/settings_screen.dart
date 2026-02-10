@@ -334,25 +334,24 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showPremiumSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (ctx) => _PremiumSheetContent(parentContext: context),
+      builder: (ctx) => _PremiumDialogContent(parentContext: context),
     );
   }
 }
 
-/// Premium sheet content as a separate stateful widget for confetti
-class _PremiumSheetContent extends ConsumerStatefulWidget {
+/// Premium dialog content as a separate stateful widget for confetti
+class _PremiumDialogContent extends ConsumerStatefulWidget {
   final BuildContext parentContext;
 
-  const _PremiumSheetContent({required this.parentContext});
+  const _PremiumDialogContent({required this.parentContext});
 
   @override
-  ConsumerState<_PremiumSheetContent> createState() => _PremiumSheetContentState();
+  ConsumerState<_PremiumDialogContent> createState() => _PremiumDialogContentState();
 }
 
-class _PremiumSheetContentState extends ConsumerState<_PremiumSheetContent> {
+class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
   late ConfettiController _confettiController;
   bool _isLoading = false;
 
@@ -442,39 +441,56 @@ class _PremiumSheetContentState extends ConsumerState<_PremiumSheetContent> {
     final isOnSale = notifier.isOnSale;
     final originalPrice = notifier.originalPrice;
 
-    return Stack(
-      alignment: Alignment.topCenter,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.star, size: 64, color: Colors.amber),
-              const SizedBox(height: 16),
-              const Text(
-                'RetroTrack Premium',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text('One-time purchase. Yours forever.'),
-              const SizedBox(height: 24),
-              const CheckItem('Remove all ads'),
-              const CheckItem('Theme customization'),
-              const CheckItem('Home screen widgets'),
-              const CheckItem('AMOLED dark mode'),
-              const CheckItem('Share cards'),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _isLoading ? null : _handlePurchase,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.star, size: 48, color: Colors.amber),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'RetroTrack Premium',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'One-time purchase. Yours forever.',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 20),
+                const CheckItem('Remove all ads'),
+                const CheckItem('Theme customization'),
+                const CheckItem('Home screen widgets'),
+                const CheckItem('AMOLED dark mode'),
+                const CheckItem('Share cards'),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _isLoading ? null : _handlePurchase,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     child: _isLoading
                         ? const SizedBox(
-                            height: 24,
-                            width: 24,
+                            height: 22,
+                            width: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
@@ -487,7 +503,7 @@ class _PremiumSheetContentState extends ConsumerState<_PremiumSheetContent> {
                                 Text(
                                   originalPrice,
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 15,
                                     decoration: TextDecoration.lineThrough,
                                     color: Colors.white70,
                                   ),
@@ -496,39 +512,48 @@ class _PremiumSheetContentState extends ConsumerState<_PremiumSheetContent> {
                               ],
                               Text(
                                 'Purchase for $priceString',
-                                style: const TextStyle(fontSize: 18),
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
                   ),
                 ),
-              ),
-              TextButton(
-                onPressed: _isLoading ? null : _handleRestore,
-                child: const Text('Restore Purchase'),
-              ),
-              TextButton(
-                onPressed: _isLoading ? null : () => Navigator.pop(context),
-                child: const Text('Maybe Later'),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: _isLoading ? null : _handleRestore,
+                      child: const Text('Restore'),
+                    ),
+                    TextButton(
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
+                      child: const Text('Maybe Later'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        // Confetti
-        ConfettiWidget(
-          confettiController: _confettiController,
-          blastDirectionality: BlastDirectionality.explosive,
-          shouldLoop: false,
-          colors: const [
-            Colors.amber,
-            Colors.orange,
-            Colors.purple,
-            Colors.blue,
-            Colors.green,
-          ],
-          numberOfParticles: 30,
-        ),
-      ],
+          // Confetti
+          Positioned(
+            top: 0,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                Colors.amber,
+                Colors.orange,
+                Colors.purple,
+                Colors.blue,
+                Colors.green,
+              ],
+              numberOfParticles: 30,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -11,33 +11,33 @@ import 'services/purchase_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load user preferences
-  final prefs = await SharedPreferences.getInstance();
-  Haptics.setEnabled(prefs.getBool('haptics_enabled') ?? true);
-
-  // Initialize AdMob
-  await AdService().initialize();
-
-  // Initialize in-app purchases
-  await PurchaseService().initialize();
-
-  // Initialize notification service
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-
-  // Initialize background sync service and check streak status
-  final backgroundSyncService = BackgroundSyncService();
-  await backgroundSyncService.initialize();
-
-  // Check streak status on app open (runs in background, doesn't block)
-  backgroundSyncService.checkStreakOnAppOpen();
-
-  // Check for new Achievement of the Week
-  backgroundSyncService.checkAotwOnAppOpen();
-
+  // Start the app immediately - don't block on service initialization
   runApp(
     const ProviderScope(
       child: RetroTrackerApp(),
     ),
   );
+
+  // Initialize services in the background (non-blocking)
+  _initializeServices();
+}
+
+/// Initialize all services in the background without blocking the UI
+Future<void> _initializeServices() async {
+  // Load user preferences (fast, can await)
+  final prefs = await SharedPreferences.getInstance();
+  Haptics.setEnabled(prefs.getBool('haptics_enabled') ?? true);
+
+  // Initialize services in parallel for speed
+  await Future.wait([
+    AdService().initialize(),
+    PurchaseService().initialize(),
+    NotificationService().initialize(),
+    BackgroundSyncService().initialize(),
+  ]);
+
+  // Non-blocking background checks
+  final backgroundSyncService = BackgroundSyncService();
+  backgroundSyncService.checkStreakOnAppOpen();
+  backgroundSyncService.checkAotwOnAppOpen();
 }
