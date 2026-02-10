@@ -322,27 +322,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
           ),
           const SizedBox(height: 8),
           Card(
-            child: ListTile(
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                  imageUrl: gameIcon.isNotEmpty
-                      ? 'https://retroachievements.org${gameIcon.startsWith('/') ? '' : '/'}$gameIcon'
-                      : 'https://retroachievements.org/Images/000001.png',
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Container(
-                    width: 48,
-                    height: 48,
-                    color: Colors.grey[800],
-                    child: const Icon(Icons.games),
-                  ),
-                ),
-              ),
-              title: Text(gameTitle),
-              subtitle: Text(consoleName),
-              trailing: const Icon(Icons.chevron_right),
+            child: InkWell(
               onTap: gameId != null
                   ? () {
                       Navigator.push(
@@ -356,6 +336,66 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                       );
                     }
                   : null,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: gameIcon.isNotEmpty
+                            ? 'https://retroachievements.org${gameIcon.startsWith('/') ? '' : '/'}$gameIcon'
+                            : 'https://retroachievements.org/Images/000001.png',
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          width: 56,
+                          height: 56,
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.games, size: 28),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            gameTitle,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          if (consoleName.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                consoleName,
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: Colors.grey[500]),
+                  ],
+                ),
+              ),
             ),
           ),
 
