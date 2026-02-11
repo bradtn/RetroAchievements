@@ -254,6 +254,22 @@ class PurchaseService {
   /// Check if purchase is pending
   bool get isPurchasePending => _purchasePending;
 
+  /// Debug info for troubleshooting
+  String get debugInfo {
+    final buffer = StringBuffer();
+    buffer.writeln('Store Available: $_isAvailable');
+    buffer.writeln('Initialized: $_isInitialized');
+    buffer.writeln('Products loaded: ${_products.length}');
+    if (_products.isNotEmpty) {
+      for (final p in _products) {
+        buffer.writeln('  - ${p.id}: ${p.price}');
+      }
+    }
+    buffer.writeln('Premium product found: ${premiumProduct != null}');
+    buffer.writeln('Queried ID: $kPremiumProductId');
+    return buffer.toString();
+  }
+
   /// Get purchase date if available
   Future<DateTime?> getPurchaseDate() async {
     final prefs = await SharedPreferences.getInstance();

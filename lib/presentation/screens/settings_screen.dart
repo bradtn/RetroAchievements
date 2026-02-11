@@ -11,6 +11,7 @@ import '../providers/premium_provider.dart';
 import '../../services/purchase_service.dart';
 import '../../core/animations.dart';
 import '../../services/notification_service.dart';
+import '../../data/datasources/ra_api_datasource.dart';
 import 'settings/settings_provider.dart';
 import 'settings/settings_widgets.dart';
 
@@ -18,7 +19,7 @@ export 'settings/settings_provider.dart';
 export 'settings/settings_widgets.dart';
 
 const String _appVersion = '1.0.0';
-const String _developerEmail = 'retrotrackerdev@gmail.com';
+const String _developerEmail = 'retrotrackdev@gmail.com';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -226,14 +227,64 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(notificationSettingsProvider.notifier).setAotwNotifications(value);
             },
           ),
+          SwitchListTile(
+            secondary: Icon(Icons.calendar_month, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Achievement of the Month', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Notify when new AOTM is available', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            value: notificationSettings.aotmNotificationsEnabled,
+            onChanged: (value) {
+              HapticFeedback.selectionClick();
+              ref.read(notificationSettingsProvider.notifier).setAotmNotifications(value);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.notifications_active, color: isDark ? Colors.white70 : Colors.grey.shade700),
+            title: Text('Test Notifications', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Send AOTW & AOTM notifications now', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            onTap: () async {
+              HapticFeedback.selectionClick();
+
+              final api = ref.read(apiDataSourceProvider);
+              final notificationService = NotificationService();
+              await notificationService.initialize();
+
+              // Fetch and send AOTW
+              final aotwData = await api.getAchievementOfTheWeek();
+              if (aotwData != null) {
+                final achievement = aotwData['Achievement'] as Map<String, dynamic>?;
+                final game = aotwData['Game'] as Map<String, dynamic>?;
+                await notificationService.showAotwNotification(
+                  achievement?['Title'] ?? 'Achievement of the Week',
+                  game?['Title'] ?? 'Unknown Game',
+                );
+              }
+
+              await Future.delayed(const Duration(milliseconds: 500));
+
+              // Fetch and send AOTM
+              final aotmData = await api.getCurrentAchievementOfTheMonth();
+              if (aotmData != null) {
+                await notificationService.showAotmNotification(
+                  aotmData['achievementTitle'] ?? 'Achievement of the Month',
+                  aotmData['gameTitle'] ?? 'Unknown Game',
+                );
+              }
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notifications sent!')),
+                );
+              }
+            },
+          ),
           const Divider(),
 
           // Premium Features
           const SectionTitle('Premium Features'),
           const FeatureTile(Icons.block, 'Ad-Free', 'No advertisements', true),
-          const FeatureTile(Icons.analytics, 'Statistics', 'Charts & insights', true),
-          const FeatureTile(Icons.offline_bolt, 'Offline Mode', 'Cache for offline', true),
-          const FeatureTile(Icons.people, 'Multi-Account', 'Switch accounts', true),
+          const FeatureTile(Icons.palette, 'Theming', 'Custom accent colors', true),
+          const FeatureTile(Icons.share, 'Share Cards', 'Share achievements', true),
+          const FeatureTile(Icons.local_fire_department, 'Streaks', 'Track your streaks', true),
 
           const Divider(),
 
@@ -303,25 +354,40 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showThemeDialog(BuildContext context, WidgetRef ref, AppThemeMode current) {
+    final isPremium = ref.read(isPremiumProvider);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Choose Theme'),
-        content: RadioGroup<AppThemeMode>(
-          groupValue: current,
-          onChanged: (v) {
-            if (v != null) {
-              ref.read(themeProvider.notifier).setTheme(v);
-              Navigator.pop(ctx);
-            }
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: AppThemeMode.values.map((mode) => RadioListTile<AppThemeMode>(
-              title: Text(_themeName(mode)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: AppThemeMode.values.map((mode) {
+            final isAmoled = mode == AppThemeMode.amoled;
+            final isLocked = isAmoled && !isPremium;
+
+            return RadioListTile<AppThemeMode>(
+              title: Row(
+                children: [
+                  Text(_themeName(mode)),
+                  if (isLocked) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.lock, size: 16, color: Colors.grey[500]),
+                  ],
+                ],
+              ),
               value: mode,
-            )).toList(),
-          ),
+              groupValue: current,
+              onChanged: isLocked
+                  ? null
+                  : (v) {
+                      if (v != null) {
+                        ref.read(themeProvider.notifier).setTheme(v);
+                        Navigator.pop(ctx);
+                      }
+                    },
+            );
+          }).toList(),
         ),
       ),
     );
@@ -671,6 +737,8 @@ class _AccentColorTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accentColor = ref.watch(accentColorProvider);
+    // Non-premium users always see blue
+    final displayColor = isPremium ? accentColor : AccentColor.blue;
 
     return ListTile(
       leading: Icon(Icons.color_lens, color: isDark ? Colors.white70 : Colors.grey.shade700),
@@ -681,16 +749,28 @@ class _AccentColorTile extends ConsumerWidget {
             width: 16,
             height: 16,
             decoration: BoxDecoration(
-              color: accentColor.color,
+              color: displayColor.color,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white24),
             ),
           ),
           const SizedBox(width: 8),
-          Text(accentColor.label, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          Text(displayColor.label, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          if (!isPremium) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.lock, size: 14, color: Colors.grey[500]),
+          ],
         ],
       ),
-      onTap: () => _showAccentColorDialog(context, ref, accentColor),
+      onTap: isPremium
+          ? () => _showAccentColorDialog(context, ref, accentColor)
+          : () => _showPremiumRequired(context),
+    );
+  }
+
+  void _showPremiumRequired(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Accent colors are a premium feature')),
     );
   }
 
