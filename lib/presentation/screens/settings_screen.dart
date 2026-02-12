@@ -237,46 +237,6 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(notificationSettingsProvider.notifier).setAotmNotifications(value);
             },
           ),
-          ListTile(
-            leading: Icon(Icons.notifications_active, color: isDark ? Colors.white70 : Colors.grey.shade700),
-            title: Text('Test Notifications', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('Send AOTW & AOTM notifications now', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-            onTap: () async {
-              HapticFeedback.selectionClick();
-
-              final api = ref.read(apiDataSourceProvider);
-              final notificationService = NotificationService();
-              await notificationService.initialize();
-
-              // Fetch and send AOTW
-              final aotwData = await api.getAchievementOfTheWeek();
-              if (aotwData != null) {
-                final achievement = aotwData['Achievement'] as Map<String, dynamic>?;
-                final game = aotwData['Game'] as Map<String, dynamic>?;
-                await notificationService.showAotwNotification(
-                  achievement?['Title'] ?? 'Achievement of the Week',
-                  game?['Title'] ?? 'Unknown Game',
-                );
-              }
-
-              await Future.delayed(const Duration(milliseconds: 500));
-
-              // Fetch and send AOTM
-              final aotmData = await api.getCurrentAchievementOfTheMonth();
-              if (aotmData != null) {
-                await notificationService.showAotmNotification(
-                  aotmData['achievementTitle'] ?? 'Achievement of the Month',
-                  aotmData['gameTitle'] ?? 'Unknown Game',
-                );
-              }
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifications sent!')),
-                );
-              }
-            },
-          ),
           const Divider(),
 
           // Premium Features
