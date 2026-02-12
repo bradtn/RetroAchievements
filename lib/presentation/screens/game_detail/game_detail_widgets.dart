@@ -58,16 +58,62 @@ class DetailRow extends StatelessWidget {
 
   const DetailRow(this.icon, this.label, this.value);
 
+  Color _getColor() {
+    switch (label) {
+      case 'Developer':
+        return Colors.blue;
+      case 'Publisher':
+        return Colors.purple;
+      case 'Genre':
+        return Colors.teal;
+      case 'Released':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final color = _getColor();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: Colors.grey),
-          const SizedBox(width: 8),
-          Text('$label: ', style: const TextStyle(color: Colors.grey)),
-          Expanded(child: Text(value)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                value,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -119,6 +165,76 @@ class FavoriteButtonLarge extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 10),
             ),
           );
+  }
+
+  void _toggleFavorite(BuildContext context, WidgetRef ref, bool isFavorite) {
+    Haptics.medium();
+    final game = FavoriteGame(
+      gameId: gameId,
+      title: title,
+      imageIcon: imageIcon,
+      consoleName: consoleName,
+      numAchievements: numAchievements,
+      earnedAchievements: earnedAchievements,
+      totalPoints: totalPoints,
+      earnedPoints: earnedPoints,
+      addedAt: DateTime.now(),
+    );
+    ref.read(favoritesProvider.notifier).toggleFavorite(game);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+}
+
+
+class FavoriteIconButton extends ConsumerWidget {
+  final int gameId;
+  final String title;
+  final String imageIcon;
+  final String consoleName;
+  final int numAchievements;
+  final int earnedAchievements;
+  final int totalPoints;
+  final int earnedPoints;
+
+  const FavoriteIconButton({
+    super.key,
+    required this.gameId,
+    required this.title,
+    required this.imageIcon,
+    required this.consoleName,
+    required this.numAchievements,
+    required this.earnedAchievements,
+    required this.totalPoints,
+    required this.earnedPoints,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFavorite = ref.watch(favoritesProvider).isFavorite(gameId);
+
+    return GestureDetector(
+      onTap: () => _toggleFavorite(context, ref, isFavorite),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isFavorite
+              ? Colors.amber.withValues(alpha: 0.2)
+              : Colors.grey.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          isFavorite ? Icons.star : Icons.star_border,
+          size: 18,
+          color: isFavorite ? Colors.amber : Colors.grey,
+        ),
+      ),
+    );
   }
 
   void _toggleFavorite(BuildContext context, WidgetRef ref, bool isFavorite) {
@@ -276,7 +392,7 @@ class AnimatedRarityDistributionState extends State<AnimatedRarityDistribution>
                               if (widget.commonCount > 0)
                                 _buildAnimatedBar(
                                   width: (widget.commonCount / total) * maxWidth * animValue,
-                                  color: Colors.grey,
+                                  color: Colors.blueGrey,
                                   count: widget.commonCount,
                                   animValue: animValue,
                                 ),
@@ -299,7 +415,7 @@ class AnimatedRarityDistributionState extends State<AnimatedRarityDistribution>
               _buildLegendItem(Icons.diamond, Colors.red, 'Ultra Rare', '<5%', widget.ultraRareCount),
               _buildLegendItem(Icons.star, Colors.purple, 'Rare', '<15%', widget.rareCount),
               _buildLegendItem(Icons.hexagon, Colors.blue, 'Uncommon', '<40%', widget.uncommonCount),
-              _buildLegendItem(Icons.circle, Colors.grey, 'Common', '40%+', widget.commonCount),
+              _buildLegendItem(Icons.circle, Colors.blueGrey, 'Common', '40%+', widget.commonCount),
             ],
           ),
         ],

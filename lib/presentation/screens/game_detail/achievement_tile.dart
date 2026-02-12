@@ -36,13 +36,13 @@ class AchievementTile extends ConsumerWidget {
       if (percent < 5) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
       if (percent < 15) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
       if (percent < 40) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
-      return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
+      return {'label': 'Common', 'color': Colors.blueGrey, 'icon': Icons.circle};
     }
     // Fallback to absolute numbers if no player count
     if (numAwarded < 100) return {'label': 'Ultra Rare', 'color': Colors.red, 'icon': Icons.diamond};
     if (numAwarded < 500) return {'label': 'Rare', 'color': Colors.purple, 'icon': Icons.star};
     if (numAwarded < 2000) return {'label': 'Uncommon', 'color': Colors.blue, 'icon': Icons.hexagon};
-    return {'label': 'Common', 'color': Colors.grey, 'icon': Icons.circle};
+    return {'label': 'Common', 'color': Colors.blueGrey, 'icon': Icons.circle};
   }
 
   // Check if achievement is missable
@@ -218,17 +218,21 @@ class AchievementTile extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.grey.withValues(alpha: 0.15),
+                              color: Colors.cyan.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Colors.cyan.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.people, size: 10, color: context.subtitleColor),
+                                Icon(Icons.people, size: 10, color: Colors.cyan[600]),
                                 const SizedBox(width: 3),
                                 Text(
                                   _formatUnlockCount(numAwarded),
-                                  style: TextStyle(color: context.subtitleColor, fontSize: 9),
+                                  style: TextStyle(color: Colors.cyan[600], fontSize: 9, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -627,13 +631,14 @@ class AchievementTile extends ConsumerWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.people, size: 12, color: Theme.of(ctx).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600]),
+                                Icon(Icons.people, size: 12, color: Colors.cyan[600]),
                                 const SizedBox(width: 4),
                                 Text(
                                   '$numAwarded unlocks',
                                   style: TextStyle(
-                                    color: Theme.of(ctx).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600],
+                                    color: Colors.cyan[600],
                                     fontSize: 11,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],

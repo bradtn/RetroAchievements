@@ -188,7 +188,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         controller: _scrollController,
         slivers: [
           _buildAppBar(title, imageIcon, imageTitle, isLightMode),
-          _buildActionButtons(title, console, imageIcon, totalPoints, earnedPoints, numAchievements, numAwarded),
           _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion),
           if (numAchievements > 0)
             _buildRarityDistribution(achievements, numDistinctPlayers),
@@ -380,50 +379,23 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(String title, String console, String imageIcon, int totalPoints, int earnedPoints, int numAchievements, int numAwarded) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  final shareData = Map<String, dynamic>.from(_gameData!);
-                  shareData['PossibleScore'] = totalPoints;
-                  shareData['ScoreAchieved'] = earnedPoints;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ShareCardScreen(
-                        type: ShareCardType.game,
-                        data: shareData,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.share, size: 18),
-                label: const Text('Share'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FavoriteButtonLarge(
-                gameId: widget.gameId,
-                title: title,
-                imageIcon: imageIcon,
-                consoleName: console,
-                numAchievements: numAchievements,
-                earnedAchievements: numAwarded,
-                totalPoints: totalPoints,
-                earnedPoints: earnedPoints,
-              ),
-            ),
-          ],
+  Widget _buildIconButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Haptics.light();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
         ),
+        child: Icon(icon, size: 18, color: color),
       ),
     );
   }
@@ -436,7 +408,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   ) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         child: Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -444,6 +416,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
@@ -464,20 +437,56 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              console,
-                              style: const TextStyle(
-                                color: Colors.blue,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  console,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const Spacer(),
+                              // Share button
+                              _buildIconButton(
+                                icon: Icons.share,
+                                color: Colors.blue,
+                                onTap: () {
+                                  final shareData = Map<String, dynamic>.from(_gameData!);
+                                  shareData['PossibleScore'] = totalPoints;
+                                  shareData['ScoreAchieved'] = earnedPoints;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ShareCardScreen(
+                                        type: ShareCardType.game,
+                                        data: shareData,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              // Favorite button
+                              FavoriteIconButton(
+                                gameId: widget.gameId,
+                                title: title,
+                                imageIcon: imageIcon,
+                                consoleName: console,
+                                numAchievements: numAchievements,
+                                earnedAchievements: numAwarded,
+                                totalPoints: totalPoints,
+                                earnedPoints: earnedPoints,
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 10),
                           if (numAchievements > 0) ...[
