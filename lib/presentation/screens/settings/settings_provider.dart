@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/background_sync_service.dart';
+import '../../../services/notification_service.dart';
 
 /// Available accent colors for the app
 enum AccentColor {
@@ -53,6 +54,7 @@ class NotificationSettings {
   final bool milestonesEnabled;
   final bool dailySummaryEnabled;
   final bool aotwNotificationsEnabled;
+  final bool aotmNotificationsEnabled;
   final int reminderHour;
   final int reminderMinute;
 
@@ -62,6 +64,7 @@ class NotificationSettings {
     this.milestonesEnabled = true,
     this.dailySummaryEnabled = true,
     this.aotwNotificationsEnabled = true,
+    this.aotmNotificationsEnabled = true,
     this.reminderHour = 19,
     this.reminderMinute = 0,
   });
@@ -79,6 +82,7 @@ class NotificationSettings {
     bool? milestonesEnabled,
     bool? dailySummaryEnabled,
     bool? aotwNotificationsEnabled,
+    bool? aotmNotificationsEnabled,
     int? reminderHour,
     int? reminderMinute,
   }) {
@@ -88,6 +92,7 @@ class NotificationSettings {
       milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
       dailySummaryEnabled: dailySummaryEnabled ?? this.dailySummaryEnabled,
       aotwNotificationsEnabled: aotwNotificationsEnabled ?? this.aotwNotificationsEnabled,
+      aotmNotificationsEnabled: aotmNotificationsEnabled ?? this.aotmNotificationsEnabled,
       reminderHour: reminderHour ?? this.reminderHour,
       reminderMinute: reminderMinute ?? this.reminderMinute,
     );
@@ -107,6 +112,7 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
       milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? true,
       dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? true,
       aotwNotificationsEnabled: prefs.getBool('aotw_notifications_enabled') ?? true,
+      aotmNotificationsEnabled: prefs.getBool('aotm_notifications_enabled') ?? true,
       reminderHour: prefs.getInt('reminder_hour') ?? 19,
       reminderMinute: prefs.getInt('reminder_minute') ?? 0,
     );
@@ -129,6 +135,16 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('streak_reminder_enabled', enabled);
     state = state.copyWith(eveningReminderEnabled: enabled);
+
+    final backgroundSync = BackgroundSyncService();
+    if (enabled) {
+      // Schedule the reminder with current settings
+      await backgroundSync.registerPeriodicTasks();
+    } else {
+      // Cancel the evening reminder notification
+      final notificationService = NotificationService();
+      await notificationService.cancel(NotificationService.streakReminderNotificationId);
+    }
   }
 
   Future<void> setMilestones(bool enabled) async {
@@ -147,6 +163,12 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('aotw_notifications_enabled', enabled);
     state = state.copyWith(aotwNotificationsEnabled: enabled);
+  }
+
+  Future<void> setAotmNotifications(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('aotm_notifications_enabled', enabled);
+    state = state.copyWith(aotmNotificationsEnabled: enabled);
   }
 
   Future<void> setReminderTime(int hour, int minute) async {
