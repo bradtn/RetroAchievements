@@ -191,7 +191,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           _buildActionButtons(title, console, imageIcon, totalPoints, earnedPoints, numAchievements, numAwarded),
           _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion),
           if (numAchievements > 0)
-            _buildAchievementsHeader(achievements, numAwarded, earnedPoints, totalPoints, numDistinctPlayers),
+            _buildRarityDistribution(achievements, numDistinctPlayers),
+          if (numAchievements > 0)
+            _buildAchievementsHeader(achievements, numAwarded, earnedPoints, totalPoints),
           if (numAchievements > 0)
             _buildAchievementsList(achievements, numDistinctPlayers, title, imageIcon, console),
           _buildLeaderboardsSection(),
@@ -575,15 +577,53 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
+  Widget _buildRarityDistribution(Map<String, dynamic> achievements, int numDistinctPlayers) {
+    final rarityCounts = calculateRarityDistribution(achievements, numDistinctPlayers);
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.diamond_outlined, size: 20, color: Colors.purple[300]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Rarity Distribution',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                AnimatedRarityDistribution(
+                  ultraRareCount: rarityCounts.ultraRare,
+                  rareCount: rarityCounts.rare,
+                  uncommonCount: rarityCounts.uncommon,
+                  commonCount: rarityCounts.common,
+                  numDistinctPlayers: numDistinctPlayers,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAchievementsHeader(
     Map<String, dynamic> achievements,
     int numAwarded,
     int earnedPoints,
     int totalPoints,
-    int numDistinctPlayers,
   ) {
     final filtered = getFilteredAchievements(achievements, _filter, _sort, _showMissable);
-    final rarityCounts = calculateRarityDistribution(achievements, numDistinctPlayers);
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -650,14 +690,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               earnedPoints: earnedPoints,
               totalPoints: totalPoints,
               filteredCount: filtered.length,
-            ),
-            const SizedBox(height: 12),
-            AnimatedRarityDistribution(
-              ultraRareCount: rarityCounts.ultraRare,
-              rareCount: rarityCounts.rare,
-              uncommonCount: rarityCounts.uncommon,
-              commonCount: rarityCounts.common,
-              numDistinctPlayers: numDistinctPlayers,
             ),
           ],
         ),
