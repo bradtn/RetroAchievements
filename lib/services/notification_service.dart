@@ -200,9 +200,9 @@ class NotificationService {
     );
   }
 
-  // Schedule evening reminder
-  Future<void> scheduleEveningReminder(int currentStreak, {int hour = 19, int minute = 0}) async {
-    if (currentStreak == 0) return;
+  // Schedule evening reminder - returns scheduled time or null if no streak
+  Future<DateTime?> scheduleEveningReminder(int currentStreak, {int hour = 19, int minute = 0}) async {
+    if (currentStreak == 0) return null;
 
     // Cancel any existing reminder first
     await cancel(streakReminderNotificationId);
@@ -229,10 +229,12 @@ class NotificationService {
       'You have a $currentStreak-day streak. Play today to keep it going!',
       scheduledDate,
       _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
+
+    return scheduledDate;
   }
 
   // Send test notification immediately
@@ -257,7 +259,7 @@ class NotificationService {
       'This notification was scheduled $seconds seconds ago!',
       scheduledDate,
       _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
@@ -266,26 +268,6 @@ class NotificationService {
   // Check pending notifications (for debugging)
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     return await _notifications.pendingNotificationRequests();
-  }
-
-  // Check if exact alarms are permitted (Android 12+)
-  Future<bool> canScheduleExactAlarms() async {
-    final android = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      return await android.canScheduleExactNotifications() ?? false;
-    }
-    return true;
-  }
-
-  // Request exact alarm permission (Android 12+)
-  Future<bool> requestExactAlarmPermission() async {
-    final android = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      return await android.requestExactAlarmsPermission() ?? false;
-    }
-    return true;
   }
 
   // Schedule a test notification at specific time (for testing)
@@ -303,7 +285,7 @@ class NotificationService {
     );
 
     // If it's already past the scheduled time, schedule for tomorrow
-    if (scheduledDate.isBefore(now) || scheduledDate.difference(now).inSeconds < 30) {
+    if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
@@ -313,7 +295,7 @@ class NotificationService {
       'This is your scheduled reminder test!',
       scheduledDate,
       _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
@@ -351,7 +333,7 @@ class NotificationService {
       message,
       scheduledDate,
       _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );

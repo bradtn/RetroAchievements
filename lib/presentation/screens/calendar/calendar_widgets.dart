@@ -422,3 +422,316 @@ class CalendarErrorView extends StatelessWidget {
     );
   }
 }
+
+class DayAchievementsModal extends StatelessWidget {
+  final DateTime date;
+  final List<dynamic> achievements;
+
+  const DayAchievementsModal({
+    super.key,
+    required this.date,
+    required this.achievements,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = formatDate(date);
+
+    // Group achievements by game
+    final Map<String, List<dynamic>> achievementsByGame = {};
+    for (final achievement in achievements) {
+      final gameTitle = achievement['GameTitle'] ?? 'Unknown Game';
+      achievementsByGame.putIfAbsent(gameTitle, () => []).add(achievement);
+    }
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 20, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      dateStr,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.emoji_events, size: 16, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${achievements.length}',
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // Achievement list grouped by game
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  itemCount: achievementsByGame.length,
+                  itemBuilder: (context, index) {
+                    final gameTitle = achievementsByGame.keys.elementAt(index);
+                    final gameAchievements = achievementsByGame[gameTitle]!;
+                    final firstAch = gameAchievements.first;
+                    final gameId = firstAch['GameID'];
+                    final gameIcon = firstAch['GameIcon'] ?? '';
+
+                    return _GameAchievementGroup(
+                      gameTitle: gameTitle,
+                      gameId: gameId,
+                      gameIcon: gameIcon,
+                      achievements: gameAchievements,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GameAchievementGroup extends StatelessWidget {
+  final String gameTitle;
+  final dynamic gameId;
+  final String gameIcon;
+  final List<dynamic> achievements;
+
+  const _GameAchievementGroup({
+    required this.gameTitle,
+    required this.gameId,
+    required this.gameIcon,
+    required this.achievements,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Game header
+          InkWell(
+            onTap: gameId != null ? () {
+              Haptics.light();
+              final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+              if (id > 0) {
+                Navigator.push(
+                  context,
+                  SlidePageRoute(
+                    page: GameDetailScreen(gameId: id, gameTitle: gameTitle),
+                  ),
+                );
+              }
+            } : null,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: 'https://retroachievements.org$gameIcon',
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        width: 40,
+                        height: 40,
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.games, size: 20),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          gameTitle,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${achievements.length} achievement${achievements.length == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            color: context.subtitleColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: context.subtitleColor),
+                ],
+              ),
+            ),
+          ),
+
+          const Divider(height: 1),
+
+          // Achievements for this game
+          ...achievements.map((achievement) => _AchievementRow(achievement: achievement)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AchievementRow extends StatelessWidget {
+  final dynamic achievement;
+
+  const _AchievementRow({required this.achievement});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = achievement['Title'] ?? 'Achievement';
+    final description = achievement['Description'] ?? '';
+    final points = achievement['Points'] ?? 0;
+    final badgeName = achievement['BadgeName'] ?? '';
+    final dateStr = achievement['Date'] ?? achievement['DateEarned'] ?? '';
+    final formattedTime = formatTime(dateStr);
+    final hardcoreMode = achievement['HardcoreMode'] == 1 ||
+                         achievement['HardcoreMode'] == true ||
+                         achievement['Hardcore'] == 1 ||
+                         achievement['Hardcore'] == true ||
+                         achievement['DateEarnedHardcore'] != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: CachedNetworkImage(
+              imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => Container(
+                width: 40,
+                height: 40,
+                color: Colors.grey[800],
+                child: const Icon(Icons.emoji_events, size: 20),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (description.isNotEmpty)
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: context.subtitleColor,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.stars, size: 12, color: Colors.amber[400]),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$points pts',
+                      style: TextStyle(color: Colors.amber[400], fontSize: 11),
+                    ),
+                    if (hardcoreMode) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'HC',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (formattedTime.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.access_time, size: 10, color: Colors.grey[500]),
+                      const SizedBox(width: 2),
+                      Text(
+                        formattedTime,
+                        style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

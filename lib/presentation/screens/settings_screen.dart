@@ -634,23 +634,42 @@ Future<void> _showTimePickerDialog(BuildContext context, WidgetRef ref, Notifica
     if (picked != null) {
       await ref.read(notificationSettingsProvider.notifier).setReminderTime(picked.hour, picked.minute);
 
-      // Schedule a test notification at the new time
+      // Schedule the actual streak reminder at the new time
+      final prefs = await SharedPreferences.getInstance();
+      final currentStreak = prefs.getInt('last_known_streak') ?? 0;
+
       final notificationService = NotificationService();
       await notificationService.initialize();
-      final scheduledTime = await notificationService.scheduleTestAtTime(picked.hour, picked.minute);
+      final scheduledTime = await notificationService.scheduleEveningReminder(
+        currentStreak,
+        hour: picked.hour,
+        minute: picked.minute,
+      );
 
       if (context.mounted) {
-        final hour = scheduledTime.hour > 12 ? scheduledTime.hour - 12 : (scheduledTime.hour == 0 ? 12 : scheduledTime.hour);
-        final ampm = scheduledTime.hour >= 12 ? 'PM' : 'AM';
-        final min = scheduledTime.minute.toString().padLeft(2, '0');
-        final isToday = scheduledTime.day == DateTime.now().day;
+        if (scheduledTime == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reminder time saved. Notifications will appear when you have an active streak.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          final hour = scheduledTime.hour > 12 ? scheduledTime.hour - 12 : (scheduledTime.hour == 0 ? 12 : scheduledTime.hour);
+          final ampm = scheduledTime.hour >= 12 ? 'PM' : 'AM';
+          final min = scheduledTime.minute.toString().padLeft(2, '0');
+          final now = DateTime.now();
+          final isToday = scheduledTime.year == now.year &&
+                          scheduledTime.month == now.month &&
+                          scheduledTime.day == now.day;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Test notification scheduled for $hour:$min $ampm ${isToday ? "today" : "tomorrow"}'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Streak reminder scheduled for $hour:$min $ampm ${isToday ? "today" : "tomorrow"}'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     }
   }

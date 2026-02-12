@@ -157,56 +157,50 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Widget _buildContent(StreakState streakState) {
-    final achievements = _getAchievementsForDate(_selectedDate, streakState);
-
-    return CustomScrollView(
-      slivers: [
-        // Streak cards
-        SliverToBoxAdapter(
-          child: Padding(
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          // Streak cards
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: _buildStreakCards(streakState),
           ),
-        ),
 
-        // Calendar
-        SliverToBoxAdapter(child: _buildCalendar(streakState)),
+          // Calendar
+          _buildCalendar(streakState),
 
-        // Legend
-        const SliverToBoxAdapter(
-          child: Padding(
+          // Legend
+          const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: CalendarLegend(),
           ),
-        ),
 
-        const SliverToBoxAdapter(child: Divider(height: 1)),
-
-        // Selected day achievements
-        SliverToBoxAdapter(
-          child: DayHeader(
-            selectedDate: _selectedDate,
-            achievementCount: achievements.length,
-          ),
-        ),
-
-        // Achievement list
-        if (achievements.isEmpty)
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: EmptyDayView(),
-          )
-        else
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewPadding.bottom + 16),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) => CalendarAchievementTile(achievement: achievements[i]),
-                childCount: achievements.length,
+          // Tip text
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Text(
+              'Tap a day to see achievements',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 12,
               ),
             ),
           ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  void _showDayAchievements(DateTime date, List<dynamic> achievements) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DayAchievementsModal(
+        date: date,
+        achievements: achievements,
+      ),
     );
   }
 
@@ -360,7 +354,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               final isFuture = date.isAfter(DateTime.now());
 
               return GestureDetector(
-                onTap: isFuture ? null : () => setState(() => _selectedDate = date),
+                onTap: isFuture ? null : () {
+                  setState(() => _selectedDate = date);
+                  final achievements = _getAchievementsForDate(date, streakState);
+                  if (achievements.isNotEmpty) {
+                    _showDayAchievements(date, achievements);
+                  }
+                },
                 child: CalendarDay(
                   day: dayOffset + 1,
                   activityCount: count,
