@@ -39,9 +39,12 @@ class AuthState {
   bool get isLoading => status == AuthStatus.loading;
 }
 
+/// Singleton API data source instance (credentials persist)
+final _apiDataSource = RAApiDataSource();
+
 /// Provider for API data source
 final apiDataSourceProvider = Provider<RAApiDataSource>((ref) {
-  return RAApiDataSource();
+  return _apiDataSource;
 });
 
 /// Secure storage instance with enhanced security options

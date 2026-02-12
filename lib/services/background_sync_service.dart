@@ -269,6 +269,91 @@ class BackgroundSyncService {
     }
   }
 
+  /// Check for new Achievement of the Month
+  Future<void> checkAotmOnAppOpen() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check if AotM notifications are enabled
+    final aotmNotificationsEnabled = prefs.getBool('aotm_notifications_enabled') ?? true;
+    if (!aotmNotificationsEnabled) return;
+
+    // Only check once per day
+    final lastCheckDate = prefs.getString('last_aotm_check_date');
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month}-${today.day}';
+
+    if (lastCheckDate == todayStr) return;
+
+    try {
+      // Fetch AotM data from GitHub
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 20),
+        responseType: ResponseType.plain,
+      ));
+
+      final cacheBuster = DateTime.now().millisecondsSinceEpoch;
+      final response = await dio.get(
+        'https://raw.githubusercontent.com/bradtn/RetroAchievements/master/aotm.json?cb=$cacheBuster',
+      );
+
+      if (response.statusCode != 200 || response.data == null) return;
+
+      final jsonString = response.data.toString();
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! List || decoded.isEmpty) return;
+
+      // Find current AotM by date
+      final now = DateTime.now().toUtc();
+      Map<String, dynamic>? currentAotm;
+
+      for (final aotm in decoded) {
+        if (aotm is Map<String, dynamic>) {
+          final startStr = aotm['achievementDateStart'] as String?;
+          final endStr = aotm['achievementDateEnd'] as String?;
+          if (startStr != null && endStr != null) {
+            try {
+              final start = DateTime.parse(startStr);
+              final end = DateTime.parse(endStr);
+              if (now.isAfter(start) && now.isBefore(end)) {
+                currentAotm = aotm;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      // Fallback to last entry if no current one found
+      if (currentAotm == null && decoded.isNotEmpty) {
+        currentAotm = decoded.last as Map<String, dynamic>?;
+      }
+
+      if (currentAotm == null) return;
+
+      final achievementId = currentAotm['achievementId']?.toString() ?? '';
+      final achievementTitle = currentAotm['achievementTitle'] ?? 'New Achievement';
+      final gameTitle = currentAotm['gameTitle'] ?? 'Unknown Game';
+
+      // Check if this is a new AotM
+      final lastKnownAotmId = prefs.getString('last_known_aotm_id') ?? '';
+
+      if (lastKnownAotmId.isNotEmpty && lastKnownAotmId != achievementId) {
+        // New AotM! Send notification
+        final notificationService = NotificationService();
+        await notificationService.initialize();
+        await notificationService.showAotmNotification(achievementTitle, gameTitle);
+      }
+
+      // Save current AotM ID
+      await prefs.setString('last_known_aotm_id', achievementId);
+      await prefs.setString('last_aotm_check_date', todayStr);
+
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
   /// Sync all widget data on app open
   Future<void> syncWidgetDataOnAppOpen() async {
     final prefs = await SharedPreferences.getInstance();

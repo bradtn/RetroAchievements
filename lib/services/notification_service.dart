@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -7,6 +8,9 @@ class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  /// Global navigator key for navigation from notifications
+  static GlobalKey<NavigatorState>? navigatorKey;
 
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
@@ -24,6 +28,7 @@ class NotificationService {
   static const int streakBrokenNotificationId = 3;
   static const int dailySummaryNotificationId = 4;
   static const int aotwNotificationId = 5;
+  static const int aotmNotificationId = 6;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -81,8 +86,17 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    // Handle notification tap - could navigate to streaks screen
-    // This would require passing context or using a navigation key
+    final payload = response.payload;
+    if (payload == null || navigatorKey?.currentState == null) return;
+
+    // Delay slightly to ensure app is ready
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (payload == 'aotw') {
+        navigatorKey?.currentState?.pushNamed('/aotw');
+      } else if (payload == 'aotm') {
+        navigatorKey?.currentState?.pushNamed('/aotm');
+      }
+    });
   }
 
   Future<bool> requestPermissions() async {
@@ -360,6 +374,18 @@ class NotificationService {
       'New Achievement of the Week! 🏆',
       '$achievementTitle from $gameTitle',
       _getNotificationDetails(),
+      payload: 'aotw',
+    );
+  }
+
+  // Show Achievement of the Month notification
+  Future<void> showAotmNotification(String achievementTitle, String gameTitle) async {
+    await _notifications.show(
+      aotmNotificationId,
+      'New Achievement of the Month! 📅',
+      '$achievementTitle from $gameTitle',
+      _getNotificationDetails(),
+      payload: 'aotm',
     );
   }
 

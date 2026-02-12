@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme_utils.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/premium_gate.dart';
 import '../share_card/share_card_screen.dart';
 import 'milestone_data.dart';
 import 'milestone_widgets.dart';
@@ -109,11 +108,7 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
       appBar: AppBar(
         title: Text(isViewingMyself ? 'My Milestones' : 'Milestones'),
       ),
-      body: PremiumGate(
-        featureName: 'Milestones',
-        description: 'Track personal achievements like total points, mastered games, and more.',
-        icon: Icons.emoji_events,
-        child: Column(
+      body: Column(
           children: [
             // Search bar
             Padding(
@@ -218,7 +213,6 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
                         ),
             ),
           ],
-        ),
       ),
     );
   }

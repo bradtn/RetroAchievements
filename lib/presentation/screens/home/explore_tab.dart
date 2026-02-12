@@ -138,16 +138,16 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
         onTap: () => Navigator.push(context, SlidePageRoute(page: const FriendsScreen())),
       ),
       _ExploreItem(
-        icon: Icons.calendar_month,
-        title: 'Calendar',
-        color: Colors.indigo,
+        icon: Icons.local_fire_department,
+        title: 'Streaks',
+        color: Colors.orange,
+        isPremium: true,
         onTap: () => Navigator.push(context, SlidePageRoute(page: const CalendarScreen())),
       ),
       _ExploreItem(
         icon: Icons.analytics,
         title: 'Stats',
         color: Colors.pink,
-        isPremium: true,
         onTap: () => Navigator.push(context, SlidePageRoute(page: const StatsScreen())),
       ),
     ];

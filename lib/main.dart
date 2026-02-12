@@ -40,4 +40,5 @@ Future<void> _initializeServices() async {
   final backgroundSyncService = BackgroundSyncService();
   backgroundSyncService.checkStreakOnAppOpen();
   backgroundSyncService.checkAotwOnAppOpen();
+  backgroundSyncService.checkAotmOnAppOpen();
 }

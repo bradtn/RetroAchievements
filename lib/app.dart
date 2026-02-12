@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/game_detail_screen.dart';
+import 'presentation/screens/aotw_screen.dart';
+import 'presentation/screens/aotm_screen.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/game_cache_provider.dart';
@@ -14,6 +16,10 @@ import 'services/background_sync_service.dart';
 
 /// Global navigator key for widget navigation
 final navigatorKey = GlobalKey<NavigatorState>();
+
+void _initNavigatorKey() {
+  NotificationService.navigatorKey = navigatorKey;
+}
 
 /// Main application widget
 class RetroTrackerApp extends ConsumerStatefulWidget {
@@ -31,6 +37,8 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   @override
   void initState() {
     super.initState();
+    // Set up navigator key for notification taps
+    _initNavigatorKey();
     // Initialize widget service to handle widget clicks
     WidgetService.init(
       onGameSelected: _onWidgetGameSelected,
@@ -116,6 +124,15 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     final authState = ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
     final accentColor = ref.watch(accentColorProvider);
+    final isPremium = ref.watch(isPremiumProvider);
+
+    // Non-premium users get default blue accent
+    final effectiveColor = isPremium ? accentColor.color : Colors.blue;
+
+    // Non-premium users can't use AMOLED theme
+    final effectiveThemeMode = (themeMode == AppThemeMode.amoled && !isPremium)
+        ? AppThemeMode.dark
+        : themeMode;
 
     // Request notification permission and trigger background tasks after user is authenticated
     if (authState.isAuthenticated) {
@@ -128,14 +145,18 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       navigatorKey: navigatorKey,
       title: 'RetroTrack',
       debugShowCheckedModeBanner: false,
-      theme: _buildLightTheme(accentColor.color),
-      darkTheme: themeMode == AppThemeMode.amoled
-          ? _buildAmoledTheme(accentColor.color)
-          : _buildDarkTheme(accentColor.color),
-      themeMode: _getThemeMode(themeMode),
+      theme: _buildLightTheme(effectiveColor),
+      darkTheme: effectiveThemeMode == AppThemeMode.amoled
+          ? _buildAmoledTheme(effectiveColor)
+          : _buildDarkTheme(effectiveColor),
+      themeMode: _getThemeMode(effectiveThemeMode),
       // Smooth theme transition animation
       themeAnimationDuration: const Duration(milliseconds: 300),
       themeAnimationCurve: Curves.easeInOut,
+      routes: {
+        '/aotw': (context) => const AchievementOfTheWeekScreen(),
+        '/aotm': (context) => const AchievementOfTheMonthScreen(),
+      },
       home: authState.isAuthenticated
           ? const HomeScreen()
           : const LoginScreen(),

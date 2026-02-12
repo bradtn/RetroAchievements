@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme_utils.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/premium_gate.dart';
 import 'game_detail_screen.dart';
 import 'profile_screen.dart';
 import 'live_feed/live_feed_widgets.dart';
@@ -180,11 +179,7 @@ class _LiveFeedScreenState extends ConsumerState<LiveFeedScreen> {
           ],
         ),
       ),
-      body: PremiumGate(
-        featureName: 'Live Feed',
-        description: 'Watch achievements unlock in real-time across the RetroAchievements community.',
-        icon: Icons.rss_feed,
-        child: _isLoading
+      body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _buildErrorState()
@@ -223,7 +218,6 @@ class _LiveFeedScreenState extends ConsumerState<LiveFeedScreen> {
                         },
                       ),
                     ),
-      ),
     );
   }
 

@@ -73,12 +73,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Achievement Calendar'),
+        title: const Text('Streaks'),
       ),
       body: PremiumGate(
-        featureName: 'Achievement Calendar',
-        description: 'Track your streaks and view achievement history on a calendar.',
-        icon: Icons.calendar_month,
+        featureName: 'Streaks',
+        description: 'Track your streaks and view achievement history.',
+        icon: Icons.local_fire_department,
         child: Column(
           children: [
             // Search bar
