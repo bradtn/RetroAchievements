@@ -1,7 +1,7 @@
 name: retrotracker
 description: Track your RetroAchievements.org progress on the go.
 publish_to: 'none'
-version: 1.0.0+10
+version: 1.0.0+11
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -48,6 +48,10 @@ dependencies:
   shimmer: ^3.0.0
   confetti: ^0.7.0
   animated_text_kit: ^4.2.2
+
+  # Share Card Customization
+  flex_color_picker: ^3.3.0
+  google_fonts: ^6.1.0
 
   # Ads (Google AdMob)
   google_mobile_ads: ^5.1.0
