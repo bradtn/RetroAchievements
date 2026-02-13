@@ -193,9 +193,12 @@ class RAUserTile extends StatelessWidget {
     final username = userData['User'] ?? userData['user'] ?? 'Unknown';
     final points = userData['Points'] ?? userData['points'] ?? userData['TotalPoints'] ?? 0;
     final userPic = '/UserPic/$username.png';
-    final lastSeen = userData['LastActivityDate'] ?? userData['LastActivity'] ?? userData['lastActivity'] ?? '';
+    final lastSeen = userData['LastActivityDate'] ?? userData['LastActivity'] ??
+                     userData['lastActivity'] ?? userData['LastSeen'] ??
+                     userData['DateLastSeen'] ?? userData['lastSeen'] ?? '';
     final lastSeenText = _parseLastSeen(lastSeen);
     final isOnline = lastSeenText == 'Online now';
+    final hasLastSeen = lastSeenText != 'Unknown' && lastSeen.toString().isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -278,20 +281,22 @@ class RAUserTile extends StatelessWidget {
                             fontSize: 13,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Icon(
-                          Icons.access_time,
-                          size: 14,
-                          color: isOnline ? Colors.green : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          lastSeenText,
-                          style: TextStyle(
-                            color: isOnline ? Colors.green : context.subtitleColor,
-                            fontSize: 13,
+                        if (hasLastSeen) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.access_time,
+                            size: 14,
+                            color: isOnline ? Colors.green : Colors.grey,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            lastSeenText,
+                            style: TextStyle(
+                              color: isOnline ? Colors.green : context.subtitleColor,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

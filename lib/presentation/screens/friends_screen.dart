@@ -51,21 +51,25 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     super.dispose();
   }
 
-  Future<void> _loadFriendProfiles() async {
-    final friendsState = ref.read(friendsProvider);
-    if (friendsState.friends.isEmpty) return;
+  Future<void> _loadFriendProfiles([List<Friend>? friendsList]) async {
+    final friends = friendsList ?? ref.read(friendsProvider).friends;
+    if (friends.isEmpty) return;
 
     setState(() => _isLoadingFriends = true);
     final api = ref.read(apiDataSourceProvider);
 
-    for (final friend in friendsState.friends) {
+    for (final friend in friends) {
       if (!_friendProfiles.containsKey(friend.username)) {
         final profile = await api.getUserProfile(friend.username);
-        _friendProfiles[friend.username] = profile;
+        if (mounted) {
+          _friendProfiles[friend.username] = profile;
+        }
       }
     }
 
-    setState(() => _isLoadingFriends = false);
+    if (mounted) {
+      setState(() => _isLoadingFriends = false);
+    }
   }
 
   Future<void> _loadFollowing() async {
@@ -238,7 +242,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     // Auto-load profiles when friends become available
     if (!friendsState.isLoading && friends.isNotEmpty && !_hasTriggeredProfileLoad && !_isLoadingFriends) {
       _hasTriggeredProfileLoad = true;
-      Future.microtask(() => _loadFriendProfiles());
+      final friendsCopy = List<Friend>.from(friends);
+      Future.microtask(() => _loadFriendProfiles(friendsCopy));
     }
 
     return Column(
