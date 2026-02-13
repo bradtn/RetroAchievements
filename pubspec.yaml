@@ -1,7 +1,7 @@
 name: retrotracker
 description: Track your RetroAchievements.org progress on the go.
 publish_to: 'none'
-version: 1.0.0+11
+version: 1.0.0+15
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -53,6 +53,13 @@ dependencies:
   flex_color_picker: ^3.3.0
   google_fonts: ^6.1.0
 
+  # Audio
+  audioplayers: ^5.2.1
+
+  # Animated Share Cards
+  flutter_animate: ^4.3.0
+  image: ^4.1.3
+
   # Ads (Google AdMob)
   google_mobile_ads: ^5.1.0
 
@@ -88,3 +95,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/sounds/

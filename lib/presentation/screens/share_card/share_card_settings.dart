@@ -6,6 +6,12 @@ enum CardBorderStyle { none, thin, thick, glow }
 enum AvatarFrame { circle, roundedSquare, square }
 enum CardLayout { detailed, compact }
 
+// GIF Animation options
+enum SparkleAmount { none, few, many }
+enum SparkleStyle { circles, stars, hearts, diamonds, sparkles, plus }
+enum SparkleColor { white, gold, rainbow, gradient }
+enum AnimationSpeed { slow, normal, fast }
+
 class ShareCardSettings {
   final Color gradientStart;
   final Color gradientEnd;

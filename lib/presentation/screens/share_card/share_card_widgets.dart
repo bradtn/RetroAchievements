@@ -445,25 +445,22 @@ class Branding extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.videogame_asset, color: Colors.white.withValues(alpha: 0.5), size: 16),
-        const SizedBox(width: 6),
-        Text(
-          'RetroTrack',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.asset(
+            'assets/RetroTrack.png',
+            height: 100,
+            width: 100,
+            fit: BoxFit.contain,
           ),
         ),
-        Text(
-          ' • ',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-        ),
+        const SizedBox(width: 12),
         Text(
           'retroachievements.org',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

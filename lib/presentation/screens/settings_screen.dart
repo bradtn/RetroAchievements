@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
 import '../../services/purchase_service.dart';
+import '../../services/sound_service.dart';
 import '../../core/animations.dart';
 import '../../services/notification_service.dart';
 import '../../data/datasources/ra_api_datasource.dart';
@@ -146,6 +147,7 @@ class SettingsScreen extends ConsumerWidget {
               (context as Element).markNeedsBuild();
             },
           ),
+          _SoundEffectsTile(isDark: isDark),
 
           const Divider(),
 
@@ -801,6 +803,75 @@ class _AccentColorTile extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SoundEffectsTile extends StatefulWidget {
+  final bool isDark;
+
+  const _SoundEffectsTile({required this.isDark});
+
+  @override
+  State<_SoundEffectsTile> createState() => _SoundEffectsTileState();
+}
+
+class _SoundEffectsTileState extends State<_SoundEffectsTile> {
+  final SoundService _soundService = SoundService();
+  bool _isEnabled = true;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSoundService();
+  }
+
+  Future<void> _initSoundService() async {
+    await _soundService.initialize();
+    if (mounted) {
+      setState(() {
+        _isEnabled = _soundService.isEnabled;
+        _isInitialized = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: Icon(Icons.volume_up, color: widget.isDark ? Colors.white70 : Colors.grey.shade700),
+          title: Text('Sound Effects', style: TextStyle(color: widget.isDark ? Colors.white : Colors.black87)),
+          subtitle: Text('8-bit sounds for achievements', style: TextStyle(color: widget.isDark ? Colors.grey[400] : Colors.grey[600])),
+          value: _isEnabled,
+          onChanged: (value) async {
+            await _soundService.setEnabled(value);
+            setState(() => _isEnabled = value);
+            if (value) {
+              // Play the sound as a demo
+              await _soundService.playAchievementUnlock();
+            }
+          },
+        ),
+        // Test button (temporary for testing)
+        Padding(
+          padding: const EdgeInsets.only(left: 56, right: 16, bottom: 8),
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              HapticFeedback.selectionClick();
+              await _soundService.playAchievementUnlock();
+            },
+            icon: const Icon(Icons.play_arrow, size: 18),
+            label: const Text('Test Achievement Sound'),
+          ),
+        ),
+      ],
     );
   }
 }
