@@ -8,6 +8,7 @@ import 'user_compare_screen.dart';
 import 'milestones/milestones_screen.dart';
 import 'share_card/share_card_screen.dart';
 import 'profile/profile_widgets.dart';
+import 'friends/friends_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String username;
@@ -289,6 +290,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildActionButtons(bool isOwnProfile) {
+    final friendsState = ref.watch(friendsProvider);
+    final isFriend = friendsState.isFriend(widget.username);
+
     return Column(
       children: [
         Row(
@@ -332,21 +336,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         if (!isOwnProfile) ...[
           const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => UserCompareScreen(compareUsername: widget.username),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UserCompareScreen(compareUsername: widget.username),
+                    ),
+                  ),
+                  icon: const Icon(Icons.compare_arrows, size: 18),
+                  label: const Text('Compare'),
                 ),
               ),
-              icon: const Icon(Icons.compare_arrows, size: 18),
-              label: const Text('Compare With Me'),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: isFriend
+                    ? OutlinedButton.icon(
+                        onPressed: () => _removeFriend(),
+                        icon: const Icon(Icons.person_remove, size: 18),
+                        label: const Text('Remove Friend'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                      )
+                    : FilledButton.icon(
+                        onPressed: () => _addFriend(),
+                        icon: const Icon(Icons.person_add, size: 18),
+                        label: const Text('Add Friend'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                      ),
+              ),
+            ],
           ),
         ],
       ],
+    );
+  }
+
+  Future<void> _addFriend() async {
+    await ref.read(friendsProvider.notifier).addFriend(
+      widget.username,
+      userPic: _profile?['UserPic'],
+      points: _profile?['TotalPoints'] is int
+          ? _profile!['TotalPoints']
+          : int.tryParse(_profile?['TotalPoints']?.toString() ?? ''),
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added ${widget.username} to friends')),
+      );
+    }
+  }
+
+  void _removeFriend() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Friend'),
+        content: Text('Remove ${widget.username} from your friends list?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              ref.read(friendsProvider.notifier).removeFriend(widget.username);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Removed ${widget.username} from friends')),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
     );
   }
 
