@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
+import '../providers/ra_status_provider.dart';
 import 'game_detail_screen.dart';
 import 'user_compare_screen.dart';
 import 'milestones/milestones_screen.dart';
@@ -48,13 +49,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ]);
 
     if (mounted) {
+      final profile = results[0] as Map<String, dynamic>?;
+
+      // Report API status
+      if (profile != null) {
+        ref.read(raStatusProvider.notifier).reportSuccess();
+      } else {
+        ref.read(raStatusProvider.notifier).reportFailure('Profile load failed');
+      }
+
       setState(() {
-        _profile = results[0] as Map<String, dynamic>?;
+        _profile = profile;
         _recentGames = results[1] as List<dynamic>?;
         _recentAchievements = results[2] as List<dynamic>?;
         _rankData = results[3] as Map<String, dynamic>?;
         _isLoading = false;
-        if (_profile == null) _error = 'Failed to load profile';
+        if (_profile == null) {
+          _error = ref.read(raStatusProvider.notifier).getErrorMessage(
+            'Unable to load profile for ${widget.username}',
+          );
+        }
       });
     }
   }

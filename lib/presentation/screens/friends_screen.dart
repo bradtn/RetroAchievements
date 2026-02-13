@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
+import '../providers/ra_status_provider.dart';
 import 'user_compare_screen.dart';
 import 'profile_screen.dart';
 import 'friends/friends_provider.dart';
@@ -114,13 +115,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     final result = await api.getUsersIFollow();
 
     if (result != null) {
+      ref.read(raStatusProvider.notifier).reportSuccess();
       setState(() {
         _following = List<Map<String, dynamic>>.from(result);
         _isLoadingFollowing = false;
       });
     } else {
+      ref.read(raStatusProvider.notifier).reportFailure('Following list failed');
       setState(() {
-        _followingError = 'Failed to load following list';
+        _followingError = ref.read(raStatusProvider.notifier).getErrorMessage(
+          'Unable to load following list. Pull down to retry.',
+        );
         _isLoadingFollowing = false;
       });
     }
@@ -136,13 +141,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     final result = await api.getUsersFollowingMe();
 
     if (result != null) {
+      ref.read(raStatusProvider.notifier).reportSuccess();
       setState(() {
         _followers = List<Map<String, dynamic>>.from(result);
         _isLoadingFollowers = false;
       });
     } else {
+      ref.read(raStatusProvider.notifier).reportFailure('Followers list failed');
       setState(() {
-        _followersError = 'Failed to load followers list';
+        _followersError = ref.read(raStatusProvider.notifier).getErrorMessage(
+          'Unable to load followers list. Pull down to retry.',
+        );
         _isLoadingFollowers = false;
       });
     }

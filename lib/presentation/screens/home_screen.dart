@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/cache/game_cache.dart';
 import '../../services/widget_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/ra_status_provider.dart';
 import '../widgets/ad_banner.dart';
+import '../widgets/ra_status_banner.dart';
 import 'settings_screen.dart';
 import 'home/home_tab.dart';
 import 'home/explore_tab.dart';
@@ -68,6 +70,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _recentAchievements = achievements;
         _isLoading = false;
       });
+
+      // Report API status
+      if (_profile != null) {
+        ref.read(raStatusProvider.notifier).reportSuccess();
+      } else {
+        ref.read(raStatusProvider.notifier).reportFailure('Failed to load profile');
+      }
 
       if (_recentGames != null) {
         GameCache.instance.putAll(
@@ -221,6 +230,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
+          const RAStatusBanner(),
           Expanded(
             child: IndexedStack(
               index: _currentIndex,

@@ -5,6 +5,7 @@ import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
+import '../providers/ra_status_provider.dart';
 import 'share_card/share_card_screen.dart';
 import 'game_detail/achievement_tile.dart';
 import 'game_detail/leaderboard_widgets.dart';
@@ -88,10 +89,21 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final api = ref.read(apiDataSourceProvider);
     final data = await api.getGameInfoWithProgress(widget.gameId);
 
+    // Report API status
+    if (data != null) {
+      ref.read(raStatusProvider.notifier).reportSuccess();
+    } else {
+      ref.read(raStatusProvider.notifier).reportFailure('Game data load failed');
+    }
+
     setState(() {
       _gameData = data;
       _isLoading = false;
-      if (data == null) _error = 'Failed to load game data';
+      if (data == null) {
+        _error = ref.read(raStatusProvider.notifier).getErrorMessage(
+          'Unable to load game data. Pull down to retry.',
+        );
+      }
     });
 
     if (data != null) {
