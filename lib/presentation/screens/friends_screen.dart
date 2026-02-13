@@ -36,11 +36,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     Future.microtask(() {
-      _loadFriendProfiles();
       _loadFollowing();
       _loadFollowers();
+      // Profile loading is triggered by the listener when friends are ready
     });
   }
+
+  bool _hasTriggeredProfileLoad = false;
 
   @override
   void dispose() {
@@ -232,6 +234,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   Widget _buildMyFriendsTab() {
     final friendsState = ref.watch(friendsProvider);
     final friends = friendsState.friends;
+
+    // Auto-load profiles when friends become available
+    if (!friendsState.isLoading && friends.isNotEmpty && !_hasTriggeredProfileLoad && !_isLoadingFriends) {
+      _hasTriggeredProfileLoad = true;
+      Future.microtask(() => _loadFriendProfiles());
+    }
 
     return Column(
       children: [
