@@ -263,24 +263,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Friends from RetroAchievements sync automatically',
-                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                ),
-              ),
-              if (friendsState.isSyncing)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: context.subtitleColor),
-                  ),
-                ),
-            ],
+          child: Text(
+            'Track any player\'s progress by adding them here',
+            style: TextStyle(color: context.subtitleColor, fontSize: 12),
           ),
         ),
         const SizedBox(height: 8),
@@ -291,14 +276,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
                   ? const EmptyFriendsState(
                       icon: Icons.people_outline,
                       title: 'No Friends Yet',
-                      subtitle: 'Your RetroAchievements friends will sync automatically, or add friends manually by username',
+                      subtitle: 'Add players by username to track their progress',
                     )
                   : _isLoadingFriends
                       ? const Center(child: CircularProgressIndicator())
                       : RefreshIndicator(
                           onRefresh: () async {
                             _friendProfiles.clear();
-                            await ref.read(friendsProvider.notifier).syncFromRAFriendList();
                             await _loadFriendProfiles();
                           },
                           child: ListView.builder(
@@ -315,7 +299,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
                                 onRemove: () => _removeFriend(friend.username),
                                 onCompare: () => _compareFriend(friend.username),
                                 onTap: () => _viewProfile(friend.username),
-                                isLocal: !friend.fromRAFriendList,
                               );
                             },
                           ),
@@ -342,22 +325,35 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadFollowing,
-      child: ListView.builder(
-        padding: EdgeInsets.fromLTRB(
-          16, 16, 16,
-          16 + MediaQuery.of(context).viewPadding.bottom,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            'Manage who you follow on retroachievements.org',
+            style: TextStyle(color: context.subtitleColor, fontSize: 12),
+          ),
         ),
-        itemCount: _following.length,
-        itemBuilder: (ctx, i) => RAUserTile(
-          userData: _following[i],
-          onTap: () => _viewProfile(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-          onCompare: () => _compareFriend(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-          onAddToFriends: () => _addToLocalFriends(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-          isFollowing: true,
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadFollowing,
+            child: ListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                16, 8, 16,
+                16 + MediaQuery.of(context).viewPadding.bottom,
+              ),
+              itemCount: _following.length,
+              itemBuilder: (ctx, i) => RAUserTile(
+                userData: _following[i],
+                onTap: () => _viewProfile(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+                onCompare: () => _compareFriend(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+                onAddToFriends: () => _addToLocalFriends(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+                isFollowing: true,
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -378,22 +374,35 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadFollowers,
-      child: ListView.builder(
-        padding: EdgeInsets.fromLTRB(
-          16, 16, 16,
-          16 + MediaQuery.of(context).viewPadding.bottom,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            'Players following you on retroachievements.org',
+            style: TextStyle(color: context.subtitleColor, fontSize: 12),
+          ),
         ),
-        itemCount: _followers.length,
-        itemBuilder: (ctx, i) => RAUserTile(
-          userData: _followers[i],
-          onTap: () => _viewProfile(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-          onCompare: () => _compareFriend(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-          onAddToFriends: () => _addToLocalFriends(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-          isFollowing: false,
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadFollowers,
+            child: ListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                16, 8, 16,
+                16 + MediaQuery.of(context).viewPadding.bottom,
+              ),
+              itemCount: _followers.length,
+              itemBuilder: (ctx, i) => RAUserTile(
+                userData: _followers[i],
+                onTap: () => _viewProfile(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+                onCompare: () => _compareFriend(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+                onAddToFriends: () => _addToLocalFriends(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+                isFollowing: false,
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
