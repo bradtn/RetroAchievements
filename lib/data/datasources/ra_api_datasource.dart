@@ -729,4 +729,31 @@ class RAApiDataSource {
       }
     });
   }
+
+  /// Get user's friend list from RetroAchievements
+  Future<List<dynamic>?> getFriendList(String username) async {
+    return _withRetry(() async {
+      try {
+        final response = await _dio.get(
+          'API_GetFriendList.php',
+          queryParameters: {
+            ..._authParams(),
+            'u': username,
+          },
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          final data = response.data;
+          if (data is List) {
+            return data;
+          } else if (data is Map<String, dynamic>) {
+            // Some endpoints return { Results: [...] }
+            return data['Results'] as List<dynamic>? ?? data['Friends'] as List<dynamic>? ?? [];
+          }
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    });
+  }
 }

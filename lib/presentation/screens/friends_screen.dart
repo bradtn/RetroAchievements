@@ -50,16 +50,16 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   }
 
   Future<void> _loadFriendProfiles() async {
-    final friends = ref.read(friendsProvider);
-    if (friends.isEmpty) return;
+    final friendsState = ref.read(friendsProvider);
+    if (friendsState.friends.isEmpty) return;
 
     setState(() => _isLoadingFriends = true);
     final api = ref.read(apiDataSourceProvider);
 
-    for (final friend in friends) {
-      if (!_friendProfiles.containsKey(friend)) {
-        final profile = await api.getUserProfile(friend);
-        _friendProfiles[friend] = profile;
+    for (final friend in friendsState.friends) {
+      if (!_friendProfiles.containsKey(friend.username)) {
+        final profile = await api.getUserProfile(friend.username);
+        _friendProfiles[friend.username] = profile;
       }
     }
 
@@ -181,8 +181,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   Future<void> _addToLocalFriends(String username) async {
     if (username.isEmpty) return;
 
-    final friends = ref.read(friendsProvider);
-    if (friends.any((f) => f.toLowerCase() == username.toLowerCase())) {
+    final friendsState = ref.read(friendsProvider);
+    if (friendsState.isFriend(username)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$username is already in your friends list')),
       );
@@ -230,7 +230,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   }
 
   Widget _buildMyFriendsTab() {
-    final friends = ref.watch(friendsProvider);
+    final friendsState = ref.watch(friendsProvider);
+    final friends = friendsState.friends;
 
     return Column(
       children: [
@@ -262,42 +263,63 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Track any player\'s progress - add them by username',
-            style: TextStyle(color: context.subtitleColor, fontSize: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Friends from RetroAchievements sync automatically',
+                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                ),
+              ),
+              if (friendsState.isSyncing)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: context.subtitleColor),
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: friends.isEmpty
-              ? const EmptyFriendsState(
-                  icon: Icons.people_outline,
-                  title: 'No Friends Yet',
-                  subtitle: 'Add friends by their RetroAchievements username to track their progress',
-                )
-              : _isLoadingFriends
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        _friendProfiles.clear();
-                        await _loadFriendProfiles();
-                      },
-                      child: ListView.builder(
-                        padding: EdgeInsets.fromLTRB(
-                          16, 8, 16,
-                          16 + MediaQuery.of(context).viewPadding.bottom,
+          child: friendsState.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : friends.isEmpty
+                  ? const EmptyFriendsState(
+                      icon: Icons.people_outline,
+                      title: 'No Friends Yet',
+                      subtitle: 'Your RetroAchievements friends will sync automatically, or add friends manually by username',
+                    )
+                  : _isLoadingFriends
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            _friendProfiles.clear();
+                            await ref.read(friendsProvider.notifier).syncFromRAFriendList();
+                            await _loadFriendProfiles();
+                          },
+                          child: ListView.builder(
+                            padding: EdgeInsets.fromLTRB(
+                              16, 8, 16,
+                              16 + MediaQuery.of(context).viewPadding.bottom,
+                            ),
+                            itemCount: friends.length,
+                            itemBuilder: (ctx, i) {
+                              final friend = friends[i];
+                              return FriendTile(
+                                username: friend.username,
+                                profile: _friendProfiles[friend.username],
+                                onRemove: () => _removeFriend(friend.username),
+                                onCompare: () => _compareFriend(friend.username),
+                                onTap: () => _viewProfile(friend.username),
+                                isLocal: !friend.fromRAFriendList,
+                              );
+                            },
+                          ),
                         ),
-                        itemCount: friends.length,
-                        itemBuilder: (ctx, i) => FriendTile(
-                          username: friends[i],
-                          profile: _friendProfiles[friends[i]],
-                          onRemove: () => _removeFriend(friends[i]),
-                          onCompare: () => _compareFriend(friends[i]),
-                          onTap: () => _viewProfile(friends[i]),
-                          isLocal: true,
-                        ),
-                      ),
-                    ),
         ),
       ],
     );
