@@ -38,11 +38,21 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
     Future.microtask(() {
       _loadFollowing();
       _loadFollowers();
-      // Profile loading is triggered by the listener when friends are ready
+      _tryLoadFriendProfiles();
     });
   }
 
-  bool _hasTriggeredProfileLoad = false;
+  void _tryLoadFriendProfiles() {
+    final friendsState = ref.read(friendsProvider);
+    if (!friendsState.isLoading && friendsState.friends.isNotEmpty) {
+      _loadFriendProfiles(friendsState.friends);
+    } else if (friendsState.isLoading) {
+      // Provider still loading, wait and retry
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _tryLoadFriendProfiles();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -238,13 +248,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   Widget _buildMyFriendsTab() {
     final friendsState = ref.watch(friendsProvider);
     final friends = friendsState.friends;
-
-    // Auto-load profiles when friends become available
-    if (!friendsState.isLoading && friends.isNotEmpty && !_hasTriggeredProfileLoad && !_isLoadingFriends) {
-      _hasTriggeredProfileLoad = true;
-      final friendsCopy = List<Friend>.from(friends);
-      Future.microtask(() => _loadFriendProfiles(friendsCopy));
-    }
 
     return Column(
       children: [

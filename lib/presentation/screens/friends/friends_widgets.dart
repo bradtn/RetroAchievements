@@ -165,40 +165,11 @@ class RAUserTile extends StatelessWidget {
     required this.isFollowing,
   });
 
-  String _parseLastSeen(String lastSeen) {
-    if (lastSeen.isEmpty) return 'Unknown';
-    try {
-      final date = DateTime.parse(lastSeen);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inMinutes < 5) {
-        return 'Online now';
-      } else if (diff.inMinutes < 60) {
-        return '${diff.inMinutes}m ago';
-      } else if (diff.inHours < 24) {
-        return '${diff.inHours}h ago';
-      } else if (diff.inDays < 7) {
-        return '${diff.inDays}d ago';
-      } else {
-        return '${date.month}/${date.day}/${date.year}';
-      }
-    } catch (_) {
-      return lastSeen;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final username = userData['User'] ?? userData['user'] ?? 'Unknown';
     final points = userData['Points'] ?? userData['points'] ?? userData['TotalPoints'] ?? 0;
     final userPic = '/UserPic/$username.png';
-    final lastSeen = userData['LastActivityDate'] ?? userData['LastActivity'] ??
-                     userData['lastActivity'] ?? userData['LastSeen'] ??
-                     userData['DateLastSeen'] ?? userData['lastSeen'] ?? '';
-    final lastSeenText = _parseLastSeen(lastSeen);
-    final isOnline = lastSeenText == 'Online now';
-    final hasLastSeen = lastSeenText != 'Unknown' && lastSeen.toString().isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -209,56 +180,36 @@ class RAUserTile extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: CachedNetworkImage(
-                      imageUrl: 'https://retroachievements.org$userPic',
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        width: 56,
-                        height: 56,
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            username.isNotEmpty ? username[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        width: 56,
-                        height: 56,
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            username.isNotEmpty ? username[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: CachedNetworkImage(
+                  imageUrl: 'https://retroachievements.org$userPic',
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    width: 56,
+                    height: 56,
+                    color: Colors.grey[800],
+                    child: Center(
+                      child: Text(
+                        username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline ? Colors.green : Colors.grey,
-                        border: Border.all(
-                          color: Theme.of(context).cardColor,
-                          width: 2,
-                        ),
+                  errorWidget: (_, __, ___) => Container(
+                    width: 56,
+                    height: 56,
+                    color: Colors.grey[800],
+                    child: Center(
+                      child: Text(
+                        username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -275,28 +226,12 @@ class RAUserTile extends StatelessWidget {
                         const Icon(Icons.stars, size: 14, color: Colors.amber),
                         const SizedBox(width: 4),
                         Text(
-                          formatNumber(points),
+                          '${formatNumber(points)} points',
                           style: TextStyle(
                             color: context.subtitleColor,
                             fontSize: 13,
                           ),
                         ),
-                        if (hasLastSeen) ...[
-                          const SizedBox(width: 12),
-                          Icon(
-                            Icons.access_time,
-                            size: 14,
-                            color: isOnline ? Colors.green : Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            lastSeenText,
-                            style: TextStyle(
-                              color: isOnline ? Colors.green : context.subtitleColor,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
