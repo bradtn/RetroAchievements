@@ -8,7 +8,7 @@ enum CardLayout { detailed, compact }
 
 // GIF Animation options
 enum SparkleAmount { none, few, many }
-enum SparkleStyle { circles, stars, hearts, diamonds, sparkles, plus }
+enum SparkleStyle { circles, stars, hearts, diamonds, sparkles, plus, playstation, xbox, dpad, retro }
 enum SparkleColor { white, gold, rainbow, gradient }
 enum AnimationSpeed { slow, normal, fast }
 

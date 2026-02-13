@@ -453,7 +453,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
                   Text('Shape', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
                   const SizedBox(height: 4),
                   SizedBox(
-                    width: 110,
+                    width: 114,
                     child: Wrap(
                       spacing: 4,
                       runSpacing: 4,
@@ -462,8 +462,10 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
                         _buildShapeButton('✦', SparkleStyle.stars),
                         _buildShapeButton('♥', SparkleStyle.hearts),
                         _buildShapeButton('◆', SparkleStyle.diamonds),
-                        _buildShapeButton('✨', SparkleStyle.sparkles),
-                        _buildShapeButton('+', SparkleStyle.plus),
+                        _buildShapeButton('▲□', SparkleStyle.playstation),
+                        _buildShapeButton('AB', SparkleStyle.xbox),
+                        _buildShapeButton('↑↓', SparkleStyle.dpad),
+                        _buildShapeButton('🍄', SparkleStyle.retro),
                       ],
                     ),
                   ),
@@ -599,6 +601,83 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
           break;
         case SparkleStyle.plus:
           sparkleWidget = Transform.rotate(angle: rotation * 0.3, child: CustomPaint(size: Size(s.size * 2, s.size * 2), painter: _PlusPainter(color)));
+          break;
+        case SparkleStyle.playstation:
+          // Cycle through PS button shapes based on index
+          final psShapes = ['△', '□', '✕', '○'];
+          final psColors = [Colors.green, Colors.pink, Colors.blue, Colors.red];
+          final shapeIndex = i % 4;
+          final psColor = psColors[shapeIndex];
+          sparkleWidget = Transform.rotate(
+            angle: rotation * 0.2,
+            child: Text(
+              psShapes[shapeIndex],
+              style: TextStyle(
+                fontSize: s.size * 2,
+                color: psColor,
+                fontWeight: FontWeight.bold,
+                shadows: [Shadow(color: psColor.withValues(alpha: 0.8), blurRadius: s.size * 2)],
+              ),
+            ),
+          );
+          break;
+        case SparkleStyle.xbox:
+          // Xbox buttons A B X Y with their colors
+          final xboxShapes = ['A', 'B', 'X', 'Y'];
+          final xboxColors = [Colors.green, Colors.red, Colors.blue, Colors.yellow];
+          final xboxIndex = i % 4;
+          final xboxColor = xboxColors[xboxIndex];
+          sparkleWidget = Transform.rotate(
+            angle: rotation * 0.15,
+            child: Container(
+              width: s.size * 2.5,
+              height: s.size * 2.5,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: xboxColor,
+                boxShadow: [BoxShadow(color: xboxColor.withValues(alpha: 0.8), blurRadius: s.size * 2)],
+              ),
+              child: Center(
+                child: Text(
+                  xboxShapes[xboxIndex],
+                  style: TextStyle(
+                    fontSize: s.size * 1.3,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          );
+          break;
+        case SparkleStyle.dpad:
+          // D-pad arrows
+          final dpadShapes = ['↑', '↓', '←', '→'];
+          final dpadIndex = i % 4;
+          sparkleWidget = Text(
+            dpadShapes[dpadIndex],
+            style: TextStyle(
+              fontSize: s.size * 2.2,
+              color: color,
+              fontWeight: FontWeight.bold,
+              shadows: [Shadow(color: color.withValues(alpha: 0.8), blurRadius: s.size * 2)],
+            ),
+          );
+          break;
+        case SparkleStyle.retro:
+          // Retro gaming items - Mario style
+          final retroShapes = ['🍄', '⭐', '🪙', '❤️'];
+          final retroIndex = i % 4;
+          sparkleWidget = Transform.rotate(
+            angle: rotation * 0.1,
+            child: Text(
+              retroShapes[retroIndex],
+              style: TextStyle(
+                fontSize: s.size * 1.8,
+                shadows: [Shadow(color: Colors.white.withValues(alpha: 0.5), blurRadius: s.size * 2)],
+              ),
+            ),
+          );
           break;
       }
 
