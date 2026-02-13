@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
 import '../providers/auth_provider.dart';
 import 'user_compare_screen.dart';
@@ -31,15 +32,36 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
   bool _isLoadingFollowers = false;
   String? _followersError;
 
+  bool? _showFriendsInfo;
+  static const String _friendsInfoDismissedKey = 'friends_info_dismissed';
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadFriendsInfoState();
     Future.microtask(() {
       _loadFollowing();
       _loadFollowers();
       _tryLoadFriendProfiles();
     });
+  }
+
+  Future<void> _loadFriendsInfoState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _showFriendsInfo = !(prefs.getBool(_friendsInfoDismissedKey) ?? false);
+      });
+    }
+  }
+
+  Future<void> _dismissFriendsInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_friendsInfoDismissedKey, true);
+    if (mounted) {
+      setState(() => _showFriendsInfo = false);
+    }
   }
 
   void _tryLoadFriendProfiles() {
@@ -277,14 +299,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Track any player\'s progress by adding them here',
-            style: TextStyle(color: context.subtitleColor, fontSize: 12),
+        if (_showFriendsInfo == true) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: _buildFriendsInfoBanner(),
           ),
-        ),
-        const SizedBox(height: 8),
+        ],
         Expanded(
           child: friendsState.isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -419,6 +439,68 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFriendsInfoBanner() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 20,
+              color: Colors.orange[300],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'App-Local Friends List',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.orange[200],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'This friends list is stored locally in the app only. '
+                    'It\'s separate from RetroAchievements Following/Followers. '
+                    'Use it to track any player\'s progress.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.subtitleColor,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _dismissFriendsInfo,
+              child: Icon(
+                Icons.close,
+                size: 18,
+                color: Colors.orange[300],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
