@@ -4,9 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_provider.dart';
 
 // Provider for the game cache
-final gameCacheProvider = StateNotifierProvider<GameCacheNotifier, GameCacheState>((ref) {
-  return GameCacheNotifier(ref);
-});
+final gameCacheProvider = NotifierProvider<GameCacheNotifier, GameCacheState>(GameCacheNotifier.new);
 
 class GameCacheState {
   final List<CachedGame> games;
@@ -80,13 +78,14 @@ class CachedGame {
   );
 }
 
-class GameCacheNotifier extends StateNotifier<GameCacheState> {
-  final Ref ref;
+class GameCacheNotifier extends Notifier<GameCacheState> {
   static const String _gamesKey = 'game_cache_v1';
   static const String _lastUpdatedKey = 'game_cache_updated';
 
-  GameCacheNotifier(this.ref) : super(GameCacheState()) {
+  @override
+  GameCacheState build() {
     _loadFromCache();
+    return GameCacheState();
   }
 
   Future<void> _loadFromCache() async {

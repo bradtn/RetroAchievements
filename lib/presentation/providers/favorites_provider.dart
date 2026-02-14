@@ -112,17 +112,18 @@ class FavoritesState {
   FavoriteGame? getPinned() => favorites.where((f) => f.isPinned).firstOrNull;
 }
 
-class FavoritesNotifier extends StateNotifier<FavoritesState> {
+class FavoritesNotifier extends Notifier<FavoritesState> {
   static const _storageKey = 'favorite_games';
   static const _widgetChannel = MethodChannel('com.retrotracker.retrotracker/widget');
-  final RAApiDataSource? _api;
-  final String? _username;
+  late final RAApiDataSource? _api;
+  late final String? _username;
 
-  FavoritesNotifier({RAApiDataSource? api, String? username})
-      : _api = api,
-        _username = username,
-        super(FavoritesState()) {
+  @override
+  FavoritesState build() {
+    _api = ref.watch(apiDataSourceProvider);
+    _username = ref.watch(authProvider).username;
     _load();
+    return FavoritesState();
   }
 
   Future<void> _load() async {
@@ -288,8 +289,4 @@ class FavoritesNotifier extends StateNotifier<FavoritesState> {
   }
 }
 
-final favoritesProvider = StateNotifierProvider<FavoritesNotifier, FavoritesState>((ref) {
-  final api = ref.watch(apiDataSourceProvider);
-  final authState = ref.watch(authProvider);
-  return FavoritesNotifier(api: api, username: authState.username);
-});
+final favoritesProvider = NotifierProvider<FavoritesNotifier, FavoritesState>(FavoritesNotifier.new);

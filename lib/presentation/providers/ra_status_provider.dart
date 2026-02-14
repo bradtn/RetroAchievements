@@ -40,10 +40,11 @@ class RAStatusState {
   bool get shouldShowBanner => status == RAStatus.offline && !bannerDismissed;
 }
 
-class RAStatusNotifier extends StateNotifier<RAStatusState> {
+class RAStatusNotifier extends Notifier<RAStatusState> {
   static const int _failureThreshold = 3; // Show banner after 3 consecutive failures
 
-  RAStatusNotifier() : super(RAStatusState());
+  @override
+  RAStatusState build() => RAStatusState();
 
   /// Call this when an API call succeeds
   void reportSuccess() {
@@ -90,9 +91,7 @@ class RAStatusNotifier extends StateNotifier<RAStatusState> {
   }
 }
 
-final raStatusProvider = StateNotifierProvider<RAStatusNotifier, RAStatusState>((ref) {
-  return RAStatusNotifier();
-});
+final raStatusProvider = NotifierProvider<RAStatusNotifier, RAStatusState>(RAStatusNotifier.new);
 
 /// Helper extension for common error message formatting
 extension RAErrorMessages on String {

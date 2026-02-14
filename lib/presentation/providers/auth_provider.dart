@@ -62,13 +62,14 @@ const _keyUsername = 'ra_username';
 const _keyApiKey = 'ra_api_key';
 
 /// Auth state notifier
-class AuthNotifier extends StateNotifier<AuthState> {
-  final RAApiDataSource _apiDataSource;
+class AuthNotifier extends Notifier<AuthState> {
+  late final RAApiDataSource _apiDataSource;
 
-  AuthNotifier({required RAApiDataSource apiDataSource})
-      : _apiDataSource = apiDataSource,
-        super(const AuthState()) {
+  @override
+  AuthState build() {
+    _apiDataSource = ref.watch(apiDataSourceProvider);
     _loadSavedCredentials();
+    return const AuthState();
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -166,8 +167,4 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 /// Provider for auth state
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(
-    apiDataSource: ref.watch(apiDataSourceProvider),
-  );
-});
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

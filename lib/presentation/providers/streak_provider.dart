@@ -3,10 +3,7 @@ import '../../data/datasources/ra_api_datasource.dart';
 import 'auth_provider.dart';
 
 // Provider for streak data
-final streakProvider = StateNotifierProvider<StreakNotifier, StreakState>((ref) {
-  final api = ref.watch(apiDataSourceProvider);
-  return StreakNotifier(api);
-});
+final streakProvider = NotifierProvider<StreakNotifier, StreakState>(StreakNotifier.new);
 
 class StreakState {
   final int currentStreak;
@@ -75,11 +72,15 @@ class StreakState {
   }
 }
 
-class StreakNotifier extends StateNotifier<StreakState> {
-  final RAApiDataSource _api;
+class StreakNotifier extends Notifier<StreakState> {
+  late final RAApiDataSource _api;
   String? _currentUsername;
 
-  StreakNotifier(this._api) : super(StreakState());
+  @override
+  StreakState build() {
+    _api = ref.watch(apiDataSourceProvider);
+    return StreakState();
+  }
 
   Future<void> loadStreaks(String username) async {
     if (state.isLoading) return;

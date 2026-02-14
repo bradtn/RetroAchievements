@@ -38,8 +38,8 @@ class NotificationService {
 
     // Get the device's local timezone and set it
     try {
-      final String timezoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timezoneName));
+      final timezoneInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
     } catch (e) {
       // Fallback to UTC if timezone detection fails
       tz.setLocalLocation(tz.getLocation('UTC'));
@@ -61,7 +61,7 @@ class NotificationService {
     );
 
     await _notifications.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -134,10 +134,10 @@ class NotificationService {
   // Show streak at risk notification
   Future<void> showStreakAtRiskNotification(int currentStreak) async {
     await _notifications.show(
-      streakReminderNotificationId,
-      'Keep Your Streak Alive! 🔥',
-      'Play today to maintain your $currentStreak-day streak!',
-      _getNotificationDetails(),
+      id: streakReminderNotificationId,
+      title: 'Keep Your Streak Alive! 🔥',
+      body: 'Play today to maintain your $currentStreak-day streak!',
+      notificationDetails: _getNotificationDetails(),
     );
   }
 
@@ -167,20 +167,20 @@ class NotificationService {
     }
 
     await _notifications.show(
-      streakMilestoneNotificationId,
-      '$streak-Day Streak! $emoji',
-      message,
-      _getNotificationDetails(),
+      id: streakMilestoneNotificationId,
+      title: '$streak-Day Streak! $emoji',
+      body: message,
+      notificationDetails: _getNotificationDetails(),
     );
   }
 
   // Show streak broken notification
   Future<void> showStreakBrokenNotification(int lostStreak) async {
     await _notifications.show(
-      streakBrokenNotificationId,
-      'Streak Ended 😢',
-      'Your $lostStreak-day streak has ended. Start a new one today!',
-      _getNotificationDetails(),
+      id: streakBrokenNotificationId,
+      title: 'Streak Ended 😢',
+      body: 'Your $lostStreak-day streak has ended. Start a new one today!',
+      notificationDetails: _getNotificationDetails(),
     );
   }
 
@@ -192,11 +192,11 @@ class NotificationService {
     if (achievementsToday == 0) return;
 
     await _notifications.show(
-      dailySummaryNotificationId,
-      'Today\'s Progress 🎮',
-      'You earned $achievementsToday achievement${achievementsToday == 1 ? '' : 's'} today! '
+      id: dailySummaryNotificationId,
+      title: 'Today\'s Progress 🎮',
+      body: 'You earned $achievementsToday achievement${achievementsToday == 1 ? '' : 's'} today! '
           '${currentStreak > 0 ? 'Streak: $currentStreak days 🔥' : ''}',
-      _getNotificationDetails(),
+      notificationDetails: _getNotificationDetails(),
     );
   }
 
@@ -224,14 +224,12 @@ class NotificationService {
     }
 
     await _notifications.zonedSchedule(
-      streakReminderNotificationId,
-      'Don\'t Forget Your Streak! 🔥',
-      'You have a $currentStreak-day streak. Play today to keep it going!',
-      scheduledDate,
-      _getNotificationDetails(),
+      id: streakReminderNotificationId,
+      title: 'Don\'t Forget Your Streak! 🔥',
+      body: 'You have a $currentStreak-day streak. Play today to keep it going!',
+      scheduledDate: scheduledDate,
+      notificationDetails: _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
 
     return scheduledDate;
@@ -240,10 +238,10 @@ class NotificationService {
   // Send test notification immediately
   Future<void> sendTestNotification() async {
     await _notifications.show(
-      streakReminderNotificationId,
-      'Test Notification 🔔',
-      'Your streak reminder notifications are working!',
-      _getNotificationDetails(),
+      id: streakReminderNotificationId,
+      title: 'Test Notification 🔔',
+      body: 'Your streak reminder notifications are working!',
+      notificationDetails: _getNotificationDetails(),
     );
   }
 
@@ -254,14 +252,12 @@ class NotificationService {
     final scheduledDate = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
 
     await _notifications.zonedSchedule(
-      streakReminderNotificationId,
-      'Scheduled Test 🔔',
-      'This notification was scheduled $seconds seconds ago!',
-      scheduledDate,
-      _getNotificationDetails(),
+      id: streakReminderNotificationId,
+      title: 'Scheduled Test 🔔',
+      body: 'This notification was scheduled $seconds seconds ago!',
+      scheduledDate: scheduledDate,
+      notificationDetails: _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -290,14 +286,12 @@ class NotificationService {
     }
 
     await _notifications.zonedSchedule(
-      streakReminderNotificationId,
-      'Streak Reminder Test 🔥',
-      'This is your scheduled reminder test!',
-      scheduledDate,
-      _getNotificationDetails(),
+      id: streakReminderNotificationId,
+      title: 'Streak Reminder Test 🔥',
+      body: 'This is your scheduled reminder test!',
+      scheduledDate: scheduledDate,
+      notificationDetails: _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
 
     return scheduledDate;
@@ -328,14 +322,12 @@ class NotificationService {
         '${currentStreak > 0 ? 'Streak: $currentStreak days 🔥' : ''}';
 
     await _notifications.zonedSchedule(
-      dailySummaryNotificationId,
-      'Today\'s Progress 🎮',
-      message,
-      scheduledDate,
-      _getNotificationDetails(),
+      id: dailySummaryNotificationId,
+      title: 'Today\'s Progress 🎮',
+      body: message,
+      scheduledDate: scheduledDate,
+      notificationDetails: _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -346,16 +338,16 @@ class NotificationService {
 
   // Cancel specific notification
   Future<void> cancel(int id) async {
-    await _notifications.cancel(id);
+    await _notifications.cancel(id: id);
   }
 
   // Show Achievement of the Week notification
   Future<void> showAotwNotification(String achievementTitle, String gameTitle) async {
     await _notifications.show(
-      aotwNotificationId,
-      'New Achievement of the Week! 🏆',
-      '$achievementTitle from $gameTitle',
-      _getNotificationDetails(),
+      id: aotwNotificationId,
+      title: 'New Achievement of the Week! 🏆',
+      body: '$achievementTitle from $gameTitle',
+      notificationDetails: _getNotificationDetails(),
       payload: 'aotw',
     );
   }
@@ -363,10 +355,10 @@ class NotificationService {
   // Show Achievement of the Month notification
   Future<void> showAotmNotification(String achievementTitle, String gameTitle) async {
     await _notifications.show(
-      aotmNotificationId,
-      'New Achievement of the Month! 📅',
-      '$achievementTitle from $gameTitle',
-      _getNotificationDetails(),
+      id: aotmNotificationId,
+      title: 'New Achievement of the Month! 📅',
+      body: '$achievementTitle from $gameTitle',
+      notificationDetails: _getNotificationDetails(),
       payload: 'aotm',
     );
   }

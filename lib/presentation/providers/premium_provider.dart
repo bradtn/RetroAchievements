@@ -37,11 +37,13 @@ class PremiumState {
 }
 
 /// Premium notifier
-class PremiumNotifier extends StateNotifier<PremiumState> {
+class PremiumNotifier extends Notifier<PremiumState> {
   final PurchaseService _purchaseService = PurchaseService();
 
-  PremiumNotifier() : super(const PremiumState()) {
+  @override
+  PremiumState build() {
     _initialize();
+    return const PremiumState();
   }
 
   Future<void> _initialize() async {
@@ -144,9 +146,7 @@ class PremiumNotifier extends StateNotifier<PremiumState> {
 }
 
 /// Provider for premium state
-final premiumProvider = StateNotifierProvider<PremiumNotifier, PremiumState>((ref) {
-  return PremiumNotifier();
-});
+final premiumProvider = NotifierProvider<PremiumNotifier, PremiumState>(PremiumNotifier.new);
 
 /// Helper provider to check if ads should be shown
 final showAdsProvider = Provider<bool>((ref) {
@@ -161,9 +161,11 @@ final isPremiumProvider = Provider<bool>((ref) {
 enum AppThemeMode { light, dark, amoled, system }
 
 /// Theme notifier
-class ThemeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeNotifier() : super(AppThemeMode.dark) {
+class ThemeNotifier extends Notifier<AppThemeMode> {
+  @override
+  AppThemeMode build() {
     _loadTheme();
+    return AppThemeMode.dark;
   }
 
   Future<void> _loadTheme() async {
@@ -196,9 +198,7 @@ class ThemeNotifier extends StateNotifier<AppThemeMode> {
 }
 
 /// Theme provider
-final themeProvider = StateNotifierProvider<ThemeNotifier, AppThemeMode>((ref) {
-  return ThemeNotifier();
-});
+final themeProvider = NotifierProvider<ThemeNotifier, AppThemeMode>(ThemeNotifier.new);
 
 /// Convert AppThemeMode to Flutter ThemeMode
 ThemeMode getThemeMode(AppThemeMode mode) {

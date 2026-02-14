@@ -23,9 +23,11 @@ enum AccentColor {
   const AccentColor(this.label, this.color);
 }
 
-class AccentColorNotifier extends StateNotifier<AccentColor> {
-  AccentColorNotifier() : super(AccentColor.blue) {
+class AccentColorNotifier extends Notifier<AccentColor> {
+  @override
+  AccentColor build() {
     _loadAccentColor();
+    return AccentColor.blue;
   }
 
   Future<void> _loadAccentColor() async {
@@ -44,9 +46,7 @@ class AccentColorNotifier extends StateNotifier<AccentColor> {
   }
 }
 
-final accentColorProvider = StateNotifierProvider<AccentColorNotifier, AccentColor>((ref) {
-  return AccentColorNotifier();
-});
+final accentColorProvider = NotifierProvider<AccentColorNotifier, AccentColor>(AccentColorNotifier.new);
 
 class NotificationSettings {
   final bool streakNotificationsEnabled;
@@ -99,9 +99,11 @@ class NotificationSettings {
   }
 }
 
-class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
-  NotificationSettingsNotifier() : super(NotificationSettings()) {
+class NotificationSettingsNotifier extends Notifier<NotificationSettings> {
+  @override
+  NotificationSettings build() {
     _loadSettings();
+    return NotificationSettings();
   }
 
   Future<void> _loadSettings() async {
@@ -183,6 +185,4 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
   }
 }
 
-final notificationSettingsProvider = StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((ref) {
-  return NotificationSettingsNotifier();
-});
+final notificationSettingsProvider = NotifierProvider<NotificationSettingsNotifier, NotificationSettings>(NotificationSettingsNotifier.new);

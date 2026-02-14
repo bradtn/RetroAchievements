@@ -71,11 +71,13 @@ class FriendsState {
     friends.any((f) => f.username.toLowerCase() == username.toLowerCase());
 }
 
-class FriendsNotifier extends StateNotifier<FriendsState> {
+class FriendsNotifier extends Notifier<FriendsState> {
   static const _storageKey = 'friends_list_v2';
 
-  FriendsNotifier() : super(FriendsState()) {
+  @override
+  FriendsState build() {
     _load();
+    return FriendsState();
   }
 
   Future<void> _load() async {
@@ -141,6 +143,4 @@ class FriendsNotifier extends StateNotifier<FriendsState> {
   bool isFriend(String username) => state.isFriend(username);
 }
 
-final friendsProvider = StateNotifierProvider<FriendsNotifier, FriendsState>((ref) {
-  return FriendsNotifier();
-});
+final friendsProvider = NotifierProvider<FriendsNotifier, FriendsState>(FriendsNotifier.new);
