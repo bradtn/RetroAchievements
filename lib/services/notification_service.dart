@@ -200,10 +200,8 @@ class NotificationService {
     );
   }
 
-  // Schedule evening reminder - returns scheduled time or null if no streak
+  // Schedule evening reminder - works with or without an active streak
   Future<DateTime?> scheduleEveningReminder(int currentStreak, {int hour = 19, int minute = 0}) async {
-    if (currentStreak == 0) return null;
-
     // Cancel any existing reminder first
     await cancel(streakReminderNotificationId);
 
@@ -223,10 +221,21 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
+    // Different message based on streak status
+    final String title;
+    final String body;
+    if (currentStreak > 0) {
+      title = 'Don\'t Forget Your Streak! 🔥';
+      body = 'You have a $currentStreak-day streak. Play today to keep it going!';
+    } else {
+      title = 'Time to Play! 🎮';
+      body = 'Start a new streak today - earn an achievement!';
+    }
+
     await _notifications.zonedSchedule(
       id: streakReminderNotificationId,
-      title: 'Don\'t Forget Your Streak! 🔥',
-      body: 'You have a $currentStreak-day streak. Play today to keep it going!',
+      title: title,
+      body: body,
       scheduledDate: scheduledDate,
       notificationDetails: _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
