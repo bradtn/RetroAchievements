@@ -106,13 +106,18 @@ class NotificationService {
     if (android != null) {
       // Check if already granted
       final areEnabled = await android.areNotificationsEnabled();
-      if (areEnabled == true) {
-        return true;
+      if (areEnabled != true) {
+        // Request notification permission
+        await android.requestNotificationsPermission();
       }
 
-      // Request permission
-      final granted = await android.requestNotificationsPermission();
-      return granted ?? false;
+      // Check and request exact alarm permission (required for scheduled notifications on Android 12+)
+      final canScheduleExact = await android.canScheduleExactNotifications();
+      if (canScheduleExact != true) {
+        await android.requestExactAlarmsPermission();
+      }
+
+      return true;
     }
 
     final ios = _notifications.resolvePlatformSpecificImplementation<
@@ -129,6 +134,25 @@ class NotificationService {
 
     // Default to true for platforms that don't require permission
     return true;
+  }
+
+  /// Check if exact alarms can be scheduled (Android 12+)
+  Future<bool> canScheduleExactAlarms() async {
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.canScheduleExactNotifications() ?? false;
+    }
+    return true;
+  }
+
+  /// Request exact alarm permission (opens Android settings on Android 12+)
+  Future<void> requestExactAlarmPermission() async {
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      await android.requestExactAlarmsPermission();
+    }
   }
 
   // Show streak at risk notification

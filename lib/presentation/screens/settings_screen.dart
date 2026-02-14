@@ -651,8 +651,41 @@ Future<void> _testNotification(BuildContext context) async {
   final notificationService = NotificationService();
   await notificationService.initialize();
 
-  // Check pending notifications first
+  // Check exact alarm permission
+  final canScheduleExact = await notificationService.canScheduleExactAlarms();
+
+  // Check pending notifications
   final pending = await notificationService.getPendingNotifications();
+
+  if (!canScheduleExact) {
+    // Show dialog to request permission
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Permission Required'),
+          content: const Text(
+            'Scheduled notifications require "Alarms & Reminders" permission.\n\n'
+            'Tap "Open Settings" and enable it for RetroTrack.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                notificationService.requestExactAlarmPermission();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+    }
+    return;
+  }
 
   // Send immediate test notification
   await notificationService.sendTestNotification();
