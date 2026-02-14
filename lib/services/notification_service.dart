@@ -17,8 +17,8 @@ class NotificationService {
 
   bool _initialized = false;
 
-  // Notification channel IDs
-  static const String _streakChannelId = 'streak_notifications';
+  // Notification channel IDs - v2 to reset channel with custom sound
+  static const String _streakChannelId = 'streak_notifications_v2';
   static const String _streakChannelName = 'Streak Notifications';
   static const String _streakChannelDesc = 'Notifications about your achievement streaks';
 
@@ -72,19 +72,25 @@ class NotificationService {
   }
 
   Future<void> _createNotificationChannel() async {
-    const androidChannel = AndroidNotificationChannel(
-      _streakChannelId,
-      _streakChannelName,
-      description: _streakChannelDesc,
-      importance: Importance.high,
-      playSound: true,
-      sound: RawResourceAndroidNotificationSound('achievement_unlock'),
-    );
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
 
-    await _notifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
+    if (android != null) {
+      // Delete old channel (sound can't be changed once created)
+      await android.deleteNotificationChannel(channelId: 'streak_notifications');
+
+      // Create new channel with custom sound
+      const androidChannel = AndroidNotificationChannel(
+        _streakChannelId,
+        _streakChannelName,
+        description: _streakChannelDesc,
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('achievement_unlock'),
+      );
+
+      await android.createNotificationChannel(androidChannel);
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
