@@ -189,10 +189,21 @@ class SettingsScreen extends ConsumerWidget {
           if (notificationSettings.eveningReminderEnabled && notificationSettings.streakNotificationsEnabled)
             Padding(
               padding: const EdgeInsets.only(left: 56, right: 16, bottom: 8),
-              child: OutlinedButton.icon(
-                onPressed: () => _showTimePickerDialog(context, ref, notificationSettings),
-                icon: const Icon(Icons.schedule, size: 18),
-                label: Text('Reminder Time: ${notificationSettings.formattedReminderTime}'),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _showTimePickerDialog(context, ref, notificationSettings),
+                    icon: const Icon(Icons.schedule, size: 18),
+                    label: Text('Reminder Time: ${notificationSettings.formattedReminderTime}'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _testNotification(context),
+                    icon: const Icon(Icons.notifications_active, size: 18),
+                    label: const Text('Test Now'),
+                  ),
+                ],
               ),
             ),
           SwitchListTile(
@@ -635,6 +646,26 @@ Future<void> _showTimePickerDialog(BuildContext context, WidgetRef ref, Notifica
       }
     }
   }
+
+Future<void> _testNotification(BuildContext context) async {
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  // Check pending notifications first
+  final pending = await notificationService.getPendingNotifications();
+
+  // Send immediate test notification
+  await notificationService.sendTestNotification();
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Test notification sent! (${pending.length} scheduled)'),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+}
 
 void _confirmLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
