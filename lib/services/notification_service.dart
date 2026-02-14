@@ -17,7 +17,7 @@ class NotificationService {
 
   bool _initialized = false;
 
-  // Notification channel IDs - v2 to reset channel with custom sound
+  // Notification channel ID
   static const String _streakChannelId = 'streak_notifications_v2';
   static const String _streakChannelName = 'Streak Notifications';
   static const String _streakChannelDesc = 'Notifications about your achievement streaks';
@@ -67,6 +67,9 @@ class NotificationService {
 
     // Create notification channel for Android
     await _createNotificationChannel();
+
+    // Request permissions on first launch
+    await requestPermissions();
 
     _initialized = true;
   }
@@ -268,68 +271,6 @@ class NotificationService {
       id: streakReminderNotificationId,
       title: title,
       body: body,
-      scheduledDate: scheduledDate,
-      notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
-
-    return scheduledDate;
-  }
-
-  // Send test notification immediately
-  Future<void> sendTestNotification() async {
-    await _notifications.show(
-      id: streakReminderNotificationId,
-      title: 'Test Notification 🔔',
-      body: 'Your streak reminder notifications are working!',
-      notificationDetails: _getNotificationDetails(),
-    );
-  }
-
-  // Schedule notification for X seconds from now (for testing)
-  Future<void> scheduleTestInSeconds(int seconds) async {
-    await cancel(streakReminderNotificationId);
-
-    final scheduledDate = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
-
-    await _notifications.zonedSchedule(
-      id: streakReminderNotificationId,
-      title: 'Scheduled Test 🔔',
-      body: 'This notification was scheduled $seconds seconds ago!',
-      scheduledDate: scheduledDate,
-      notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
-  }
-
-  // Check pending notifications (for debugging)
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    return await _notifications.pendingNotificationRequests();
-  }
-
-  // Schedule a test notification at specific time (for testing)
-  Future<DateTime> scheduleTestAtTime(int hour, int minute) async {
-    await cancel(streakReminderNotificationId);
-
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-
-    // If it's already past the scheduled time, schedule for tomorrow
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    await _notifications.zonedSchedule(
-      id: streakReminderNotificationId,
-      title: 'Streak Reminder Test 🔥',
-      body: 'This is your scheduled reminder test!',
       scheduledDate: scheduledDate,
       notificationDetails: _getNotificationDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
