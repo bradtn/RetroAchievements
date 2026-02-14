@@ -176,8 +176,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           SwitchListTile(
             secondary: Icon(Icons.access_time, color: isDark ? Colors.white70 : Colors.grey.shade700),
-            title: Text('Evening Reminder', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('Remind me at ${notificationSettings.formattedReminderTime} if I haven\'t played', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            title: Text('Daily Reminder', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+            subtitle: Text('Remind me at ${notificationSettings.formattedReminderTime} to play', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.eveningReminderEnabled,
             onChanged: notificationSettings.streakNotificationsEnabled
                 ? (value) {
@@ -189,21 +189,10 @@ class SettingsScreen extends ConsumerWidget {
           if (notificationSettings.eveningReminderEnabled && notificationSettings.streakNotificationsEnabled)
             Padding(
               padding: const EdgeInsets.only(left: 56, right: 16, bottom: 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => _showTimePickerDialog(context, ref, notificationSettings),
-                    icon: const Icon(Icons.schedule, size: 18),
-                    label: Text('Reminder Time: ${notificationSettings.formattedReminderTime}'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => _testNotification(context),
-                    icon: const Icon(Icons.notifications_active, size: 18),
-                    label: const Text('Test Now'),
-                  ),
-                ],
+              child: OutlinedButton.icon(
+                onPressed: () => _showTimePickerDialog(context, ref, notificationSettings),
+                icon: const Icon(Icons.schedule, size: 18),
+                label: Text('Reminder Time: ${notificationSettings.formattedReminderTime}'),
               ),
             ),
           SwitchListTile(
@@ -599,6 +588,40 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
 
 // Top-level helper functions for settings screen
 Future<void> _showTimePickerDialog(BuildContext context, WidgetRef ref, NotificationSettings settings) async {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    // Check exact alarm permission first
+    final canScheduleExact = await notificationService.canScheduleExactAlarms();
+    if (!canScheduleExact && context.mounted) {
+      final shouldRequest = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Permission Required'),
+          content: const Text(
+            'Scheduled reminders require "Alarms & Reminders" permission.\n\n'
+            'Tap "Open Settings" and enable it for RetroTrack.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+      if (shouldRequest == true) {
+        await notificationService.requestExactAlarmPermission();
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: settings.reminderHour, minute: settings.reminderMinute),
@@ -607,98 +630,34 @@ Future<void> _showTimePickerDialog(BuildContext context, WidgetRef ref, Notifica
     if (picked != null) {
       await ref.read(notificationSettingsProvider.notifier).setReminderTime(picked.hour, picked.minute);
 
-      // Schedule the actual streak reminder at the new time
+      // Schedule the reminder at the new time
       final prefs = await SharedPreferences.getInstance();
       final currentStreak = prefs.getInt('last_known_streak') ?? 0;
 
-      final notificationService = NotificationService();
-      await notificationService.initialize();
       final scheduledTime = await notificationService.scheduleEveningReminder(
         currentStreak,
         hour: picked.hour,
         minute: picked.minute,
       );
 
-      if (context.mounted) {
-        if (scheduledTime == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reminder time saved. Notifications will appear when you have an active streak.'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        } else {
-          final hour = scheduledTime.hour > 12 ? scheduledTime.hour - 12 : (scheduledTime.hour == 0 ? 12 : scheduledTime.hour);
-          final ampm = scheduledTime.hour >= 12 ? 'PM' : 'AM';
-          final min = scheduledTime.minute.toString().padLeft(2, '0');
-          final now = DateTime.now();
-          final isToday = scheduledTime.year == now.year &&
-                          scheduledTime.month == now.month &&
-                          scheduledTime.day == now.day;
+      if (context.mounted && scheduledTime != null) {
+        final hour = scheduledTime.hour > 12 ? scheduledTime.hour - 12 : (scheduledTime.hour == 0 ? 12 : scheduledTime.hour);
+        final ampm = scheduledTime.hour >= 12 ? 'PM' : 'AM';
+        final min = scheduledTime.minute.toString().padLeft(2, '0');
+        final now = DateTime.now();
+        final isToday = scheduledTime.year == now.year &&
+                        scheduledTime.month == now.month &&
+                        scheduledTime.day == now.day;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Streak reminder scheduled for $hour:$min $ampm ${isToday ? "today" : "tomorrow"}'),
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reminder set for $hour:$min $ampm ${isToday ? "today" : "tomorrow"}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
-
-Future<void> _testNotification(BuildContext context) async {
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-
-  // Check exact alarm permission
-  final canScheduleExact = await notificationService.canScheduleExactAlarms();
-
-  // Check pending notifications
-  final pending = await notificationService.getPendingNotifications();
-
-  if (!canScheduleExact) {
-    // Show dialog to request permission
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Permission Required'),
-          content: const Text(
-            'Scheduled notifications require "Alarms & Reminders" permission.\n\n'
-            'Tap "Open Settings" and enable it for RetroTrack.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                notificationService.requestExactAlarmPermission();
-              },
-              child: const Text('Open Settings'),
-            ),
-          ],
-        ),
-      );
-    }
-    return;
-  }
-
-  // Send immediate test notification
-  await notificationService.sendTestNotification();
-
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Test notification sent! (${pending.length} scheduled)'),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-}
 
 void _confirmLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(

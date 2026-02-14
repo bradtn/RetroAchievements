@@ -77,6 +77,8 @@ class NotificationService {
       _streakChannelName,
       description: _streakChannelDesc,
       importance: Importance.high,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('achievement_unlock'),
     );
 
     await _notifications
@@ -405,6 +407,8 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('achievement_unlock'),
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
