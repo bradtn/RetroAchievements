@@ -229,7 +229,7 @@ class NotificationService {
       body: 'You have a $currentStreak-day streak. Play today to keep it going!',
       scheduledDate: scheduledDate,
       notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
 
     return scheduledDate;
@@ -257,7 +257,7 @@ class NotificationService {
       body: 'This notification was scheduled $seconds seconds ago!',
       scheduledDate: scheduledDate,
       notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
@@ -291,7 +291,7 @@ class NotificationService {
       body: 'This is your scheduled reminder test!',
       scheduledDate: scheduledDate,
       notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
 
     return scheduledDate;
@@ -327,7 +327,7 @@ class NotificationService {
       body: message,
       scheduledDate: scheduledDate,
       notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
