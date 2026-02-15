@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 
@@ -17,6 +18,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscureApiKey = true;
 
   static const _raApiKeyUrl = 'https://retroachievements.org/controlpanel.php';
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-login fallback: if credentials exist but auth provider didn't load them,
+    // try to log in automatically after a short delay
+    Future.delayed(const Duration(seconds: 1), _autoLoginIfNeeded);
+  }
+
+  Future<void> _autoLoginIfNeeded() async {
+    final authState = ref.read(authProvider);
+    if (!authState.isAuthenticated) {
+      final prefs = await SharedPreferences.getInstance();
+      final username = prefs.getString('ra_username');
+      final apiKey = prefs.getString('ra_api_key');
+      if (username != null && apiKey != null && username.isNotEmpty && apiKey.isNotEmpty) {
+        await ref.read(authProvider.notifier).login(username, apiKey);
+      }
+    }
+  }
 
   @override
   void dispose() {

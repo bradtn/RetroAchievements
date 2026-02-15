@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/ra_api_datasource.dart';
 
 /// Authentication state
@@ -47,7 +48,7 @@ final apiDataSourceProvider = Provider<RAApiDataSource>((ref) {
   return _apiDataSource;
 });
 
-/// Secure storage instance with enhanced security options
+/// Secure storage instance
 const _secureStorage = FlutterSecureStorage(
   aOptions: AndroidOptions(
     encryptedSharedPreferences: true,
@@ -68,7 +69,7 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     _apiDataSource = ref.watch(apiDataSourceProvider);
-    _loadSavedCredentials();
+    Future.microtask(() => _loadSavedCredentials());
     return const AuthState();
   }
 
@@ -81,24 +82,14 @@ class AuthNotifier extends Notifier<AuthState> {
 
       if (username != null && apiKey != null && username.isNotEmpty && apiKey.isNotEmpty) {
         _apiDataSource.setCredentials(username, apiKey);
-
-        // Validate credentials are still valid
-        final profile = await _apiDataSource.getUserProfile(username);
-        if (profile != null) {
-          state = AuthState(
-            status: AuthStatus.authenticated,
-            username: username,
-          );
-        } else {
-          // Credentials invalid, clear them
-          await _clearStoredCredentials();
-          state = const AuthState(status: AuthStatus.unauthenticated);
-        }
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          username: username,
+        );
       } else {
         state = const AuthState(status: AuthStatus.unauthenticated);
       }
     } catch (e) {
-      // On error, stay unauthenticated
       state = const AuthState(status: AuthStatus.unauthenticated);
     }
   }
@@ -106,6 +97,10 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> _clearStoredCredentials() async {
     await _secureStorage.delete(key: _keyUsername);
     await _secureStorage.delete(key: _keyApiKey);
+    // Also clear from SharedPreferences backup
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyUsername);
+    await prefs.remove(_keyApiKey);
   }
 
   /// Login with username and API key
@@ -113,14 +108,10 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(status: AuthStatus.loading, error: null);
 
     try {
-      // Set credentials first
       _apiDataSource.setCredentials(username, apiKey);
-
-      // Try to fetch user profile to validate
       final profile = await _apiDataSource.getUserProfile(username);
 
       if (profile != null) {
-        // Verify the returned username matches what was entered (case-insensitive)
         final returnedUsername = profile['User']?.toString() ?? '';
         if (returnedUsername.toLowerCase() != username.toLowerCase()) {
           _apiDataSource.clearCredentials();
@@ -131,9 +122,14 @@ class AuthNotifier extends Notifier<AuthState> {
           return false;
         }
 
-        // Save credentials securely using the exact username from RA
+        // Save to secure storage
         await _secureStorage.write(key: _keyUsername, value: returnedUsername);
         await _secureStorage.write(key: _keyApiKey, value: apiKey);
+
+        // Also save to SharedPreferences as backup for auto-login fallback
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_keyUsername, returnedUsername);
+        await prefs.setString(_keyApiKey, apiKey);
 
         state = AuthState(
           status: AuthStatus.authenticated,
