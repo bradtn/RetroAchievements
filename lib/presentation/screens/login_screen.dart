@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 
@@ -30,9 +30,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _autoLoginIfNeeded() async {
     final authState = ref.read(authProvider);
     if (!authState.isAuthenticated) {
-      final prefs = await SharedPreferences.getInstance();
-      final username = prefs.getString('ra_username');
-      final apiKey = prefs.getString('ra_api_key');
+      const secureStorage = FlutterSecureStorage(
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      );
+      final username = await secureStorage.read(key: 'ra_username');
+      final apiKey = await secureStorage.read(key: 'ra_api_key');
       if (username != null && apiKey != null && username.isNotEmpty && apiKey.isNotEmpty) {
         await ref.read(authProvider.notifier).login(username, apiKey);
       }

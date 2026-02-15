@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/ra_api_datasource.dart';
 
 /// Authentication state
@@ -97,10 +96,6 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> _clearStoredCredentials() async {
     await _secureStorage.delete(key: _keyUsername);
     await _secureStorage.delete(key: _keyApiKey);
-    // Also clear from SharedPreferences backup
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyUsername);
-    await prefs.remove(_keyApiKey);
   }
 
   /// Login with username and API key
@@ -125,11 +120,6 @@ class AuthNotifier extends Notifier<AuthState> {
         // Save to secure storage
         await _secureStorage.write(key: _keyUsername, value: returnedUsername);
         await _secureStorage.write(key: _keyApiKey, value: apiKey);
-
-        // Also save to SharedPreferences as backup for auto-login fallback
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_keyUsername, returnedUsername);
-        await prefs.setString(_keyApiKey, apiKey);
 
         state = AuthState(
           status: AuthStatus.authenticated,
