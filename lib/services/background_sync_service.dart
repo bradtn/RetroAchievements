@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -393,8 +394,13 @@ class BackgroundSyncService {
       // Sync friend activity
       await _syncFriendActivityWidget(dio, username, apiKey, prefs);
 
-      // Update all widgets
+      // Update all widgets (Android)
       await WidgetService.updateAllWidgets();
+
+      // Reload iOS widget timelines
+      if (Platform.isIOS) {
+        await WidgetService.reloadIOSWidgets();
+      }
 
       await prefs.setInt('last_widget_sync_time', now);
     } catch (e) {
@@ -478,7 +484,13 @@ class BackgroundSyncService {
         });
       }
 
-      await prefs.setString('widget_recent_achievements', jsonEncode(widgetData));
+      final jsonData = jsonEncode(widgetData);
+      await prefs.setString('widget_recent_achievements', jsonData);
+
+      // Also write to iOS App Group
+      if (Platform.isIOS) {
+        await WidgetService.writeToAppGroup('widget_recent_achievements', jsonData);
+      }
     } catch (e) {
       // Silently fail
     }
@@ -569,7 +581,16 @@ class BackgroundSyncService {
       }
 
       await prefs.setInt('widget_current_streak', currentStreak);
-      await prefs.setInt('widget_best_streak', bestStreak > 0 ? bestStreak : currentStreak);
+      final bestStreakValue = bestStreak > 0 ? bestStreak : currentStreak;
+      await prefs.setInt('widget_best_streak', bestStreakValue);
+
+      // Also write to iOS App Group
+      if (Platform.isIOS) {
+        await WidgetService.writeMultipleToAppGroup({
+          'widget_current_streak': currentStreak,
+          'widget_best_streak': bestStreakValue,
+        });
+      }
     } catch (e) {
       // Silently fail
     }
@@ -597,16 +618,35 @@ class BackgroundSyncService {
       final game = data['Game'] as Map<String, dynamic>?;
       final console = data['Console'] as Map<String, dynamic>?;
 
-      await prefs.setString('widget_aotw_title', achievement?['Title']?.toString() ?? '');
-      await prefs.setString('widget_aotw_game', game?['Title']?.toString() ?? '');
-      await prefs.setString('widget_aotw_console', console?['Name']?.toString() ?? '');
-      await prefs.setInt('widget_aotw_points', achievement?['Points'] ?? 0);
-      await prefs.setInt('widget_aotw_game_id', game?['ID'] ?? 0);
-
+      final aotwTitle = achievement?['Title']?.toString() ?? '';
+      final aotwGame = game?['Title']?.toString() ?? '';
+      final aotwConsole = console?['Name']?.toString() ?? '';
+      final aotwPoints = achievement?['Points'] ?? 0;
+      final aotwGameId = game?['ID'] ?? 0;
       final badgeName = achievement?['BadgeName']?.toString() ?? '';
-      await prefs.setString('widget_aotw_achievement_icon',
-          badgeName.isNotEmpty ? '/Badge/$badgeName.png' : '');
-      await prefs.setString('widget_aotw_game_icon', game?['ImageIcon']?.toString() ?? '');
+      final aotwAchievementIcon = badgeName.isNotEmpty ? '/Badge/$badgeName.png' : '';
+      final aotwGameIcon = game?['ImageIcon']?.toString() ?? '';
+
+      await prefs.setString('widget_aotw_title', aotwTitle);
+      await prefs.setString('widget_aotw_game', aotwGame);
+      await prefs.setString('widget_aotw_console', aotwConsole);
+      await prefs.setInt('widget_aotw_points', aotwPoints);
+      await prefs.setInt('widget_aotw_game_id', aotwGameId);
+      await prefs.setString('widget_aotw_achievement_icon', aotwAchievementIcon);
+      await prefs.setString('widget_aotw_game_icon', aotwGameIcon);
+
+      // Also write to iOS App Group
+      if (Platform.isIOS) {
+        await WidgetService.writeMultipleToAppGroup({
+          'widget_aotw_title': aotwTitle,
+          'widget_aotw_game': aotwGame,
+          'widget_aotw_console': aotwConsole,
+          'widget_aotw_points': aotwPoints,
+          'widget_aotw_game_id': aotwGameId,
+          'widget_aotw_achievement_icon': aotwAchievementIcon,
+          'widget_aotw_game_icon': aotwGameIcon,
+        });
+      }
     } catch (e) {
       // Silently fail
     }
@@ -712,7 +752,13 @@ class BackgroundSyncService {
         }
       }
 
-      await prefs.setString('widget_friend_activity', jsonEncode(widgetData));
+      final jsonData = jsonEncode(widgetData);
+      await prefs.setString('widget_friend_activity', jsonData);
+
+      // Also write to iOS App Group
+      if (Platform.isIOS) {
+        await WidgetService.writeToAppGroup('widget_friend_activity', jsonData);
+      }
     } catch (e) {
       // Silently fail
     }

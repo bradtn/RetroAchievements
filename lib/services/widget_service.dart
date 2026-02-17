@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 
-/// Service to handle communication with Android home screen widgets
+/// Service to handle communication with home screen widgets (Android & iOS)
 class WidgetService {
   static const _channel = MethodChannel('com.retrotracker.retrotracker/widget');
   static Function(int gameId)? _onGameSelected;
@@ -116,4 +117,42 @@ class WidgetService {
 
   /// Legacy method for backwards compatibility
   static Future<void> updateWidget() => updateGameTrackerWidget();
+
+  // ==================== iOS-specific methods ====================
+
+  /// Write data to iOS App Group UserDefaults for widget access
+  static Future<void> writeToAppGroup(String key, dynamic value) async {
+    if (!Platform.isIOS) return;
+
+    try {
+      await _channel.invokeMethod('writeToAppGroup', {
+        'key': key,
+        'value': value,
+      });
+    } catch (e) {
+      // iOS widget write failed, ignore
+    }
+  }
+
+  /// Write multiple key-value pairs to iOS App Group UserDefaults
+  static Future<void> writeMultipleToAppGroup(Map<String, dynamic> data) async {
+    if (!Platform.isIOS) return;
+
+    try {
+      await _channel.invokeMethod('writeMultipleToAppGroup', data);
+    } catch (e) {
+      // iOS widget write failed, ignore
+    }
+  }
+
+  /// Trigger WidgetKit to reload all widget timelines on iOS
+  static Future<void> reloadIOSWidgets() async {
+    if (!Platform.isIOS) return;
+
+    try {
+      await _channel.invokeMethod('reloadAllTimelines');
+    } catch (e) {
+      // iOS widget reload failed, ignore
+    }
+  }
 }
