@@ -9,7 +9,7 @@ class ImageLoader {
 
     private init() {
         if let containerUrl = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.spectersystems.retrotrack"
+            forSecurityApplicationGroupIdentifier: "group.com.bradnohra.retrotrack"
         ) {
             cacheDirectory = containerUrl.appendingPathComponent("ImageCache", isDirectory: true)
             try? FileManager.default.createDirectory(

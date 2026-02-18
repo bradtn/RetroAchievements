@@ -29,6 +29,8 @@ class NotificationService {
   static const int dailySummaryNotificationId = 4;
   static const int aotwNotificationId = 5;
   static const int aotmNotificationId = 6;
+  static const int aotwReminderNotificationId = 7;
+  static const int aotmReminderNotificationId = 8;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -48,11 +50,17 @@ class NotificationService {
     // Android settings
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS settings
+    // iOS settings - include foreground presentation options
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
+      // Show notifications even when app is in foreground
+      defaultPresentAlert: true,
+      defaultPresentBadge: true,
+      defaultPresentSound: true,
+      defaultPresentBanner: true,
+      defaultPresentList: true,
     );
 
     const initSettings = InitializationSettings(
@@ -237,6 +245,11 @@ class NotificationService {
 
   // Schedule evening reminder - works with or without an active streak
   Future<DateTime?> scheduleEveningReminder(int currentStreak, {int hour = 19, int minute = 0}) async {
+    // Ensure initialized
+    if (!_initialized) {
+      await initialize();
+    }
+
     // Cancel any existing reminder first
     await cancel(streakReminderNotificationId);
 
@@ -267,16 +280,19 @@ class NotificationService {
       body = 'Start a new streak today - earn an achievement!';
     }
 
-    await _notifications.zonedSchedule(
-      id: streakReminderNotificationId,
-      title: title,
-      body: body,
-      scheduledDate: scheduledDate,
-      notificationDetails: _getNotificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
-
-    return scheduledDate;
+    try {
+      await _notifications.zonedSchedule(
+        id: streakReminderNotificationId,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: _getNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      return scheduledDate;
+    } catch (e) {
+      return null;
+    }
   }
 
   // Schedule daily summary for 9 PM
@@ -345,6 +361,102 @@ class NotificationService {
     );
   }
 
+  /// Schedule weekly AOTW reminder (every Monday at 10 AM)
+  Future<void> scheduleAotwWeeklyReminder() async {
+    if (!_initialized) await initialize();
+
+    // Cancel any existing reminder
+    await cancel(aotwReminderNotificationId);
+
+    // Find next Monday at 10 AM
+    final now = tz.TZDateTime.now(tz.local);
+    var nextMonday = now;
+
+    // Find next Monday
+    while (nextMonday.weekday != DateTime.monday) {
+      nextMonday = nextMonday.add(const Duration(days: 1));
+    }
+
+    // Set to 10 AM
+    nextMonday = tz.TZDateTime(
+      tz.local,
+      nextMonday.year,
+      nextMonday.month,
+      nextMonday.day,
+      10,
+      0,
+    );
+
+    // If it's already past 10 AM on Monday, schedule for next Monday
+    if (nextMonday.isBefore(now)) {
+      nextMonday = nextMonday.add(const Duration(days: 7));
+    }
+
+    try {
+      await _notifications.zonedSchedule(
+        id: aotwReminderNotificationId,
+        title: 'New Achievement of the Week!',
+        body: 'Check out this week\'s featured achievement challenge!',
+        scheduledDate: nextMonday,
+        notificationDetails: _getNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: 'aotw',
+      );
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  /// Cancel AOTW weekly reminder
+  Future<void> cancelAotwWeeklyReminder() async {
+    await cancel(aotwReminderNotificationId);
+  }
+
+  /// Schedule monthly AOTM reminder (1st of each month at 10 AM)
+  Future<void> scheduleAotmMonthlyReminder() async {
+    if (!_initialized) await initialize();
+
+    // Cancel any existing reminder
+    await cancel(aotmReminderNotificationId);
+
+    // Find 1st of next month at 10 AM
+    final now = tz.TZDateTime.now(tz.local);
+    var nextFirst = tz.TZDateTime(
+      tz.local,
+      now.month == 12 ? now.year + 1 : now.year,
+      now.month == 12 ? 1 : now.month + 1,
+      1,
+      10,
+      0,
+    );
+
+    // If we're on the 1st and it's before 10 AM, use today
+    if (now.day == 1 && now.hour < 10) {
+      nextFirst = tz.TZDateTime(tz.local, now.year, now.month, 1, 10, 0);
+    }
+
+    try {
+      await _notifications.zonedSchedule(
+        id: aotmReminderNotificationId,
+        title: 'New Achievement of the Month!',
+        body: 'A new monthly achievement challenge is available!',
+        scheduledDate: nextFirst,
+        notificationDetails: _getNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        payload: 'aotm',
+      );
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  /// Cancel AOTM monthly reminder
+  Future<void> cancelAotmMonthlyReminder() async {
+    await cancel(aotmReminderNotificationId);
+  }
+
   NotificationDetails _getNotificationDetails() {
     return const NotificationDetails(
       android: AndroidNotificationDetails(
@@ -361,6 +473,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'achievement_unlock.wav',
       ),
     );
   }

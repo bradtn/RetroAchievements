@@ -1,15 +1,24 @@
 import Flutter
 import UIKit
 import WidgetKit
+import FirebaseCore
+import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-    private let appGroupId = "group.com.spectersystems.retrotrack"
+    private let appGroupId = "group.com.bradnohra.retrotrack"
 
     override func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        // Configure Firebase
+        FirebaseApp.configure()
+
+        // Set up push notification delegate
+        UNUserNotificationCenter.current().delegate = self
+        Messaging.messaging().delegate = self
+
         GeneratedPluginRegistrant.register(with: self)
 
         // Set up MethodChannel for widget communication
@@ -90,5 +99,12 @@ import WidgetKit
         }
 
         userDefaults.synchronize()
+    }
+}
+
+// MARK: - MessagingDelegate
+extension AppDelegate: MessagingDelegate {
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        // Token is handled by firebase_messaging Flutter plugin
     }
 }

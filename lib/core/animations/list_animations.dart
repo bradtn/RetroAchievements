@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Animated list item that slides and fades in
+/// Only animates first 8 items to avoid scroll jank
 class AnimatedListItem extends StatefulWidget {
   final Widget child;
   final int index;
@@ -15,53 +16,67 @@ class AnimatedListItem extends StatefulWidget {
     this.duration = const Duration(milliseconds: 400),
   });
 
+  // Max items to animate - items beyond this render instantly
+  static const int maxAnimatedItems = 8;
+
   @override
   State<AnimatedListItem> createState() => _AnimatedListItemState();
 }
 
 class _AnimatedListItemState extends State<AnimatedListItem>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacity;
-  late Animation<Offset> _slideAnimation;
+  AnimationController? _controller;
+  Animation<double>? _opacity;
+  Animation<Offset>? _slideAnimation;
+
+  bool get _shouldAnimate => widget.index < AnimatedListItem.maxAnimatedItems;
 
   @override
   void initState() {
     super.initState();
+
+    // Skip animation setup for items beyond the threshold
+    if (!_shouldAnimate) return;
+
     _controller = AnimationController(
       duration: widget.duration,
       vsync: this,
     );
 
     _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+      CurvedAnimation(parent: _controller!, curve: Curves.easeOut),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeOutCubic));
 
     // Stagger the animation based on index
     Future.delayed(widget.delay * widget.index, () {
       if (mounted) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Skip animation for items beyond threshold
+    if (!_shouldAnimate) {
+      return widget.child;
+    }
+
     return FadeTransition(
-      opacity: _opacity,
+      opacity: _opacity!,
       child: SlideTransition(
-        position: _slideAnimation,
+        position: _slideAnimation!,
         child: widget.child,
       ),
     );

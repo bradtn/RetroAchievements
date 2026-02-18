@@ -145,6 +145,8 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       navigatorKey: navigatorKey,
       title: 'RetroTrack',
       debugShowCheckedModeBanner: false,
+      // Use iOS-style scrolling on all platforms for smoother feel
+      scrollBehavior: const _SmoothScrollBehavior(),
       theme: _buildLightTheme(effectiveColor),
       darkTheme: effectiveThemeMode == AppThemeMode.amoled
           ? _buildAmoledTheme(effectiveColor)
@@ -419,6 +421,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
         backgroundColor: Color(0xFF121212),
       ),
       useMaterial3: true,
+    );
+  }
+}
+
+/// Custom scroll behavior for smoother iOS-style scrolling
+class _SmoothScrollBehavior extends ScrollBehavior {
+  const _SmoothScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    // Use bouncing physics everywhere for smoother feel
+    return const BouncingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+      decelerationRate: ScrollDecelerationRate.fast,
     );
   }
 }

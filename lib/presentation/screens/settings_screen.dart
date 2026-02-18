@@ -12,6 +12,7 @@ import '../../services/purchase_service.dart';
 import '../../services/sound_service.dart';
 import '../../core/animations.dart';
 import '../../services/notification_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../data/datasources/ra_api_datasource.dart';
 import 'settings/settings_provider.dart';
 import 'settings/settings_widgets.dart';
@@ -53,6 +54,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
         child: ListView(
+        cacheExtent: 500, // Pre-render items for smoother scrolling
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         children: [
           // Premium Banner (if not premium)
           if (!premium.isPremium)
@@ -222,21 +225,43 @@ class SettingsScreen extends ConsumerWidget {
           SwitchListTile(
             secondary: Icon(Icons.emoji_events, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Achievement of the Week', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('Notify when new AOTW is available', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            subtitle: Text('Get notified about new weekly challenges', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.aotwNotificationsEnabled,
-            onChanged: (value) {
+            onChanged: (value) async {
               HapticFeedback.selectionClick();
               ref.read(notificationSettingsProvider.notifier).setAotwNotifications(value);
+
+              final notificationService = NotificationService();
+              final pushService = PushNotificationService();
+
+              if (value) {
+                await notificationService.scheduleAotwWeeklyReminder();
+                await pushService.subscribeToTopic('aotw_updates');
+              } else {
+                await notificationService.cancelAotwWeeklyReminder();
+                await pushService.unsubscribeFromTopic('aotw_updates');
+              }
             },
           ),
           SwitchListTile(
             secondary: Icon(Icons.calendar_month, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Achievement of the Month', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-            subtitle: Text('Notify when new AOTM is available', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            subtitle: Text('Get notified about new monthly challenges', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
             value: notificationSettings.aotmNotificationsEnabled,
-            onChanged: (value) {
+            onChanged: (value) async {
               HapticFeedback.selectionClick();
               ref.read(notificationSettingsProvider.notifier).setAotmNotifications(value);
+
+              final notificationService = NotificationService();
+              final pushService = PushNotificationService();
+
+              if (value) {
+                await notificationService.scheduleAotmMonthlyReminder();
+                await pushService.subscribeToTopic('aotm_updates');
+              } else {
+                await notificationService.cancelAotmMonthlyReminder();
+                await pushService.unsubscribeFromTopic('aotm_updates');
+              }
             },
           ),
           const Divider(),

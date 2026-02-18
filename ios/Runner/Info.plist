@@ -48,9 +48,9 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 
-		<!-- Google AdMob App ID - REPLACE WITH YOUR iOS APP ID FROM ADMOB -->
+		<!-- Google AdMob App ID -->
 		<key>GADApplicationIdentifier</key>
-		<string>ca-app-pub-2658368978045167~XXXXXXXXXX</string>
+		<string>ca-app-pub-3940256099942544~1458002511</string>
 
 		<!-- SKAdNetwork IDs for AdMob -->
 		<key>SKAdNetworkItems</key>

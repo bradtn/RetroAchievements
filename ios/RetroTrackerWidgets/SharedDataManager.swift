@@ -3,7 +3,7 @@ import Foundation
 class SharedDataManager {
     static let shared = SharedDataManager()
 
-    private let appGroupId = "group.com.spectersystems.retrotrack"
+    private let appGroupId = "group.com.bradnohra.retrotrack"
 
     private var userDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupId)
