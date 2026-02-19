@@ -59,9 +59,9 @@ tar -xzvf /path/to/ios_widget_update.tar.gz
 2. Navigate to **Certificates, Identifiers & Profiles** → **Identifiers**
 
 ### Configure Main App ID:
-3. Find your main app identifier: `com.spectersystems.retrotrack`
+3. Find your main app identifier: `com.bradnohra.retrotrack`
 4. Click **Edit** and enable **App Groups**
-5. Click **+** to add a new App Group: `group.com.spectersystems.retrotrack`
+5. Click **+** to add a new App Group: `group.com.bradnohra.retrotrack`
 6. Save changes
 
 ### Create Widget Extension App ID:
@@ -70,9 +70,9 @@ tar -xzvf /path/to/ios_widget_update.tar.gz
 9. Select **App** → Continue
 10. Enter:
     - Description: `RetroTrack Widgets`
-    - Bundle ID: `com.spectersystems.retrotrack.widgets`
+    - Bundle ID: `com.bradnohra.retrotrack.widgets`
 11. Enable **App Groups** capability
-12. Select `group.com.spectersystems.retrotrack`
+12. Select `group.com.bradnohra.retrotrack`
 13. Continue and Register
 
 ---
@@ -81,8 +81,8 @@ tar -xzvf /path/to/ios_widget_update.tar.gz
 
 1. Go to **Profiles** in Developer Portal
 2. Create or regenerate profiles for:
-   - Main app: `com.spectersystems.retrotrack` (Development & Distribution)
-   - Widget: `com.spectersystems.retrotrack.widgets` (Development & Distribution)
+   - Main app: `com.bradnohra.retrotrack` (Development & Distribution)
+   - Widget: `com.bradnohra.retrotrack.widgets` (Development & Distribution)
 3. Download the profiles (Xcode can also do this automatically)
 
 ---
@@ -132,7 +132,7 @@ open ios/Runner.xcworkspace
    - Click the **+ Capability** button (top left of capabilities area)
    - Search for **App Groups** and double-click to add it
    - Click **+** under the App Groups section
-   - Add: `group.com.spectersystems.retrotrack`
+   - Add: `group.com.bradnohra.retrotrack`
 
 ### For RetroTrackWidgets target:
 7. Select **RetroTrackWidgets** target
@@ -142,7 +142,7 @@ open ios/Runner.xcworkspace
 11. **Add App Groups capability:**
     - Click the **+ Capability** button
     - Search for **App Groups** and double-click to add it
-    - Select the same group: `group.com.spectersystems.retrotrack`
+    - Select the same group: `group.com.bradnohra.retrotrack`
 
 **IMPORTANT:** Both targets MUST have the identical App Group ID for widget data sharing to work.
 
@@ -210,7 +210,7 @@ flutter build ios --no-codesign
 ### Widgets show "No Data" or placeholder
 - Open main app first and let it fully sync
 - Check App Groups configured identically for both targets
-- Verify the App Group ID matches exactly: `group.com.spectersystems.retrotrack`
+- Verify the App Group ID matches exactly: `group.com.bradnohra.retrotrack`
 
 ### Signing/Provisioning errors
 - Ensure both targets use the same Team

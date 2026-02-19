@@ -23,20 +23,34 @@ class BackgroundSyncService {
   }
 
   Future<void> registerPeriodicTasks() async {
-    // Schedule local notification for evening reminder if user has a streak
     final prefs = await SharedPreferences.getInstance();
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    // Schedule evening streak reminder if user has a streak
     final currentStreak = prefs.getInt('last_known_streak') ?? 0;
     final reminderHour = prefs.getInt('reminder_hour') ?? 19;
     final reminderMinute = prefs.getInt('reminder_minute') ?? 0;
+    final eveningReminderEnabled = prefs.getBool('evening_reminder_enabled') ?? true;
 
-    if (currentStreak > 0) {
-      final notificationService = NotificationService();
-      await notificationService.initialize();
+    if (currentStreak > 0 && eveningReminderEnabled) {
       await notificationService.scheduleEveningReminder(
         currentStreak,
         hour: reminderHour,
         minute: reminderMinute,
       );
+    }
+
+    // Schedule AOTW weekly reminder if enabled
+    final aotwEnabled = prefs.getBool('aotw_notifications_enabled') ?? true;
+    if (aotwEnabled) {
+      await notificationService.scheduleAotwWeeklyReminder();
+    }
+
+    // Schedule AOTM monthly reminder if enabled
+    final aotmEnabled = prefs.getBool('aotm_notifications_enabled') ?? true;
+    if (aotmEnabled) {
+      await notificationService.scheduleAotmMonthlyReminder();
     }
   }
 
