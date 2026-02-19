@@ -339,6 +339,81 @@ class NotificationService {
     await _notifications.cancel(id: id);
   }
 
+  /// Clear the app badge count (iOS) and cancel notification (Android)
+  Future<void> clearBadge() async {
+    // Cancel AOTW and AOTM notifications (clears Android badge)
+    await _notifications.cancel(id: aotwNotificationId);
+    await _notifications.cancel(id: aotmNotificationId);
+
+    // On iOS, also explicitly set badge to 0
+    try {
+      const clearBadgeDetails = NotificationDetails(
+        iOS: DarwinNotificationDetails(
+          presentAlert: false,
+          presentBadge: true,
+          presentSound: false,
+          badgeNumber: 0,
+        ),
+      );
+
+      // Show a silent notification with badge 0, then cancel it
+      await _notifications.show(
+        id: 99999, // Use a dedicated ID for badge clearing
+        title: null,
+        body: null,
+        notificationDetails: clearBadgeDetails,
+      );
+
+      // Cancel the notification immediately
+      await _notifications.cancel(id: 99999);
+    } catch (e) {
+      // Silently fail - badge clearing is not critical
+    }
+  }
+
+  /// Clear AOTW notification and badge
+  Future<void> clearAotwBadge() async {
+    // Cancel AOTW notification (clears Android badge for this notification)
+    await _notifications.cancel(id: aotwNotificationId);
+
+    // On iOS, set badge to 0
+    await _clearIosBadge();
+  }
+
+  /// Clear AOTM notification and badge
+  Future<void> clearAotmBadge() async {
+    // Cancel AOTM notification (clears Android badge for this notification)
+    await _notifications.cancel(id: aotmNotificationId);
+
+    // On iOS, set badge to 0
+    await _clearIosBadge();
+  }
+
+  /// Internal method to clear iOS badge
+  Future<void> _clearIosBadge() async {
+    try {
+      const clearBadgeDetails = NotificationDetails(
+        iOS: DarwinNotificationDetails(
+          presentAlert: false,
+          presentBadge: true,
+          presentSound: false,
+          badgeNumber: 0,
+        ),
+      );
+
+      await _notifications.show(
+        id: 99999,
+        title: null,
+        body: null,
+        notificationDetails: clearBadgeDetails,
+      );
+
+      await _notifications.cancel(id: 99999);
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
   // Show Achievement of the Week notification
   Future<void> showAotwNotification(String achievementTitle, String gameTitle) async {
     await _notifications.show(

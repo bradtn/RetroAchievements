@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
+import '../../services/notification_service.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 
@@ -41,12 +42,14 @@ class _AchievementOfTheMonthScreenState
       if (data == null) _error = errorMsg ?? 'Failed to load Achievement of the Month';
     });
 
-    // Mark as viewed
+    // Mark as viewed and clear badge/notification
     if (data != null) {
       final achievementId = data['achievementId']?.toString() ?? '';
       if (achievementId.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_viewed_aotm_id', achievementId);
+        // Clear AOTM notification (Android) and badge (iOS)
+        await NotificationService().clearAotmBadge();
       }
     }
   }

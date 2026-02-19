@@ -152,6 +152,14 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
       ),
     ];
 
+    // Calculate responsive column count based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = screenWidth < 400 ? 3
+        : screenWidth < 600 ? 3
+        : screenWidth < 900 ? 4
+        : screenWidth < 1200 ? 5
+        : 6;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Explore')),
       body: Padding(
@@ -160,8 +168,8 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
           animation: _animationController,
           builder: (context, child) {
             return GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.95,

@@ -215,14 +215,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Widget _buildAppBar(String title, String imageIcon, String imageTitle, bool isLightMode) {
+    // Responsive hero height - taller on iPad for better image display
+    final screenWidth = MediaQuery.of(context).size.width;
+    final expandedHeight = screenWidth > 600 ? 320.0 : 220.0;
+
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: expandedHeight,
       pinned: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       foregroundColor: isLightMode ? Colors.grey[900] : Colors.white,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final expandedHeight = 220.0;
           final collapsedHeight = kToolbarHeight + MediaQuery.of(context).padding.top;
           final currentHeight = constraints.maxHeight;
           final collapseRatio = ((expandedHeight - currentHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);

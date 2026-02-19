@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "785778741087",
+    "project_id": "retrotrack-247e1",
+    "storage_bucket": "retrotrack-247e1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785778741087:android:bba2a7430f32b2337ff0ea",
+        "android_client_info": {
+          "package_name": "com.retrotracker.retrotracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiYtkbZ2HKXkmzfbbtLYStPEE-iHP-Z4Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -22,7 +22,11 @@ import FirebaseMessaging
         GeneratedPluginRegistrant.register(with: self)
 
         // Set up MethodChannel for widget communication
-        let controller = window?.rootViewController as! FlutterViewController
+        // Use safe unwrapping to prevent crashes on iPad/scene-based apps
+        guard let controller = window?.rootViewController as? FlutterViewController else {
+            return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+        }
+
         let widgetChannel = FlutterMethodChannel(
             name: "com.retrotracker.retrotracker/widget",
             binaryMessenger: controller.binaryMessenger

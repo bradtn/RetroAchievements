@@ -25,8 +25,7 @@ class AdService {
     if (Platform.isAndroid) {
       return 'ca-app-pub-2658368978045167/6585548356';
     } else if (Platform.isIOS) {
-      // TODO: Add iOS ad unit ID when iOS app is set up
-      return 'ca-app-pub-3940256099942544/2934735716';
+      return 'ca-app-pub-2658368978045167/6226868390';
     }
     throw UnsupportedError('Unsupported platform');
   }
