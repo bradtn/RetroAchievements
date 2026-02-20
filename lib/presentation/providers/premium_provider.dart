@@ -5,7 +5,7 @@ import '../../services/purchase_service.dart';
 
 /// DEBUG: Set to true to force premium unlock for testing/screenshots
 /// REMOVE BEFORE SUBMITTING TO APP STORE
-const bool kDebugForcePremium = true;
+const bool kDebugForcePremium = false;
 
 /// Premium state
 class PremiumState {
