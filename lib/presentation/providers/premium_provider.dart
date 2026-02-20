@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/purchase_service.dart';
 
+/// DEBUG: Set to true to force premium unlock for testing/screenshots
+/// REMOVE BEFORE SUBMITTING TO APP STORE
+const bool kDebugForcePremium = true;
+
 /// Premium state
 class PremiumState {
   final bool isPremium;
@@ -150,10 +154,12 @@ final premiumProvider = NotifierProvider<PremiumNotifier, PremiumState>(PremiumN
 
 /// Helper provider to check if ads should be shown
 final showAdsProvider = Provider<bool>((ref) {
+  if (kDebugForcePremium) return false; // DEBUG: Remove before release
   return !ref.watch(premiumProvider).isPremium;
 });
 
 final isPremiumProvider = Provider<bool>((ref) {
+  if (kDebugForcePremium) return true; // DEBUG: Remove before release
   return ref.watch(premiumProvider).isPremium;
 });
 
