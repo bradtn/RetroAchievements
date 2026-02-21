@@ -9,6 +9,7 @@ import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
+import android.view.View
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -193,6 +194,9 @@ class SecondaryDisplayActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Disable default focus highlight on the entire window/view hierarchy
+        disableFocusHighlight()
+
         // Register receiver to listen for close broadcasts
         val filter = IntentFilter(CLOSE_ACTION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -209,6 +213,36 @@ class SecondaryDisplayActivity : FlutterActivity() {
             windowManager.defaultDisplay
         }
         android.util.Log.d("SecondaryDisplayActivity", "Started on display: ${display?.displayId} (${display?.name})")
+    }
+
+    private fun disableFocusHighlight() {
+        // Disable on the root view
+        val rootView = window.decorView.rootView
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            rootView.defaultFocusHighlightEnabled = false
+        }
+
+        // Disable on the decor view
+        val decorView = window.decorView
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            decorView.defaultFocusHighlightEnabled = false
+        }
+
+        // Try to disable on Flutter view after it's created
+        window.decorView.post {
+            disableFocusHighlightRecursive(window.decorView)
+        }
+    }
+
+    private fun disableFocusHighlightRecursive(view: View) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            view.defaultFocusHighlightEnabled = false
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                disableFocusHighlightRecursive(view.getChildAt(i))
+            }
+        }
     }
 
     override fun onDestroy() {

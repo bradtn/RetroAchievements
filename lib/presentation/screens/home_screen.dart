@@ -9,7 +9,6 @@ import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/ra_status_banner.dart';
-import '../widgets/dual_screen_fab.dart';
 import 'settings_screen.dart';
 import 'home/home_tab.dart';
 import 'home/explore_tab.dart';
@@ -72,14 +71,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    // Running on primary display - read current state and auto-enable if dual-screen
-    setState(() => _isCompanionModeActive = _dualScreen.isCompanionModeActive);
+    // Check if a mode switch happened recently (within last 10 seconds)
+    // If so, don't auto-enable anything - respect the user's choice
+    final recentSwitch = await _dualScreen.wasModeSwitchedRecently();
+    if (recentSwitch) {
+      debugPrint('HomeScreen: Recent mode switch detected, skipping auto-companion');
+      setState(() => _isCompanionModeActive = _dualScreen.isCompanionModeActive);
+      return;
+    }
 
+    // No recent switch - check if we have a secondary display and auto-enable companion
     final hasSecondary = await _dualScreen.hasSecondaryDisplay();
-    if (hasSecondary && !_isCompanionModeActive) {
+    if (hasSecondary) {
       debugPrint('HomeScreen: Auto-enabling companion mode for dual-screen device');
       _dualScreen.setCompanionModeActive(true);
       await _dualScreen.showOnSecondary(route: '/secondary');
+      setState(() => _isCompanionModeActive = true);
     }
   }
 
@@ -361,41 +368,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          // Main content
-          Column(
-            children: [
-              const RAStatusBanner(),
-              Expanded(
-                child: IndexedStack(
-                  index: _currentIndex,
-                  children: [
-                    HomeTab(
-                      profile: _profile,
-                      recentGames: _recentGames,
-                      isLoading: _isLoading,
-                      onRefresh: _loadData,
-                    ),
-                    ExploreTab(isSelected: _currentIndex == 1),
-                    AchievementsTab(
-                      achievements: _recentAchievements,
-                      isLoading: _isLoading,
-                      onRefresh: _loadData,
-                    ),
-                    const SettingsScreen(),
-                  ],
+          const RAStatusBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                HomeTab(
+                  profile: _profile,
+                  recentGames: _recentGames,
+                  isLoading: _isLoading,
+                  onRefresh: _loadData,
                 ),
-              ),
-              const AdBanner(),
-            ],
+                ExploreTab(isSelected: _currentIndex == 1),
+                AchievementsTab(
+                  achievements: _recentAchievements,
+                  isLoading: _isLoading,
+                  onRefresh: _loadData,
+                ),
+                const SettingsScreen(),
+              ],
+            ),
           ),
-          // Dual-screen FAB (only shows on multi-display devices)
-          const Positioned(
-            right: 8,
-            bottom: 8, // Just above the ad banner
-            child: DualScreenFAB(),
-          ),
+          const AdBanner(),
         ],
       ),
       // Hide bottom nav when companion mode is active (nav is on secondary screen)

@@ -10,6 +10,7 @@ class AnimatedStatCard extends StatefulWidget {
   final Color color;
   final int delay;
   final bool isRank;
+  final bool compact;
 
   const AnimatedStatCard({
     super.key,
@@ -19,6 +20,7 @@ class AnimatedStatCard extends StatefulWidget {
     required this.color,
     this.delay = 0,
     this.isRank = false,
+    this.compact = false,
   });
 
   @override
@@ -65,13 +67,19 @@ class _AnimatedStatCardState extends State<AnimatedStatCard>
 
   @override
   Widget build(BuildContext context) {
+    final iconSize = widget.compact ? 18.0 : 24.0;
+    final valueFontSize = widget.compact ? 13.0 : 16.0;
+    final labelFontSize = widget.compact ? 9.0 : 11.0;
+    final cardPadding = widget.compact ? 8.0 : 12.0;
+    final spacing = widget.compact ? 4.0 : 8.0;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           children: [
-            Icon(widget.icon, color: widget.color, size: 24),
-            const SizedBox(height: 8),
+            Icon(widget.icon, color: widget.color, size: iconSize),
+            SizedBox(height: spacing),
             AnimatedBuilder(
               animation: _animation,
               builder: (context, child) {
@@ -88,7 +96,7 @@ class _AnimatedStatCardState extends State<AnimatedStatCard>
                   displayValue,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: valueFontSize,
                     color: widget.color,
                   ),
                 );
@@ -100,7 +108,7 @@ class _AnimatedStatCardState extends State<AnimatedStatCard>
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.grey[400]
                     : Colors.grey[600],
-                fontSize: 11,
+                fontSize: labelFontSize,
               ),
             ),
           ],
@@ -113,11 +121,13 @@ class _AnimatedStatCardState extends State<AnimatedStatCard>
 class RecentGameTile extends StatelessWidget {
   final Map<String, dynamic> game;
   final VoidCallback onTap;
+  final bool compact;
 
   const RecentGameTile({
     super.key,
     required this.game,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -128,61 +138,66 @@ class RecentGameTile extends StatelessWidget {
     final numAchieved = game['NumAchieved'] ?? game['NumAwarded'] ?? 0;
     final numTotal = game['NumPossibleAchievements'] ?? game['AchievementsPossible'] ?? 0;
 
+    final imageSize = compact ? 60.0 : 80.0;
+    final tileWidth = compact ? 85.0 : 110.0;
+    final titleFontSize = compact ? 9.0 : 11.0;
+    final chipFontSize = compact ? 7.0 : 8.0;
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 110,
+        width: tileWidth,
         child: Column(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(compact ? 8 : 12),
               child: CachedNetworkImage(
                 imageUrl: 'https://retroachievements.org$imageIcon',
-                width: 80,
-                height: 80,
+                width: imageSize,
+                height: imageSize,
                 fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => Container(
-                  width: 80,
-                  height: 80,
+                  width: imageSize,
+                  height: imageSize,
                   color: Colors.grey[800],
-                  child: const Icon(Icons.games, size: 32),
+                  child: Icon(Icons.games, size: imageSize / 2.5),
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: compact ? 4 : 6),
             Text(
               title,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: compact ? 2 : 4),
             // Console chip
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 3 : 4, vertical: 1),
               decoration: BoxDecoration(
                 color: Colors.blue.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(3),
               ),
               child: Text(
                 consoleName,
-                style: const TextStyle(color: Colors.blue, fontSize: 8, fontWeight: FontWeight.w500),
+                style: TextStyle(color: Colors.blue, fontSize: chipFontSize, fontWeight: FontWeight.w500),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: compact ? 1 : 2),
             // Achievement chip
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 3 : 4, vertical: 1),
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(3),
               ),
               child: Text(
                 '$numAchieved/$numTotal',
-                style: const TextStyle(color: Colors.green, fontSize: 8, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Colors.green, fontSize: chipFontSize, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -196,12 +211,14 @@ class RecentAchievementTile extends StatelessWidget {
   final Map<String, dynamic> achievement;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final bool compact;
 
   const RecentAchievementTile({
     super.key,
     required this.achievement,
     required this.onTap,
     required this.onLongPress,
+    this.compact = false,
   });
 
   @override
@@ -212,70 +229,76 @@ class RecentAchievementTile extends StatelessWidget {
     final points = achievement['Points'] ?? 0;
     final dateEarned = achievement['Date'] ?? achievement['DateEarned'] ?? '';
 
+    final badgeSize = compact ? 36.0 : 44.0;
+    final cardPadding = compact ? 8.0 : 12.0;
+    final titleFontSize = compact ? 13.0 : 14.0;
+    final subtitleFontSize = compact ? 10.0 : 12.0;
+    final chipFontSize = compact ? 8.0 : 10.0;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: compact ? 4 : 8),
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(cardPadding),
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(compact ? 6 : 8),
                 child: badgeName.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                        width: 44,
-                        height: 44,
+                        width: badgeSize,
+                        height: badgeSize,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const DefaultBadge(),
+                        errorWidget: (_, __, ___) => DefaultBadge(size: badgeSize),
                       )
-                    : const DefaultBadge(),
+                    : DefaultBadge(size: badgeSize),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: compact ? 8 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: titleFontSize),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       gameTitle,
-                      style: TextStyle(fontSize: 12, color: context.subtitleColor),
+                      style: TextStyle(fontSize: subtitleFontSize, color: context.subtitleColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: compact ? 2 : 4),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: compact ? 1 : 2),
                           decoration: BoxDecoration(
                             color: Colors.amber.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             '$points pts',
-                            style: TextStyle(color: Colors.amber[600], fontSize: 10),
+                            style: TextStyle(color: Colors.amber[600], fontSize: chipFontSize),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: compact ? 6 : 8),
                         Text(
                           formatProfileDate(dateEarned),
-                          style: TextStyle(fontSize: 10, color: context.subtitleColor),
+                          style: TextStyle(fontSize: chipFontSize, color: context.subtitleColor),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: context.subtitleColor),
+              Icon(Icons.chevron_right, color: context.subtitleColor, size: compact ? 18 : 24),
             ],
           ),
         ),

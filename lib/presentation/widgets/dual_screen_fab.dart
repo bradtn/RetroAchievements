@@ -110,6 +110,8 @@ class _DualScreenFABState extends State<DualScreenFAB> with SingleTickerProvider
   Future<void> _handleModeFromPrimary(DisplayMode mode) async {
     switch (mode) {
       case DisplayMode.topOnly:
+        // Save preference
+        await _dualScreenService.saveDisplayModePreference(DisplayModePreference.topOnly);
         // Dismiss everything - presentation AND activity
         debugPrint('DualScreenFAB: Dismissing all secondary displays');
         // Deactivate companion mode first
@@ -121,6 +123,8 @@ class _DualScreenFABState extends State<DualScreenFAB> with SingleTickerProvider
         break;
 
       case DisplayMode.bottomOnly:
+        // Save preference BEFORE launching
+        await _dualScreenService.saveDisplayModePreference(DisplayModePreference.bottomOnly);
         // Deactivate companion mode
         _dualScreenService.setCompanionModeActive(false);
         // First dismiss companion if active, then launch full app
@@ -139,11 +143,15 @@ class _DualScreenFABState extends State<DualScreenFAB> with SingleTickerProvider
           await Future.delayed(const Duration(milliseconds: 500));
           await _dualScreenService.finishMainActivity();
         } else {
+          // Clear preference if launch failed
+          await _dualScreenService.saveDisplayModePreference(DisplayModePreference.topOnly);
           _showSnackBar('Failed to launch on secondary', isError: true);
         }
         break;
 
       case DisplayMode.dualCompanion:
+        // Save preference
+        await _dualScreenService.saveDisplayModePreference(DisplayModePreference.companion);
         // Activate companion mode - this hides nav bar on main screen
         _dualScreenService.setCompanionModeActive(true);
         // Show companion view on secondary
@@ -159,6 +167,8 @@ class _DualScreenFABState extends State<DualScreenFAB> with SingleTickerProvider
   Future<void> _handleModeFromSecondary(DisplayMode mode) async {
     switch (mode) {
       case DisplayMode.topOnly:
+        // Save preference FIRST
+        await _dualScreenService.saveDisplayModePreference(DisplayModePreference.topOnly);
         // Launch app on primary display and close this (secondary) activity
         debugPrint('DualScreenFAB: Launching app on primary from secondary');
         final success = await _dualScreenService.launchOnPrimary();
@@ -172,11 +182,14 @@ class _DualScreenFABState extends State<DualScreenFAB> with SingleTickerProvider
         break;
 
       case DisplayMode.bottomOnly:
-        // We're already on the bottom screen, nothing to do
+        // We're already on the bottom screen, just confirm the preference
+        await _dualScreenService.saveDisplayModePreference(DisplayModePreference.bottomOnly);
         _showSnackBar('Already on bottom screen');
         break;
 
       case DisplayMode.dualCompanion:
+        // Save preference
+        await _dualScreenService.saveDisplayModePreference(DisplayModePreference.companion);
         // Launch on primary with companion mode
         // First launch on primary
         debugPrint('DualScreenFAB: Launching companion mode from secondary');

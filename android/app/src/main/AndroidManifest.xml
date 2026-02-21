@@ -41,7 +41,8 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
             android:resizeableActivity="true"
-            android:supportsPictureInPicture="false">
+            android:supportsPictureInPicture="false"
+            android:defaultFocusHighlightEnabled="false">
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"

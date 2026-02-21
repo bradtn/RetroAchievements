@@ -12,14 +12,38 @@ class SecondaryDisplayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Disable focus highlight for gamepad navigation
+    FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+
     return MaterialApp(
       title: 'RetroTrack - Achievements',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(useMaterial3: true).copyWith(
         scaffoldBackgroundColor: const Color(0xFF121212),
+        // Disable yellow focus border
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashFactory: NoSplash.splashFactory,
         cardTheme: const CardThemeData(
           color: Color(0xFF1e1e2e),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+        ),
+        // Override button focus
+        iconButtonTheme: IconButtonThemeData(
+          style: ButtonStyle(
+            overlayColor: WidgetStateProperty.all(Colors.transparent),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: ButtonStyle(
+            overlayColor: WidgetStateProperty.all(Colors.transparent),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: ButtonStyle(
+            overlayColor: WidgetStateProperty.all(Colors.transparent),
+          ),
         ),
       ),
       home: const SecondaryDisplayScreen(),
@@ -520,7 +544,16 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
       ),
       child: Row(
         children: [
-          const Text('🎮', style: TextStyle(fontSize: 20)),
+          // RetroTrack logo scaled down
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Image.asset(
+              'assets/RetroTrack.png',
+              height: 24,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Text('🎮', style: TextStyle(fontSize: 20)),
+            ),
+          ),
           const SizedBox(width: 8),
           Text(
             title ?? 'RetroTrack',

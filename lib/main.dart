@@ -16,7 +16,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Disable focus highlight for gamepad/keyboard navigation (removes yellow border)
+  // Set strategy to always use touch mode (no yellow borders)
   FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+
+  // Add listener to force touch mode whenever system tries to switch to traditional
+  FocusManager.instance.addHighlightModeListener((mode) {
+    if (mode == FocusHighlightMode.traditional) {
+      Future.microtask(() {
+        FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+      });
+    }
+  });
 
   // Initialize Firebase (required before runApp for push notifications)
   await Firebase.initializeApp();
@@ -73,5 +83,18 @@ Future<void> _initializeServices() async {
 @pragma('vm:entry-point')
 void secondaryDisplayMain() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Disable focus highlight for gamepad/keyboard navigation (removes yellow border)
+  FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+
+  // Add listener to force touch mode whenever system tries to switch to traditional
+  FocusManager.instance.addHighlightModeListener((mode) {
+    if (mode == FocusHighlightMode.traditional) {
+      Future.microtask(() {
+        FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+      });
+    }
+  });
+
   runApp(const SecondaryDisplayApp());
 }

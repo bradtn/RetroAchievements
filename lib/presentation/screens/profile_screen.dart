@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
 import 'game_detail_screen.dart';
@@ -99,32 +100,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _buildErrorState()
-              : RefreshIndicator(
-                  onRefresh: _loadProfile,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildProfileHeader(),
-                      const SizedBox(height: 16),
-                      _buildStatsCards(),
-                      const SizedBox(height: 16),
-                      _buildActionButtons(isOwnProfile),
-                      const SizedBox(height: 24),
-                      if (_recentGames != null && _recentGames!.isNotEmpty) ...[
-                        _buildSectionHeader('Recent Games', Icons.games),
-                        const SizedBox(height: 8),
-                        _buildRecentGames(),
-                        const SizedBox(height: 24),
-                      ],
-                      if (_recentAchievements != null && _recentAchievements!.isNotEmpty) ...[
-                        _buildSectionHeader('Recent Achievements', Icons.emoji_events),
-                        const SizedBox(height: 8),
-                        _buildRecentAchievements(),
-                      ],
-                      SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 16),
-                    ],
-                  ),
-                ),
+              : _buildContent(isOwnProfile),
+    );
+  }
+
+  Widget _buildContent(bool isOwnProfile) {
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
+    final padding = isWidescreen ? 12.0 : 16.0;
+    final spacing = isWidescreen ? 12.0 : 16.0;
+    final sectionSpacing = isWidescreen ? 16.0 : 24.0;
+
+    return RefreshIndicator(
+      onRefresh: _loadProfile,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+          child: ListView(
+            padding: EdgeInsets.all(padding),
+            children: [
+              _buildProfileHeader(compact: isWidescreen),
+              SizedBox(height: spacing),
+              _buildStatsCards(compact: isWidescreen),
+              SizedBox(height: spacing),
+              _buildActionButtons(isOwnProfile, compact: isWidescreen),
+              SizedBox(height: sectionSpacing),
+              if (_recentGames != null && _recentGames!.isNotEmpty) ...[
+                _buildSectionHeader('Recent Games', Icons.games, compact: isWidescreen),
+                SizedBox(height: isWidescreen ? 6 : 8),
+                _buildRecentGames(compact: isWidescreen),
+                SizedBox(height: sectionSpacing),
+              ],
+              if (_recentAchievements != null && _recentAchievements!.isNotEmpty) ...[
+                _buildSectionHeader('Recent Achievements', Icons.emoji_events, compact: isWidescreen),
+                SizedBox(height: isWidescreen ? 6 : 8),
+                _buildRecentAchievements(compact: isWidescreen),
+              ],
+              SizedBox(height: MediaQuery.of(context).viewPadding.bottom + padding),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -154,16 +169,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader({bool compact = false}) {
     final userPic = _profile?['UserPic'] ?? '';
     final motto = _profile?['Motto'] ?? '';
     final memberSince = _profile?['MemberSince'] ?? '';
     final richPresence = _profile?['RichPresenceMsg'] ?? 'Offline';
     final isOnline = !richPresence.toLowerCase().contains('offline');
 
+    final avatarRadius = compact ? 32.0 : 40.0;
+    final statusSize = compact ? 12.0 : 16.0;
+    final usernameFontSize = compact ? 18.0 : 22.0;
+    final presenceFontSize = compact ? 11.0 : 13.0;
+    final cardPadding = compact ? 12.0 : 16.0;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           children: [
             Row(
@@ -171,7 +192,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Stack(
                   children: [
                     CircleAvatar(
-                      radius: 40,
+                      radius: avatarRadius,
                       backgroundImage: userPic.isNotEmpty
                           ? CachedNetworkImageProvider('https://retroachievements.org$userPic')
                           : null,
@@ -179,7 +200,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: userPic.isEmpty
                           ? Text(
                               widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
-                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: compact ? 20 : 28, fontWeight: FontWeight.bold),
                             )
                           : null,
                     ),
@@ -187,8 +208,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        width: 16,
-                        height: 16,
+                        width: statusSize,
+                        height: statusSize,
                         decoration: BoxDecoration(
                           color: isOnline ? Colors.green : Colors.grey,
                           shape: BoxShape.circle,
@@ -201,21 +222,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: compact ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.username,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: usernameFontSize, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: compact ? 2 : 4),
                       Text(
                         richPresence,
                         style: TextStyle(
                           color: isOnline ? Colors.green : context.subtitleColor,
-                          fontSize: 13,
+                          fontSize: presenceFontSize,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -226,10 +247,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             if (motto.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: compact ? 8 : 12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(compact ? 8 : 12),
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Colors.white.withValues(alpha: 0.05)
@@ -241,15 +262,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   style: TextStyle(
                     color: context.subtitleColor,
                     fontStyle: FontStyle.italic,
+                    fontSize: compact ? 12 : 14,
                   ),
                 ),
               ),
             ],
             if (memberSince.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: compact ? 6 : 8),
               Text(
                 'Member since $memberSince',
-                style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                style: TextStyle(color: context.subtitleColor, fontSize: compact ? 10 : 12),
               ),
             ],
           ],
@@ -258,7 +280,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildStatsCards() {
+  Widget _buildStatsCards({bool compact = false}) {
     final points = _profile?['TotalPoints'] ?? 0;
     final truePoints = _profile?['TotalTruePoints'] ?? 0;
     final rankRaw = _rankData?['Rank'] ?? _rankData?['rank'] ?? 0;
@@ -276,9 +298,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: 'Points',
             color: Colors.amber,
             delay: 0,
+            compact: compact,
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: compact ? 6 : 8),
         Expanded(
           child: AnimatedStatCard(
             icon: Icons.military_tech,
@@ -286,9 +309,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: 'True Points',
             color: Colors.purple,
             delay: 100,
+            compact: compact,
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: compact ? 6 : 8),
         Expanded(
           child: AnimatedStatCard(
             icon: Icons.leaderboard,
@@ -297,15 +321,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             color: Colors.blue,
             delay: 200,
             isRank: true,
+            compact: compact,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons(bool isOwnProfile) {
+  Widget _buildActionButtons(bool isOwnProfile, {bool compact = false}) {
     final friendsState = ref.watch(friendsProvider);
     final isFriend = friendsState.isFriend(widget.username);
+
+    final iconSize = compact ? 16.0 : 18.0;
+    final buttonStyle = compact
+        ? ButtonStyle(
+            padding: WidgetStateProperty.all(
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            ),
+            textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 12)),
+          )
+        : null;
 
     return Column(
       children: [
@@ -319,11 +354,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     builder: (_) => MilestonesScreen(username: widget.username),
                   ),
                 ),
-                icon: const Icon(Icons.emoji_events, size: 18),
+                icon: Icon(Icons.emoji_events, size: iconSize),
                 label: const Text('Awards'),
+                style: buttonStyle,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: compact ? 6 : 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => Navigator.push(
@@ -342,14 +378,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ),
-                icon: const Icon(Icons.share, size: 18),
+                icon: Icon(Icons.share, size: iconSize),
                 label: const Text('Share'),
+                style: buttonStyle,
               ),
             ),
           ],
         ),
         if (!isOwnProfile) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 6 : 8),
           Row(
             children: [
               Expanded(
@@ -360,28 +397,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       builder: (_) => UserCompareScreen(compareUsername: widget.username),
                     ),
                   ),
-                  icon: const Icon(Icons.compare_arrows, size: 18),
+                  icon: Icon(Icons.compare_arrows, size: iconSize),
                   label: const Text('Compare'),
+                  style: buttonStyle,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: compact ? 6 : 8),
               Expanded(
                 child: isFriend
                     ? OutlinedButton.icon(
                         onPressed: () => _removeFriend(),
-                        icon: const Icon(Icons.person_remove, size: 18),
-                        label: const Text('Remove Friend'),
+                        icon: Icon(Icons.person_remove, size: iconSize),
+                        label: Text(compact ? 'Remove' : 'Remove Friend'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
+                          padding: compact ? const EdgeInsets.symmetric(horizontal: 8, vertical: 6) : null,
+                          textStyle: compact ? const TextStyle(fontSize: 12) : null,
                         ),
                       )
                     : FilledButton.icon(
                         onPressed: () => _addFriend(),
-                        icon: const Icon(Icons.person_add, size: 18),
-                        label: const Text('Add Friend'),
+                        icon: Icon(Icons.person_add, size: iconSize),
+                        label: Text(compact ? 'Add' : 'Add Friend'),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.green,
+                          padding: compact ? const EdgeInsets.symmetric(horizontal: 8, vertical: 6) : null,
+                          textStyle: compact ? const TextStyle(fontSize: 12) : null,
                         ),
                       ),
               ),
@@ -434,14 +476,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, IconData icon, {bool compact = false}) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey),
-        const SizedBox(width: 8),
+        Icon(icon, size: compact ? 16 : 20, color: Colors.grey),
+        SizedBox(width: compact ? 6 : 8),
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: (compact
+              ? Theme.of(context).textTheme.titleSmall
+              : Theme.of(context).textTheme.titleMedium)?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -449,9 +493,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildRecentGames() {
+  Widget _buildRecentGames({bool compact = false}) {
+    final height = compact ? 110.0 : 140.0;
+
     return SizedBox(
-      height: 140,
+      height: height,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _recentGames!.length,
@@ -461,9 +507,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final title = game['Title'] ?? 'Unknown';
 
           return Padding(
-            padding: EdgeInsets.only(right: i < _recentGames!.length - 1 ? 12 : 0),
+            padding: EdgeInsets.only(right: i < _recentGames!.length - 1 ? (compact ? 8 : 12) : 0),
             child: RecentGameTile(
               game: game,
+              compact: compact,
               onTap: () {
                 final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
                 if (id > 0) {
@@ -482,7 +529,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildRecentAchievements() {
+  Widget _buildRecentAchievements({bool compact = false}) {
     final toShow = _recentAchievements!.take(5).toList();
 
     return Column(
@@ -493,6 +540,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
         return RecentAchievementTile(
           achievement: achievement,
+          compact: compact,
           onTap: () {
             final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
             if (id > 0) {

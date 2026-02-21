@@ -1,11 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Display mode options
+enum DisplayModePreference {
+  topOnly,
+  bottomOnly,
+  companion,
+}
 
 /// Service for managing dual-screen functionality on devices like Ayn Odin
 /// Uses singleton pattern to ensure only one method channel handler exists
 class DualScreenService {
   static const _channel = MethodChannel('com.retrotracker.retrotracker/dual_screen');
+  static const _displayModeKey = 'display_mode_preference';
+  static const _displayModeTimestampKey = 'display_mode_timestamp';
 
   // Singleton instance
   static final DualScreenService _instance = DualScreenService._internal();
@@ -13,6 +23,9 @@ class DualScreenService {
 
   bool _isSecondaryScreen = false;
   bool get isSecondaryScreen => _isSecondaryScreen;
+
+  // Cached display mode preference
+  DisplayModePreference? _cachedDisplayMode;
 
   // Companion mode state - when active, nav bar moves to secondary display
   bool _isCompanionModeActive = false;
@@ -322,6 +335,48 @@ class DualScreenService {
       'type': 'navigationChanged',
       'tabIndex': tabIndex,
     });
+  }
+
+  /// Save the display mode preference
+  Future<void> saveDisplayModePreference(DisplayModePreference mode) async {
+    _cachedDisplayMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_displayModeKey, mode.index);
+    // Save timestamp to detect recent changes
+    await prefs.setInt(_displayModeTimestampKey, DateTime.now().millisecondsSinceEpoch);
+    debugPrint('DualScreenService: Saved display mode preference: $mode');
+  }
+
+  /// Get the saved display mode preference
+  Future<DisplayModePreference> getDisplayModePreference() async {
+    if (_cachedDisplayMode != null) return _cachedDisplayMode!;
+    final prefs = await SharedPreferences.getInstance();
+    final index = prefs.getInt(_displayModeKey) ?? DisplayModePreference.topOnly.index;
+    _cachedDisplayMode = DisplayModePreference.values[index];
+    return _cachedDisplayMode!;
+  }
+
+  /// Clear the display mode preference (reset to default)
+  Future<void> clearDisplayModePreference() async {
+    _cachedDisplayMode = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_displayModeKey);
+    debugPrint('DualScreenService: Cleared display mode preference');
+  }
+
+  /// Check if a mode switch happened recently (within last 10 seconds)
+  /// Used to prevent auto-companion when user intentionally switched modes
+  Future<bool> wasModeSwitchedRecently() async {
+    final prefs = await SharedPreferences.getInstance();
+    final timestamp = prefs.getInt(_displayModeTimestampKey) ?? 0;
+    if (timestamp == 0) return false; // No timestamp = fresh install
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final timeSinceChange = now - timestamp;
+    final isRecent = timeSinceChange < 10000; // 10 seconds
+
+    debugPrint('DualScreenService: Mode switch was ${timeSinceChange}ms ago, isRecent=$isRecent');
+    return isRecent;
   }
 
   List<DisplayInfo> _parseDisplayList(dynamic data) {

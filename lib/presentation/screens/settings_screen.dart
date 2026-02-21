@@ -125,7 +125,6 @@ class SettingsScreen extends ConsumerWidget {
             leading: Icon(Icons.palette, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Theme', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
             subtitle: Text(_themeName(themeMode), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-            trailing: themeMode == AppThemeMode.amoled && !premium.isPremium ? const ProBadge() : null,
             onTap: () => _showThemeDialog(context, ref, themeMode),
           ),
           _AccentColorTile(isDark: isDark, isPremium: premium.isPremium),
@@ -345,8 +344,6 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showThemeDialog(BuildContext context, WidgetRef ref, AppThemeMode current) {
-    final isPremium = ref.read(isPremiumProvider);
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -354,29 +351,16 @@ class SettingsScreen extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: AppThemeMode.values.map((mode) {
-            final isAmoled = mode == AppThemeMode.amoled;
-            final isLocked = isAmoled && !isPremium;
-
             return RadioListTile<AppThemeMode>(
-              title: Row(
-                children: [
-                  Text(_themeName(mode)),
-                  if (isLocked) ...[
-                    const SizedBox(width: 8),
-                    Icon(Icons.lock, size: 16, color: Colors.grey[500]),
-                  ],
-                ],
-              ),
+              title: Text(_themeName(mode)),
               value: mode,
               groupValue: current,
-              onChanged: isLocked
-                  ? null
-                  : (v) {
-                      if (v != null) {
-                        ref.read(themeProvider.notifier).setTheme(v);
-                        Navigator.pop(ctx);
-                      }
-                    },
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(themeProvider.notifier).setTheme(v);
+                  Navigator.pop(ctx);
+                }
+              },
             );
           }).toList(),
         ),
@@ -523,9 +507,8 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
                 ),
                 const SizedBox(height: 20),
                 const CheckItem('Remove all ads'),
-                const CheckItem('Theme customization'),
+                const CheckItem('Accent color customization'),
                 const CheckItem('Home screen widgets'),
-                const CheckItem('AMOLED dark mode'),
                 const CheckItem('Share cards'),
                 const SizedBox(height: 24),
                 SizedBox(
