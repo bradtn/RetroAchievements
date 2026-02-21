@@ -2,16 +2,29 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/dual_screen_service.dart';
 import '../../data/cache/game_cache.dart';
 import '../../services/widget_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/ra_status_banner.dart';
+import '../widgets/dual_screen_fab.dart';
 import 'settings_screen.dart';
 import 'home/home_tab.dart';
 import 'home/explore_tab.dart';
 import 'home/achievements_tab.dart';
+// Explore screens for companion mode navigation
+import 'game_search_screen.dart';
+import 'live_feed_screen.dart';
+import 'milestones/milestones_screen.dart';
+import 'favorites_screen.dart';
+import 'aotw_screen.dart';
+import 'aotm_screen.dart';
+import 'console_browser_screen.dart';
+import 'leaderboard_screen.dart';
+import 'friends_screen.dart';
+import 'calendar_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -27,10 +40,115 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<dynamic>? _recentAchievements;
   bool _isLoading = true;
 
+  // Dual-screen companion mode
+  final DualScreenService _dualScreen = DualScreenService();
+  bool _isCompanionModeActive = false;
+
   @override
   void initState() {
     super.initState();
+    _isCompanionModeActive = _dualScreen.isCompanionModeActive;
+    _dualScreen.addCompanionModeListener(_onCompanionModeChanged);
+    _dualScreen.addSecondaryEventListener(_onSecondaryEvent);
     _loadData();
+    _autoEnableCompanionMode();
+  }
+
+  /// Auto-enable companion mode on dual-screen devices
+  Future<void> _autoEnableCompanionMode() async {
+    // Small delay to let the display detection initialize
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    final hasSecondary = await _dualScreen.hasSecondaryDisplay();
+    if (hasSecondary && !_isCompanionModeActive) {
+      debugPrint('HomeScreen: Auto-enabling companion mode for dual-screen device');
+      _dualScreen.setCompanionModeActive(true);
+      await _dualScreen.showOnSecondary(route: '/secondary');
+    }
+  }
+
+  @override
+  void dispose() {
+    _dualScreen.removeCompanionModeListener(_onCompanionModeChanged);
+    _dualScreen.removeSecondaryEventListener(_onSecondaryEvent);
+    super.dispose();
+  }
+
+  void _onCompanionModeChanged(bool active) {
+    if (mounted) {
+      setState(() => _isCompanionModeActive = active);
+      // Send current tab to secondary when companion mode activates
+      if (active) {
+        _dualScreen.sendNavigationEvent(_currentIndex);
+      }
+    }
+  }
+
+  void _onSecondaryEvent(String event, Map<String, dynamic> data) {
+    if (!mounted) return;
+    if (event == 'navigationChanged') {
+      // Navigation event from secondary display
+      final tabIndex = data['tabIndex'] as int?;
+      if (tabIndex != null && tabIndex >= 0 && tabIndex <= 3) {
+        // Pop back to home screen if we're on a sub-screen
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        setState(() => _currentIndex = tabIndex);
+      }
+    } else if (event == 'navigateTo') {
+      // Navigate to a specific screen from secondary display
+      final screen = data['screen'] as String?;
+      if (screen != null) {
+        _navigateToScreen(screen);
+      }
+    }
+  }
+
+  /// Navigate to a screen requested by the secondary display
+  void _navigateToScreen(String screen) {
+    // Import these screens at the top if not already imported
+    switch (screen) {
+      // Explore screens
+      case 'explore_search':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const GameSearchScreen()));
+        break;
+      case 'explore_live_feed':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveFeedScreen()));
+        break;
+      case 'explore_awards':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const MilestonesScreen()));
+        break;
+      case 'explore_favorites':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()));
+        break;
+      case 'explore_aotw':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementOfTheWeekScreen()));
+        break;
+      case 'explore_aotm':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementOfTheMonthScreen()));
+        break;
+      case 'explore_consoles':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsoleBrowserScreen()));
+        break;
+      case 'explore_leaderboard':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen()));
+        break;
+      case 'explore_friends':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
+        break;
+      case 'explore_streaks':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen()));
+        break;
+      // Settings screens - just switch to settings tab for now
+      case 'settings_account':
+      case 'settings_appearance':
+      case 'settings_notifications':
+      case 'settings_display':
+      case 'settings_premium':
+      case 'settings_about':
+        setState(() => _currentIndex = 3); // Switch to settings tab
+        break;
+    }
   }
 
   Future<void> _loadData() async {
@@ -228,35 +346,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          const RAStatusBanner(),
-          Expanded(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: [
-                HomeTab(
-                  profile: _profile,
-                  recentGames: _recentGames,
-                  isLoading: _isLoading,
-                  onRefresh: _loadData,
+          // Main content
+          Column(
+            children: [
+              const RAStatusBanner(),
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    HomeTab(
+                      profile: _profile,
+                      recentGames: _recentGames,
+                      isLoading: _isLoading,
+                      onRefresh: _loadData,
+                    ),
+                    ExploreTab(isSelected: _currentIndex == 1),
+                    AchievementsTab(
+                      achievements: _recentAchievements,
+                      isLoading: _isLoading,
+                      onRefresh: _loadData,
+                    ),
+                    const SettingsScreen(),
+                  ],
                 ),
-                ExploreTab(isSelected: _currentIndex == 1),
-                AchievementsTab(
-                  achievements: _recentAchievements,
-                  isLoading: _isLoading,
-                  onRefresh: _loadData,
-                ),
-                const SettingsScreen(),
-              ],
-            ),
+              ),
+              const AdBanner(),
+            ],
           ),
-          const AdBanner(),
+          // Dual-screen FAB (only shows on multi-display devices)
+          const Positioned(
+            right: 8,
+            bottom: 8, // Just above the ad banner
+            child: DualScreenFAB(),
+          ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      // Hide bottom nav when companion mode is active (nav is on secondary screen)
+      bottomNavigationBar: _isCompanionModeActive ? null : NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        onDestinationSelected: (i) {
+          setState(() => _currentIndex = i);
+          // Sync to secondary if companion mode is active
+          if (_isCompanionModeActive) {
+            _dualScreen.sendNavigationEvent(i);
+          }
+        },
         destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined, color: Colors.grey.shade600),

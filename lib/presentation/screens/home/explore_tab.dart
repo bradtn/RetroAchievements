@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/animations.dart';
+import '../../../core/responsive_utils.dart';
 import '../game_search_screen.dart';
 import '../live_feed_screen.dart';
 import '../milestones/milestones_screen.dart';
@@ -145,13 +146,10 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
       ),
     ];
 
-    // Calculate responsive column count based on screen width
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = screenWidth < 400 ? 3
-        : screenWidth < 600 ? 3
-        : screenWidth < 900 ? 4
-        : screenWidth < 1200 ? 5
-        : 6;
+    // Calculate responsive column count based on screen width and aspect ratio
+    final crossAxisCount = context.gridColumns(min: 2, max: 6);
+    // Adjust aspect ratio for square screens
+    final childAspectRatio = context.isSquareScreen ? 0.85 : 0.95;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Explore')),
@@ -165,7 +163,7 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
                 crossAxisCount: crossAxisCount,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 0.95,
+                childAspectRatio: childAspectRatio,
               ),
               itemCount: items.length,
               itemBuilder: (context, index) {

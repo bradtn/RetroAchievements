@@ -399,7 +399,93 @@ class _PremiumRequiredScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isWidescreen = size.width > size.height && size.width > 600;
 
+    // Compact layout for widescreen
+    if (isWidescreen) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.amber.withValues(alpha: 0.15),
+                ),
+                child: Icon(
+                  icon,
+                  size: 40,
+                  color: Colors.amber.shade600,
+                ),
+              ),
+              const SizedBox(width: 24),
+              // Content
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'PREMIUM',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        featureName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 24),
+              // Button
+              FilledButton.icon(
+                onPressed: onUpgrade,
+                icon: const Icon(Icons.star, size: 16),
+                label: const Text('Unlock \$4.99'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Normal portrait layout
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),

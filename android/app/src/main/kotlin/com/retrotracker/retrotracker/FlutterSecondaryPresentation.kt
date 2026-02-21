@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.Display
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import io.flutter.embedding.android.FlutterView
@@ -34,6 +35,10 @@ class FlutterSecondaryPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "Creating Flutter secondary presentation on display ${display.displayId}")
+
+        // Prevent dismissal from back button, outside touch, etc.
+        setCancelable(false)
+        setCanceledOnTouchOutside(false)
 
         // Create FlutterView attached to our secondary engine
         flutterView = FlutterView(context).apply {
@@ -99,6 +104,28 @@ class FlutterSecondaryPresentation(
     override fun dismiss() {
         flutterView.detachFromFlutterEngine()
         super.dismiss()
+    }
+
+    /**
+     * Intercept key events to prevent accidental dismissal.
+     * Back button and keyboard dismiss should not close the presentation.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Intercept back button - don't let it dismiss the presentation
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            Log.d(TAG, "Back key intercepted - not dismissing presentation")
+            // Let Flutter handle the back event if needed
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Override to prevent the presentation from being cancelled by outside touches or back press
+     */
+    override fun onBackPressed() {
+        Log.d(TAG, "onBackPressed intercepted - not dismissing")
+        // Don't call super - we don't want to dismiss
     }
 
     /**

@@ -54,6 +54,10 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
   bool _showMissable = false;
   int _numDistinctPlayers = 0;
 
+  // Companion mode state - shows navigation bar
+  bool _isCompanionModeActive = false;
+  int _currentNavIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +69,21 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
       switch (call.method) {
         case 'updateGameData':
           final data = Map<String, dynamic>.from(call.arguments as Map);
+          // Check for special message types first
+          final type = data['type'] as String?;
+          if (type == 'companionModeChanged') {
+            setState(() {
+              _isCompanionModeActive = data['active'] as bool? ?? false;
+            });
+            return true;
+          }
+          if (type == 'navigationChanged') {
+            setState(() {
+              _currentNavIndex = data['tabIndex'] as int? ?? 0;
+            });
+            return true;
+          }
+          // Regular game data update
           setState(() {
             _gameData = data;
             _achievements = _parseAchievements(data['achievements']);
@@ -99,6 +118,12 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
           return null;
       }
     });
+  }
+
+  /// Handle navigation tap on secondary display
+  void _onNavTap(int index) {
+    setState(() => _currentNavIndex = index);
+    _sendToMain('navigationChanged', {'tabIndex': index});
   }
 
   /// Send event to main app
@@ -231,10 +256,17 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Companion mode = purely navigation, no achievements
+    if (_isCompanionModeActive) {
+      return _buildNavigationPanel();
+    }
+
+    // Non-companion mode: show achievements if we have game data
     if (_gameData == null) {
       return _buildWaitingScreen();
     }
 
+    // When game data is present (not companion mode), show achievements
     return Scaffold(
       body: Column(
         children: [
@@ -244,6 +276,313 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
             child: _buildAchievementsList(),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Build navigation panel for companion mode
+  /// Always shows explore panel with bottom nav - simple and consistent
+  Widget _buildNavigationPanel() {
+    return _buildExplorePanel();
+  }
+
+  /// Build the navigation grid panel (for Home/Achievements tabs)
+  Widget _buildNavGridPanel() {
+    final tabs = [
+      {'icon': '🏠', 'label': 'Home'},
+      {'icon': '🔍', 'label': 'Explore'},
+      {'icon': '🏆', 'label': 'Achievements'},
+      {'icon': '⚙️', 'label': 'Settings'},
+    ];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildCompanionHeader(),
+            // Navigation grid - 2x2 fixed, no scrolling
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  children: [
+                    // First row
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _NavigationCard(
+                              icon: tabs[0]['icon']!,
+                              label: tabs[0]['label']!,
+                              isSelected: _currentNavIndex == 0,
+                              onTap: () => _onNavTap(0),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _NavigationCard(
+                              icon: tabs[1]['icon']!,
+                              label: tabs[1]['label']!,
+                              isSelected: _currentNavIndex == 1,
+                              onTap: () => _onNavTap(1),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Second row
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _NavigationCard(
+                              icon: tabs[2]['icon']!,
+                              label: tabs[2]['label']!,
+                              isSelected: _currentNavIndex == 2,
+                              onTap: () => _onNavTap(2),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _NavigationCard(
+                              icon: tabs[3]['icon']!,
+                              label: tabs[3]['label']!,
+                              isSelected: _currentNavIndex == 3,
+                              onTap: () => _onNavTap(3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Info text - compact
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Tap Explore or Settings to browse here',
+                style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build the Explore panel showing explore options
+  Widget _buildExplorePanel() {
+    final exploreItems = [
+      {'icon': '🔎', 'label': 'Search', 'color': Colors.pink, 'action': 'search'},
+      {'icon': '📡', 'label': 'Live', 'color': Colors.red, 'action': 'live_feed'},
+      {'icon': '🎖️', 'label': 'Awards', 'color': Colors.purple, 'action': 'awards'},
+      {'icon': '⭐', 'label': 'Favorites', 'color': Colors.amber, 'action': 'favorites'},
+      {'icon': '🏆', 'label': 'AOTW', 'color': Colors.orange, 'action': 'aotw'},
+      {'icon': '📅', 'label': 'AOTM', 'color': Colors.deepPurple, 'action': 'aotm'},
+      {'icon': '🎮', 'label': 'Consoles', 'color': Colors.blue, 'action': 'consoles'},
+      {'icon': '📊', 'label': 'Boards', 'color': Colors.green, 'action': 'leaderboard'},
+      {'icon': '👥', 'label': 'Friends', 'color': Colors.teal, 'action': 'friends'},
+      {'icon': '🔥', 'label': 'Streaks', 'color': Colors.orange, 'action': 'streaks'},
+    ];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildCompanionHeader(title: 'Explore'),
+            // Explore grid - 5x2 layout, no scrolling
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Column(
+                  children: [
+                    // Row 1
+                    Expanded(
+                      child: Row(
+                        children: List.generate(5, (i) => Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(3),
+                            child: _ExploreCardCompact(
+                              icon: exploreItems[i]['icon'] as String,
+                              label: exploreItems[i]['label'] as String,
+                              color: exploreItems[i]['color'] as Color,
+                              onTap: () => _onExploreTap(exploreItems[i]['action'] as String),
+                            ),
+                          ),
+                        )),
+                      ),
+                    ),
+                    // Row 2
+                    Expanded(
+                      child: Row(
+                        children: List.generate(5, (i) => Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(3),
+                            child: _ExploreCardCompact(
+                              icon: exploreItems[i + 5]['icon'] as String,
+                              label: exploreItems[i + 5]['label'] as String,
+                              color: exploreItems[i + 5]['color'] as Color,
+                              onTap: () => _onExploreTap(exploreItems[i + 5]['action'] as String),
+                            ),
+                          ),
+                        )),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Bottom nav to switch tabs
+            _buildBottomNav(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build the Settings panel
+  Widget _buildSettingsPanel() {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildCompanionHeader(title: 'Settings'),
+            // Settings options
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  _SettingsCard(
+                    icon: '👤',
+                    label: 'Account',
+                    subtitle: 'Profile & login',
+                    onTap: () => _onSettingsTap('account'),
+                  ),
+                  _SettingsCard(
+                    icon: '🎨',
+                    label: 'Appearance',
+                    subtitle: 'Theme & display',
+                    onTap: () => _onSettingsTap('appearance'),
+                  ),
+                  _SettingsCard(
+                    icon: '🔔',
+                    label: 'Notifications',
+                    subtitle: 'Alerts & reminders',
+                    onTap: () => _onSettingsTap('notifications'),
+                  ),
+                  _SettingsCard(
+                    icon: '📱',
+                    label: 'Display',
+                    subtitle: 'Dual screen options',
+                    onTap: () => _onSettingsTap('display'),
+                  ),
+                  _SettingsCard(
+                    icon: '⭐',
+                    label: 'Premium',
+                    subtitle: 'Upgrade & features',
+                    color: Colors.amber,
+                    onTap: () => _onSettingsTap('premium'),
+                  ),
+                  _SettingsCard(
+                    icon: 'ℹ️',
+                    label: 'About',
+                    subtitle: 'Version & credits',
+                    onTap: () => _onSettingsTap('about'),
+                  ),
+                ],
+              ),
+            ),
+            // Bottom nav to switch tabs
+            _buildBottomNav(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build companion mode header
+  Widget _buildCompanionHeader({String? title}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1e1e2e),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Text('🎮', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Text(
+            title ?? 'RetroTrack',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '📡 Companion',
+              style: TextStyle(
+                color: Colors.green,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Handle explore item tap - send to main app
+  void _onExploreTap(String action) {
+    debugPrint('SecondaryDisplay: Explore tap - $action');
+    _sendToMain('navigateTo', {'screen': 'explore_$action'});
+  }
+
+  /// Handle settings item tap - send to main app
+  void _onSettingsTap(String section) {
+    debugPrint('SecondaryDisplay: Settings tap - $section');
+    _sendToMain('navigateTo', {'screen': 'settings_$section'});
+  }
+
+  /// Build bottom navigation bar for companion mode
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1e1e2e),
+        border: Border(top: BorderSide(color: Colors.grey[800]!, width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(icon: '🏠', label: 'Home', isSelected: _currentNavIndex == 0, onTap: () => _onNavTap(0)),
+              _NavItem(icon: '🔍', label: 'Explore', isSelected: _currentNavIndex == 1, onTap: () => _onNavTap(1)),
+              _NavItem(icon: '🏆', label: 'Achievements', isSelected: _currentNavIndex == 2, onTap: () => _onNavTap(2)),
+              _NavItem(icon: '⚙️', label: 'Settings', isSelected: _currentNavIndex == 3, onTap: () => _onNavTap(3)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -826,6 +1165,287 @@ class _SecondaryAchievementTile extends StatelessWidget {
       height: 44,
       color: Colors.grey[800],
       child: const Center(child: Text('🏆', style: TextStyle(fontSize: 20))),
+    );
+  }
+}
+
+/// Navigation card for the companion mode grid
+class _NavigationCard extends StatelessWidget {
+  final String icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavigationCard({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.deepPurple.withValues(alpha: 0.3)
+              : const Color(0xFF1e1e2e),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? Colors.deepPurple : Colors.grey[800]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              icon,
+              style: TextStyle(
+                fontSize: isSelected ? 32 : 28,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.deepPurple[200] : Colors.grey[400],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom nav item for companion mode
+class _NavItem extends StatelessWidget {
+  final String icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            icon,
+            style: TextStyle(fontSize: isSelected ? 22 : 20),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.deepPurple[200] : Colors.grey[500],
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Explore item card for companion mode
+class _ExploreCard extends StatelessWidget {
+  final String icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ExploreCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1e1e2e),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!, width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                icon,
+                style: const TextStyle(fontSize: 22),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[300],
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact explore card for 5x2 grid layout
+class _ExploreCardCompact extends StatelessWidget {
+  final String icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ExploreCardCompact({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[300],
+                fontSize: 9,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Settings item card for companion mode
+class _SettingsCard extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String subtitle;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _SettingsCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1e1e2e),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color?.withValues(alpha: 0.3) ?? Colors.grey[800]!,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (color ?? Colors.grey).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                icon,
+                style: const TextStyle(fontSize: 22),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color ?? Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '›',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

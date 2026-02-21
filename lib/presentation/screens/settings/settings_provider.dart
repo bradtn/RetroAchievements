@@ -59,10 +59,10 @@ class NotificationSettings {
   final int reminderMinute;
 
   NotificationSettings({
-    this.streakNotificationsEnabled = true,
-    this.eveningReminderEnabled = true,
-    this.milestonesEnabled = true,
-    this.dailySummaryEnabled = true,
+    this.streakNotificationsEnabled = false,
+    this.eveningReminderEnabled = false,
+    this.milestonesEnabled = false,
+    this.dailySummaryEnabled = false,
     this.aotwNotificationsEnabled = true,
     this.aotmNotificationsEnabled = true,
     this.reminderHour = 19,
@@ -109,10 +109,10 @@ class NotificationSettingsNotifier extends Notifier<NotificationSettings> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     state = NotificationSettings(
-      streakNotificationsEnabled: prefs.getBool('streak_notifications_enabled') ?? true,
-      eveningReminderEnabled: prefs.getBool('streak_reminder_enabled') ?? true,
-      milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? true,
-      dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? true,
+      streakNotificationsEnabled: prefs.getBool('streak_notifications_enabled') ?? false,
+      eveningReminderEnabled: prefs.getBool('streak_reminder_enabled') ?? false,
+      milestonesEnabled: prefs.getBool('milestone_notifications_enabled') ?? false,
+      dailySummaryEnabled: prefs.getBool('daily_summary_enabled') ?? false,
       aotwNotificationsEnabled: prefs.getBool('aotw_notifications_enabled') ?? true,
       aotmNotificationsEnabled: prefs.getBool('aotm_notifications_enabled') ?? true,
       reminderHour: prefs.getInt('reminder_hour') ?? 19,

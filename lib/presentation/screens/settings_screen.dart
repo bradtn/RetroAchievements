@@ -13,7 +13,6 @@ import '../../services/sound_service.dart';
 import '../../core/animations.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_notification_service.dart';
-import '../../data/datasources/ra_api_datasource.dart';
 import '../../core/services/dual_screen_service.dart';
 import 'settings/settings_provider.dart';
 import 'settings/settings_widgets.dart';
@@ -382,12 +381,6 @@ class SettingsScreen extends ConsumerWidget {
           }).toList(),
         ),
       ),
-    );
-  }
-
-  void _showPremiumRequired(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Premium feature - upgrade to unlock!')),
     );
   }
 
@@ -929,7 +922,7 @@ class _SoundEffectsTileState extends State<_SoundEffectsTile> {
   }
 }
 
-/// Dual-screen settings tile for devices like Ayn Odin
+/// Dual-screen settings tile for devices like Ayn Thor/Odin
 class _DualScreenTile extends ConsumerStatefulWidget {
   final bool isDark;
 
@@ -944,6 +937,8 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
   bool _hasSecondaryDisplay = false;
   bool _isSecondaryActive = false;
   List<DisplayInfo> _displays = [];
+  int _currentDisplayId = 0;
+  bool _isLaunching = false;
 
   @override
   void initState() {
@@ -955,10 +950,12 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
   Future<void> _checkDisplays() async {
     final hasSecondary = await _dualScreenService.hasSecondaryDisplay();
     final displays = await _dualScreenService.getDisplays();
+    final currentId = await _dualScreenService.getCurrentDisplayId();
     if (mounted) {
       setState(() {
         _hasSecondaryDisplay = hasSecondary;
         _displays = displays;
+        _currentDisplayId = currentId;
       });
     }
   }
@@ -972,13 +969,74 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
     }
   }
 
-  Future<void> _toggleSecondaryDisplay() async {
+  Future<void> _toggleCompanionDisplay() async {
     if (_isSecondaryActive) {
       await _dualScreenService.dismissSecondary();
       setState(() => _isSecondaryActive = false);
     } else {
       await _dualScreenService.showOnSecondary(route: '/secondary');
       setState(() => _isSecondaryActive = true);
+    }
+  }
+
+  Future<void> _launchFullAppOnSecondary() async {
+    if (_isLaunching) return;
+
+    setState(() => _isLaunching = true);
+    HapticFeedback.mediumImpact();
+
+    final success = await _dualScreenService.launchFullAppOnSecondary();
+
+    if (mounted) {
+      setState(() => _isLaunching = false);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Launching RetroTrack on secondary display...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to launch on secondary display'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchOnDisplay(DisplayInfo display) async {
+    if (_isLaunching) return;
+
+    setState(() => _isLaunching = true);
+    HapticFeedback.mediumImpact();
+
+    final success = await _dualScreenService.launchOnDisplay(
+      display.displayId,
+      launchFullApp: true,
+    );
+
+    if (mounted) {
+      setState(() => _isLaunching = false);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Launching on ${display.name}...'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to launch on ${display.name}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -992,7 +1050,7 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
             color: widget.isDark ? Colors.white70 : Colors.grey.shade700,
           ),
           title: Text(
-            'Secondary Display',
+            'Multi-Display',
             style: TextStyle(color: widget.isDark ? Colors.white : Colors.black87),
           ),
           subtitle: Text(
@@ -1002,20 +1060,78 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
             style: TextStyle(color: widget.isDark ? Colors.grey[400] : Colors.grey[600]),
           ),
           trailing: _hasSecondaryDisplay
-              ? Switch(
-                  value: _isSecondaryActive,
-                  onChanged: (_) => _toggleSecondaryDisplay(),
+              ? IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _checkDisplays,
                 )
               : Icon(Icons.info_outline, color: Colors.grey[500]),
-          onTap: _hasSecondaryDisplay ? _toggleSecondaryDisplay : _showNoDisplayInfo,
+          onTap: _hasSecondaryDisplay ? null : _showNoDisplayInfo,
         ),
+
+        // Display list with launch buttons
         if (_displays.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
-              children: _displays.map((d) => _DisplayInfoRow(display: d, isDark: widget.isDark)).toList(),
+              children: _displays.map((d) => _DisplayInfoRowWithActions(
+                display: d,
+                isDark: widget.isDark,
+                isCurrentDisplay: d.displayId == _currentDisplayId,
+                onLaunch: () => _launchOnDisplay(d),
+                isLaunching: _isLaunching,
+              )).toList(),
             ),
           ),
+
+        // Quick actions for secondary display
+        if (_hasSecondaryDisplay) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isLaunching ? null : _launchFullAppOnSecondary,
+                    icon: _isLaunching
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('Full App'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _toggleCompanionDisplay,
+                    icon: Icon(
+                      _isSecondaryActive ? Icons.close : Icons.view_sidebar,
+                      size: 18,
+                    ),
+                    label: Text(_isSecondaryActive ? 'Close' : 'Companion'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Full App: Run RetroTrack independently on secondary display\n'
+              'Companion: Show achievements list while browsing on main',
+              style: TextStyle(
+                fontSize: 11,
+                color: widget.isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -1028,13 +1144,14 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
           children: [
             Icon(Icons.connected_tv),
             SizedBox(width: 8),
-            Text('Dual-Screen Mode'),
+            Text('Multi-Display Mode'),
           ],
         ),
         content: const Text(
-          'This feature is designed for dual-screen devices like the Ayn Odin.\n\n'
-          'When a secondary display is detected, you can show game info on one screen '
-          'while navigating on the other.\n\n'
+          'This feature is designed for multi-display devices like the Ayn Thor.\n\n'
+          'When a secondary display is detected, you can:\n'
+          '• Launch the full app on either display\n'
+          '• Show a companion view (achievements list) on one screen while browsing on the other\n\n'
           'No secondary display is currently connected.',
         ),
         actions: [
@@ -1048,49 +1165,133 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
   }
 }
 
-class _DisplayInfoRow extends StatelessWidget {
+/// Display info row with launch action button
+class _DisplayInfoRowWithActions extends StatelessWidget {
   final DisplayInfo display;
   final bool isDark;
+  final bool isCurrentDisplay;
+  final VoidCallback onLaunch;
+  final bool isLaunching;
 
-  const _DisplayInfoRow({required this.display, required this.isDark});
+  const _DisplayInfoRowWithActions({
+    required this.display,
+    required this.isDark,
+    required this.isCurrentDisplay,
+    required this.onLaunch,
+    required this.isLaunching,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isCurrentDisplay
+            ? (isDark ? Colors.green.withValues(alpha: 0.15) : Colors.green.withValues(alpha: 0.1))
+            : (isDark ? Colors.grey.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.05)),
+        borderRadius: BorderRadius.circular(8),
+        border: isCurrentDisplay
+            ? Border.all(color: Colors.green.withValues(alpha: 0.3))
+            : null,
+      ),
       child: Row(
         children: [
           Icon(
             display.isDefault ? Icons.smartphone : Icons.tv,
-            size: 16,
-            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            size: 20,
+            color: isCurrentDisplay
+                ? Colors.green
+                : (isDark ? Colors.grey[400] : Colors.grey[600]),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              '${display.name} (${display.width}x${display.height})',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        display.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isCurrentDisplay ? FontWeight.bold : FontWeight.normal,
+                          color: isCurrentDisplay
+                              ? Colors.green
+                              : (isDark ? Colors.white : Colors.black87),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isCurrentDisplay) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'CURRENT',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      '${display.width}x${display.height}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: display.isWidescreen
+                            ? Colors.blue.withValues(alpha: 0.2)
+                            : Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Text(
+                        display.isWidescreen ? '16:9' : '4:3',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: display.isWidescreen ? Colors.blue : Colors.orange,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: display.isWidescreen
-                  ? Colors.blue.withValues(alpha: 0.2)
-                  : Colors.orange.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              display.isWidescreen ? '16:9' : '4:3',
-              style: TextStyle(
-                fontSize: 10,
-                color: display.isWidescreen ? Colors.blue : Colors.orange,
+          if (!isCurrentDisplay)
+            TextButton(
+              onPressed: isLaunching ? null : onLaunch,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: Size.zero,
               ),
+              child: isLaunching
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Launch', style: TextStyle(fontSize: 12)),
             ),
-          ),
         ],
       ),
     );

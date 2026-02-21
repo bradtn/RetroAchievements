@@ -1,7 +1,10 @@
 package com.retrotracker.retrotracker
 
+import android.app.ActivityOptions
 import android.content.Context
+import android.content.Intent
 import android.hardware.display.DisplayManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -43,7 +46,7 @@ class DualScreenManager(
         override fun onDisplayRemoved(displayId: Int) {
             Log.d(TAG, "Display removed: $displayId")
             if (secondaryPresentation?.display?.displayId == displayId) {
-                dismissSecondaryDisplay()
+                dismissSecondaryPresentation()
             }
             notifyDisplayChange()
         }
@@ -73,7 +76,24 @@ class DualScreenManager(
                         result.success(true)
                     }
                     "dismissSecondary" -> {
-                        dismissSecondaryDisplay()
+                        // Only dismiss the presentation, not the activity
+                        dismissSecondaryPresentation()
+                        result.success(true)
+                    }
+                    "closeSecondaryActivity" -> {
+                        // Explicitly close SecondaryDisplayActivity
+                        closeSecondaryActivity()
+                        result.success(true)
+                    }
+                    "dismissAll" -> {
+                        // Dismiss everything - presentation AND activity
+                        dismissSecondaryPresentation()
+                        closeSecondaryActivity()
+                        result.success(true)
+                    }
+                    "finishMainActivity" -> {
+                        // Close the main activity (for bottom-only mode)
+                        finishMainActivity()
                         result.success(true)
                     }
                     "getSecondaryDisplayInfo" -> {
@@ -88,6 +108,29 @@ class DualScreenManager(
                     "isSecondaryActive" -> {
                         result.success(secondaryPresentation != null)
                     }
+                    "launchOnDisplay" -> {
+                        val displayId = call.argument<Int>("displayId") ?: -1
+                        val launchFull = call.argument<Boolean>("launchFullApp") ?: false
+                        result.success(launchOnDisplay(displayId, launchFull))
+                    }
+                    "launchOnPrimary" -> {
+                        // When called from primary, this is a no-op (we're already on primary)
+                        Log.d(TAG, "launchOnPrimary called from primary - already on primary")
+                        result.success(true)
+                    }
+                    "isRunningOnSecondary" -> {
+                        // Primary activity is not on secondary
+                        result.success(false)
+                    }
+                    "getDefaultDisplayId" -> {
+                        result.success(Display.DEFAULT_DISPLAY)
+                    }
+                    "isMultiDisplayAvailable" -> {
+                        result.success(hasSecondaryDisplay())
+                    }
+                    "getCurrentDisplayId" -> {
+                        result.success(getCurrentDisplayId())
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -101,7 +144,8 @@ class DualScreenManager(
 
     fun dispose() {
         displayManager.unregisterDisplayListener(displayListener)
-        dismissSecondaryDisplay()
+        // Only dismiss presentation, NOT the activity - activity runs in separate process
+        dismissSecondaryPresentation()
     }
 
     private fun getAvailableDisplays(): List<Map<String, Any>> {
@@ -211,18 +255,48 @@ class DualScreenManager(
         }
     }
 
-    fun dismissSecondaryDisplay() {
+    /**
+     * Dismiss only the secondary presentation (companion view).
+     * Does NOT close SecondaryDisplayActivity.
+     */
+    fun dismissSecondaryPresentation() {
         mainHandler.post {
+            // Dismiss the presentation if active
             secondaryPresentation?.dismiss()
             secondaryPresentation = null
 
             secondaryEngine?.destroy()
             secondaryEngine = null
 
-            Log.d(TAG, "Secondary display dismissed")
+            Log.d(TAG, "Secondary presentation dismissed")
 
             // Notify Flutter
             methodChannel?.invokeMethod("onSecondaryDisplayActive", false)
+        }
+    }
+
+    /**
+     * Finish the main activity (for bottom-only mode)
+     */
+    private fun finishMainActivity() {
+        mainHandler.post {
+            Log.d(TAG, "Finishing main activity")
+            (context as? android.app.Activity)?.finishAndRemoveTask()
+        }
+    }
+
+    /**
+     * Close any running SecondaryDisplayActivity instances
+     */
+    private fun closeSecondaryActivity() {
+        try {
+            // Send a broadcast to close SecondaryDisplayActivity
+            val intent = android.content.Intent("com.retrotracker.retrotracker.CLOSE_SECONDARY_ACTIVITY")
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+            Log.d(TAG, "Sent close broadcast to SecondaryDisplayActivity")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close SecondaryDisplayActivity", e)
         }
     }
 
@@ -239,5 +313,89 @@ class DualScreenManager(
 
     private fun notifyDisplayChange() {
         methodChannel?.invokeMethod("onDisplaysChanged", getAvailableDisplays())
+    }
+
+    /**
+     * Get the display ID that the main activity is currently running on
+     */
+    private fun getCurrentDisplayId(): Int {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                (context as? android.app.Activity)?.display?.displayId ?: Display.DEFAULT_DISPLAY
+            } else {
+                @Suppress("DEPRECATION")
+                (context as? android.app.Activity)?.windowManager?.defaultDisplay?.displayId ?: Display.DEFAULT_DISPLAY
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get current display ID", e)
+            Display.DEFAULT_DISPLAY
+        }
+    }
+
+    /**
+     * Launch the app on a specific display.
+     *
+     * @param displayId The ID of the display to launch on (-1 for default)
+     * @param launchFullApp If true, launches the full app (SecondaryDisplayActivity).
+     *                      If false, shows the companion view (FlutterSecondaryPresentation).
+     * @return true if launch was successful, false otherwise
+     */
+    fun launchOnDisplay(displayId: Int, launchFullApp: Boolean): Boolean {
+        Log.d(TAG, "launchOnDisplay: displayId=$displayId, launchFullApp=$launchFullApp")
+
+        // Find the target display
+        val targetDisplay = if (displayId == -1 || displayId == Display.DEFAULT_DISPLAY) {
+            getSecondaryDisplay()
+        } else {
+            displayManager.displays.find { it.displayId == displayId }
+        }
+
+        if (targetDisplay == null) {
+            Log.w(TAG, "Target display not found: $displayId")
+            return false
+        }
+
+        return if (launchFullApp) {
+            launchActivityOnDisplay(targetDisplay.displayId)
+        } else {
+            // Use presentation mode
+            showOnSecondaryDisplay()
+            true
+        }
+    }
+
+    /**
+     * Launch the SecondaryDisplayActivity on a specific display
+     */
+    private fun launchActivityOnDisplay(displayId: Int): Boolean {
+        return try {
+            val intent = Intent(context, SecondaryDisplayActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            }
+
+            // Create ActivityOptions with the target display
+            val options = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                ActivityOptions.makeBasic().apply {
+                    launchDisplayId = displayId
+                }
+            } else {
+                ActivityOptions.makeBasic()
+            }
+
+            Log.d(TAG, "Launching SecondaryDisplayActivity on display $displayId")
+            context.startActivity(intent, options.toBundle())
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch activity on display $displayId", e)
+            false
+        }
+    }
+
+    /**
+     * Get a specific display by ID
+     */
+    fun getDisplayById(displayId: Int): Display? {
+        return displayManager.displays.find { it.displayId == displayId }
     }
 }

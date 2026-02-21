@@ -14,9 +14,16 @@ class ResponsiveLayout {
     final size = MediaQuery.of(context).size;
     final orientation = MediaQuery.of(context).orientation;
     final shortestSide = size.shortestSide;
+    final aspectRatio = size.width / size.height;
 
-    // Widescreen: landscape orientation with good width
-    if (orientation == Orientation.landscape && size.width > 600) {
+    // Widescreen detection:
+    // 1. Landscape orientation with good width, OR
+    // 2. Wide aspect ratio (> 1.5) indicating a widescreen device like gaming handhelds
+    //    even if orientation reports differently
+    final isWideAspect = aspectRatio > 1.5;
+    final isLandscapeWide = orientation == Orientation.landscape && size.width > 600;
+
+    if (isLandscapeWide || (isWideAspect && size.width > 600)) {
       return ScreenType.widescreen;
     }
 

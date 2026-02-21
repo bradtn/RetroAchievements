@@ -198,6 +198,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     return ThemeData(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+      // Disable yellow focus border for gamepad/d-pad navigation
+      focusColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       // Improve card contrast in light mode
       cardTheme: CardThemeData(
         elevation: 0,
@@ -290,6 +294,47 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
         backgroundColor: Colors.white,
         side: BorderSide(color: Colors.grey.shade300),
       ),
+      // Disable focus highlights on buttons for gamepad navigation
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
       useMaterial3: true,
     );
   }
@@ -314,6 +359,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     return ThemeData(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFF121212),
+      // Disable yellow focus border for gamepad/d-pad navigation
+      focusColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       cardTheme: CardThemeData(
         elevation: 0,
         color: const Color(0xFF1E1E1E),
@@ -355,6 +404,47 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF1E1E1E),
       ),
+      // Disable focus highlights on buttons for gamepad navigation
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null; // Use default for other states
+          }),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
       useMaterial3: true,
     );
   }
@@ -379,6 +469,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     return ThemeData(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.black,
+      // Disable yellow focus border for gamepad/d-pad navigation
+      focusColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       cardTheme: CardThemeData(
         elevation: 0,
         color: const Color(0xFF121212),
@@ -419,6 +513,47 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       ),
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF121212),
+      ),
+      // Disable focus highlights on buttons for gamepad navigation
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) return Colors.transparent;
+            return null;
+          }),
+        ),
       ),
       useMaterial3: true,
     );

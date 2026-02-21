@@ -15,6 +15,9 @@ import 'presentation/screens/secondary_display_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Disable focus highlight for gamepad/keyboard navigation (removes yellow border)
+  FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+
   // Initialize Firebase (required before runApp for push notifications)
   await Firebase.initializeApp();
 

@@ -14,10 +14,15 @@ class DualScreenService {
   bool _isSecondaryScreen = false;
   bool get isSecondaryScreen => _isSecondaryScreen;
 
+  // Companion mode state - when active, nav bar moves to secondary display
+  bool _isCompanionModeActive = false;
+  bool get isCompanionModeActive => _isCompanionModeActive;
+
   final List<void Function(List<DisplayInfo>)> _displayChangeListeners = [];
   final List<void Function(Map<String, dynamic>)> _dataFromSecondaryListeners = [];
   final List<void Function(Map<String, dynamic>)> _dataFromMainListeners = [];
   final List<void Function(String, Map<String, dynamic>)> _secondaryEventListeners = [];
+  final List<void Function(bool)> _companionModeListeners = [];
 
   DualScreenService._internal() {
     debugPrint('DualScreenService: Singleton created, setting up method channel handler');
@@ -28,9 +33,33 @@ class DualScreenService {
 
   Future<void> _checkIfSecondaryScreen() async {
     try {
-      _isSecondaryScreen = await _channel.invokeMethod<bool>('isSecondaryScreen') ?? false;
+      // Try the new method first, fall back to old method
+      _isSecondaryScreen = await _channel.invokeMethod<bool>('isRunningOnSecondary') ?? false;
+      if (!_isSecondaryScreen) {
+        _isSecondaryScreen = await _channel.invokeMethod<bool>('isSecondaryScreen') ?? false;
+      }
+      debugPrint('DualScreenService: Running on secondary display: $_isSecondaryScreen');
     } catch (e) {
       _isSecondaryScreen = false;
+    }
+  }
+
+  /// Check if the app is running on the secondary display
+  Future<bool> isRunningOnSecondary() async {
+    try {
+      return await _channel.invokeMethod<bool>('isRunningOnSecondary') ?? false;
+    } catch (e) {
+      return _isSecondaryScreen;
+    }
+  }
+
+  /// Launch the app on the primary display (when running on secondary)
+  Future<bool> launchOnPrimary() async {
+    try {
+      return await _channel.invokeMethod<bool>('launchOnPrimary') ?? false;
+    } catch (e) {
+      debugPrint('DualScreenService: Error launching on primary: $e');
+      return false;
     }
   }
 
@@ -112,10 +141,37 @@ class DualScreenService {
     }
   }
 
-  /// Dismiss the secondary display
+  /// Dismiss the secondary presentation (companion view only)
   Future<bool> dismissSecondary() async {
     try {
       return await _channel.invokeMethod<bool>('dismissSecondary') ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Close the SecondaryDisplayActivity (full app on secondary)
+  Future<bool> closeSecondaryActivity() async {
+    try {
+      return await _channel.invokeMethod<bool>('closeSecondaryActivity') ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Dismiss everything - both presentation AND activity
+  Future<bool> dismissAll() async {
+    try {
+      return await _channel.invokeMethod<bool>('dismissAll') ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Finish the main activity (for bottom-only mode)
+  Future<bool> finishMainActivity() async {
+    try {
+      return await _channel.invokeMethod<bool>('finishMainActivity') ?? false;
     } catch (e) {
       return false;
     }
@@ -152,6 +208,58 @@ class DualScreenService {
     }
   }
 
+  /// Launch the app on a specific display
+  /// [displayId] - The display ID to launch on (-1 for auto-select secondary)
+  /// [launchFullApp] - If true, launches the full app. If false, shows companion view.
+  Future<bool> launchOnDisplay(int displayId, {bool launchFullApp = true}) async {
+    try {
+      return await _channel.invokeMethod<bool>('launchOnDisplay', {
+        'displayId': displayId,
+        'launchFullApp': launchFullApp,
+      }) ?? false;
+    } catch (e) {
+      debugPrint('DualScreenService: Error launching on display: $e');
+      return false;
+    }
+  }
+
+  /// Get the default display ID
+  Future<int> getDefaultDisplayId() async {
+    try {
+      return await _channel.invokeMethod<int>('getDefaultDisplayId') ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Check if multi-display is available
+  Future<bool> isMultiDisplayAvailable() async {
+    try {
+      return await _channel.invokeMethod<bool>('isMultiDisplayAvailable') ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get the current display ID the app is running on
+  Future<int> getCurrentDisplayId() async {
+    try {
+      return await _channel.invokeMethod<int>('getCurrentDisplayId') ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Launch the full app on the secondary display
+  Future<bool> launchFullAppOnSecondary() async {
+    return launchOnDisplay(-1, launchFullApp: true);
+  }
+
+  /// Launch companion view on the secondary display
+  Future<bool> launchCompanionOnSecondary() async {
+    return launchOnDisplay(-1, launchFullApp: false);
+  }
+
   /// Add listener for display changes
   void addDisplayChangeListener(void Function(List<DisplayInfo>) listener) {
     _displayChangeListeners.add(listener);
@@ -180,6 +288,40 @@ class DualScreenService {
   /// Remove secondary event listener
   void removeSecondaryEventListener(void Function(String event, Map<String, dynamic> data) listener) {
     _secondaryEventListeners.remove(listener);
+  }
+
+  /// Set companion mode active state
+  void setCompanionModeActive(bool active) {
+    if (_isCompanionModeActive != active) {
+      _isCompanionModeActive = active;
+      debugPrint('DualScreenService: Companion mode ${active ? "activated" : "deactivated"}');
+      for (final listener in _companionModeListeners) {
+        listener(active);
+      }
+      // Notify secondary display about companion mode change
+      sendToSecondary({
+        'type': 'companionModeChanged',
+        'active': active,
+      });
+    }
+  }
+
+  /// Add listener for companion mode changes
+  void addCompanionModeListener(void Function(bool) listener) {
+    _companionModeListeners.add(listener);
+  }
+
+  /// Remove companion mode listener
+  void removeCompanionModeListener(void Function(bool) listener) {
+    _companionModeListeners.remove(listener);
+  }
+
+  /// Send navigation event to secondary (for bottom nav sync)
+  Future<bool> sendNavigationEvent(int tabIndex) async {
+    return sendToSecondary({
+      'type': 'navigationChanged',
+      'tabIndex': tabIndex,
+    });
   }
 
   List<DisplayInfo> _parseDisplayList(dynamic data) {

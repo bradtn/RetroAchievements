@@ -413,50 +413,59 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final earnedPoints = points.earnedPoints;
     final progress = numAchievements > 0 ? numAwarded / numAchievements : 0.0;
     final isLightMode = Theme.of(context).brightness == Brightness.light;
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
 
     return RefreshIndicator(
       onRefresh: _loadGame,
       child: CustomScrollView(
         controller: _scrollController,
         slivers: [
+          // Hero/AppBar spans full width
           _buildAppBar(title, imageIcon, imageTitle, isLightMode),
-          _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion),
+          // All other content is containerized on widescreen
+          _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion, isWidescreen),
           // Toggle between Achievements and Leaderboards
           if (numAchievements > 0 || _leaderboards.isNotEmpty)
-            _buildViewToggle(numAchievements, _leaderboards.length),
+            _buildViewToggle(numAchievements, _leaderboards.length, isWidescreen),
           // Show either Achievements or Leaderboards based on toggle
           if (!_showLeaderboards) ...[
             if (numAchievements > 0)
-              _buildRarityDistribution(achievements, numDistinctPlayers),
+              _buildRarityDistribution(achievements, numDistinctPlayers, isWidescreen),
             if (numAchievements > 0)
-              _buildAchievementsHeader(achievements, numAwarded, earnedPoints, totalPoints),
+              _buildAchievementsHeader(achievements, numAwarded, earnedPoints, totalPoints, isWidescreen),
             if (numAchievements > 0)
-              _buildAchievementsList(achievements, numDistinctPlayers, title, imageIcon, console),
+              _buildAchievementsList(achievements, numDistinctPlayers, title, imageIcon, console, isWidescreen),
           ] else ...[
-            _buildUserLeaderboardsSection(),
-            _buildLeaderboardsListView(),
+            _buildUserLeaderboardsSection(isWidescreen),
+            _buildLeaderboardsListView(isWidescreen),
           ],
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          SliverToBoxAdapter(child: _wrapForWidescreen(const SizedBox(height: 32), isWidescreen)),
         ],
       ),
     );
   }
 
-  Widget _buildAppBar(String title, String imageIcon, String imageTitle, bool isLightMode) {
-    // Responsive hero height based on screen type
-    final isWidescreen = ResponsiveLayout.isWidescreen(context);
-    final screenWidth = MediaQuery.of(context).size.width;
+  /// Wraps a widget in a centered container for widescreen displays
+  Widget _wrapForWidescreen(Widget child, bool isWidescreen) {
+    if (!isWidescreen) return child;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: child,
+      ),
+    );
+  }
 
-    // Widescreen (landscape gaming handhelds): smaller header to show more content
+  Widget _buildAppBar(String title, String imageIcon, String imageTitle, bool isLightMode) {
+    // Content is constrained to 600px on widescreen, so use standard phone height
     // Tablet portrait: taller header
     // Phone: standard header
+    final screenWidth = MediaQuery.of(context).size.width;
     final double expandedHeight;
-    if (isWidescreen) {
-      expandedHeight = 160.0; // Compact for widescreen
-    } else if (screenWidth > 600) {
+    if (screenWidth > 600) {
       expandedHeight = 320.0; // Tablet
     } else {
-      expandedHeight = 220.0; // Phone
+      expandedHeight = 220.0; // Phone (also used for constrained widescreen)
     }
 
     return SliverAppBar(
@@ -659,10 +668,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     String title, String console, String imageIcon,
     dynamic developer, dynamic publisher, dynamic genre, dynamic released,
     int numAchievements, int numAwarded, int totalPoints, int earnedPoints,
-    double progress, String completion,
+    double progress, String completion, bool isWidescreen,
   ) {
     return SliverToBoxAdapter(
-      child: Padding(
+      child: _wrapForWidescreen(Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         child: Card(
           child: Padding(
@@ -837,14 +846,14 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
           ),
         ),
-      ),
+      ), isWidescreen),
     );
   }
 
   /// Build toggle between Achievements and Leaderboards view
-  Widget _buildViewToggle(int achievementCount, int leaderboardCount) {
+  Widget _buildViewToggle(int achievementCount, int leaderboardCount, bool isWidescreen) {
     return SliverToBoxAdapter(
-      child: Padding(
+      child: _wrapForWidescreen(Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Container(
           decoration: BoxDecoration(
@@ -931,15 +940,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ],
           ),
         ),
-      ),
+      ), isWidescreen),
     );
   }
 
-  Widget _buildRarityDistribution(Map<String, dynamic> achievements, int numDistinctPlayers) {
+  Widget _buildRarityDistribution(Map<String, dynamic> achievements, int numDistinctPlayers, bool isWidescreen) {
     final rarityCounts = calculateRarityDistribution(achievements, numDistinctPlayers);
 
     return SliverToBoxAdapter(
-      child: Padding(
+      child: _wrapForWidescreen(Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         child: Card(
           child: Padding(
@@ -971,7 +980,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
           ),
         ),
-      ),
+      ), isWidescreen),
     );
   }
 
@@ -980,11 +989,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     int numAwarded,
     int earnedPoints,
     int totalPoints,
+    bool isWidescreen,
   ) {
     final filtered = getFilteredAchievements(achievements, _filter, _sort, _showMissable);
 
     return SliverToBoxAdapter(
-      child: Padding(
+      child: _wrapForWidescreen(Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1051,7 +1061,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
           ],
         ),
-      ),
+      ), isWidescreen),
     );
   }
 
@@ -1061,19 +1071,48 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     String title,
     String imageIcon,
     String console,
+    bool isWidescreen,
   ) {
     final filtered = getFilteredAchievements(achievements, _filter, _sort, _showMissable);
 
     if (filtered.isEmpty && _showMissable) {
-      return const SliverToBoxAdapter(child: NoMissableMessage());
+      return SliverToBoxAdapter(child: _wrapForWidescreen(const NoMissableMessage(), isWidescreen));
     }
 
     final username = ref.watch(authProvider).username;
     final userPic = _gameData?['UserPic'] ?? '';
-    final isWidescreen = ResponsiveLayout.isWidescreen(context);
 
-    // Use grid layout for widescreen to fit more achievements on screen
+    // For widescreen, content is already constrained to 600px, use single column
+    // For tablets/phones, use appropriate layout
     if (isWidescreen) {
+      // Single column list wrapped in container
+      return SliverPadding(
+        padding: EdgeInsets.zero,
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _wrapForWidescreen(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: AchievementTile(
+                  achievement: filtered[index],
+                  numDistinctPlayers: numDistinctPlayers,
+                  gameTitle: title,
+                  gameIcon: imageIcon,
+                  consoleName: console,
+                  username: username,
+                  userPic: userPic,
+                ),
+              ),
+              isWidescreen,
+            ),
+            childCount: filtered.length,
+          ),
+        ),
+      );
+    }
+
+    // Original grid layout for tablets
+    if (MediaQuery.of(context).size.width > 600) {
       return SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         sliver: SliverGrid(
@@ -1131,19 +1170,19 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   /// Build full leaderboards list view (when toggled to leaderboards)
-  Widget _buildLeaderboardsListView() {
+  Widget _buildLeaderboardsListView(bool isWidescreen) {
     if (_isLoadingLeaderboards) {
-      return const SliverToBoxAdapter(
-        child: Padding(
+      return SliverToBoxAdapter(
+        child: _wrapForWidescreen(const Padding(
           padding: EdgeInsets.all(32),
           child: Center(child: CircularProgressIndicator()),
-        ),
+        ), isWidescreen),
       );
     }
 
     if (_leaderboards.isEmpty) {
       return SliverToBoxAdapter(
-        child: Padding(
+        child: _wrapForWidescreen(Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             children: [
@@ -1155,7 +1194,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               ),
             ],
           ),
-        ),
+        ), isWidescreen),
       );
     }
 
@@ -1163,10 +1202,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           if (index >= _leaderboards.length) return null;
-          return LeaderboardTile(
+          return _wrapForWidescreen(LeaderboardTile(
             leaderboard: _leaderboards[index],
             onTap: () => _showLeaderboardDetail(_leaderboards[index]),
-          );
+          ), isWidescreen);
         },
         childCount: _leaderboards.length,
       ),
@@ -1174,7 +1213,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   /// Build section showing user's personal leaderboard entries for this game
-  Widget _buildUserLeaderboardsSection() {
+  Widget _buildUserLeaderboardsSection(bool isWidescreen) {
     if (_userGameLeaderboards.isEmpty && !_isLoadingUserLeaderboards) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -1182,7 +1221,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return SliverMainAxisGroup(
       slivers: [
         SliverToBoxAdapter(
-          child: Padding(
+          child: _wrapForWidescreen(Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
             child: Row(
               children: [
@@ -1197,14 +1236,14 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   ),
               ],
             ),
-          ),
+          ), isWidescreen),
         ),
         if (_isLoadingUserLeaderboards)
-          const SliverToBoxAdapter(
-            child: Padding(
+          SliverToBoxAdapter(
+            child: _wrapForWidescreen(const Padding(
               padding: EdgeInsets.all(32),
               child: Center(child: CircularProgressIndicator()),
-            ),
+            ), isWidescreen),
           )
         else
           SliverList(
@@ -1212,7 +1251,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               (context, index) {
                 if (index >= _userGameLeaderboards.length) return null;
                 final entry = _userGameLeaderboards[index];
-                return _buildUserLeaderboardEntry(entry);
+                return _wrapForWidescreen(_buildUserLeaderboardEntry(entry), isWidescreen);
               },
               childCount: _userGameLeaderboards.length,
             ),

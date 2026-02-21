@@ -39,7 +39,9 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="false">
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
@@ -137,5 +139,24 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/friend_activity_widget_info" />
         </receiver>
+
+        <!-- Secondary Display Activity - Launches full app on secondary display (e.g., Ayn Thor bottom screen) -->
+        <!-- Runs in separate process so it survives when main app is closed -->
+        <activity
+            android:name=".SecondaryDisplayActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:process=":secondary"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="false">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"/>
+        </activity>
     </application>
 </manifest>
