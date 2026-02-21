@@ -265,11 +265,13 @@ class _MilestoneDetailDialogState extends State<MilestoneDetailDialog> {
 class MilestoneBadge extends StatelessWidget {
   final Milestone milestone;
   final VoidCallback onTap;
+  final bool compact;
 
   const MilestoneBadge({
     super.key,
     required this.milestone,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -279,15 +281,20 @@ class MilestoneBadge extends StatelessWidget {
         : 0.0;
     final progressPercent = (progress * 100).toInt();
 
+    final iconSize = compact ? 24.0 : 32.0;
+    final progressSize = compact ? 32.0 : 40.0;
+    final progressIconSize = compact ? 16.0 : 20.0;
+    final fontSize = compact ? 8.0 : 10.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: milestone.color.withValues(alpha: milestone.isEarned ? 0.15 : 0.08),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(compact ? 12 : 16),
           border: Border.all(
             color: milestone.color.withValues(alpha: milestone.isEarned ? 0.5 : 0.3),
-            width: 2,
+            width: compact ? 1.5 : 2,
           ),
         ),
         child: Column(
@@ -297,47 +304,47 @@ class MilestoneBadge extends StatelessWidget {
               // Earned: just show the icon
               Icon(
                 milestone.icon,
-                size: 32,
+                size: iconSize,
                 color: milestone.color,
               ),
             ] else ...[
               // Not earned: show icon with circular progress
               SizedBox(
-                width: 40,
-                height: 40,
+                width: progressSize,
+                height: progressSize,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     // Background circle
                     CircularProgressIndicator(
                       value: 1.0,
-                      strokeWidth: 3,
+                      strokeWidth: compact ? 2 : 3,
                       color: milestone.color.withValues(alpha: 0.15),
                     ),
                     // Progress circle
                     CircularProgressIndicator(
                       value: progress,
-                      strokeWidth: 3,
+                      strokeWidth: compact ? 2 : 3,
                       color: milestone.color.withValues(alpha: 0.8),
                       backgroundColor: Colors.transparent,
                     ),
                     // Icon in center
                     Icon(
                       milestone.icon,
-                      size: 20,
+                      size: progressIconSize,
                       color: milestone.color.withValues(alpha: 0.6),
                     ),
                   ],
                 ),
               ),
             ],
-            const SizedBox(height: 6),
+            SizedBox(height: compact ? 4 : 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
               child: Text(
                 milestone.title,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   color: milestone.isEarned ? null : milestone.color.withValues(alpha: 0.8),
                 ),
@@ -347,11 +354,11 @@ class MilestoneBadge extends StatelessWidget {
               ),
             ),
             if (!milestone.isEarned) ...[
-              const SizedBox(height: 2),
+              SizedBox(height: compact ? 1 : 2),
               Text(
                 '$progressPercent%',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   color: milestone.color,
                 ),
@@ -367,11 +374,13 @@ class MilestoneBadge extends StatelessWidget {
 class RAAwardBadge extends StatelessWidget {
   final Map<String, dynamic> award;
   final VoidCallback onTap;
+  final bool compact;
 
   const RAAwardBadge({
     super.key,
     required this.award,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -394,46 +403,49 @@ class RAAwardBadge extends StatelessWidget {
         borderColor = Colors.blue;
     }
 
+    final imageSize = compact ? 36.0 : 48.0;
+    final fontSize = compact ? 8.0 : 10.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: borderColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(compact ? 12 : 16),
           border: Border.all(
             color: borderColor.withValues(alpha: 0.5),
-            width: 2,
+            width: compact ? 1.5 : 2,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(compact ? 6 : 8),
               child: Image.network(
                 'https://retroachievements.org$imageIcon',
-                width: 48,
-                height: 48,
+                width: imageSize,
+                height: imageSize,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  width: 48,
-                  height: 48,
+                  width: imageSize,
+                  height: imageSize,
                   color: Colors.grey[800],
-                  child: Icon(Icons.emoji_events, color: borderColor, size: 24),
+                  child: Icon(Icons.emoji_events, color: borderColor, size: imageSize / 2),
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: compact ? 4 : 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
               child: Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 10,
+                style: TextStyle(
+                  fontSize: fontSize,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: compact ? 1 : 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -448,33 +460,35 @@ class AwardStat extends StatelessWidget {
   final IconData icon;
   final int value;
   final String label;
+  final bool compact;
 
   const AwardStat({
     super.key,
     required this.icon,
     required this.value,
     required this.label,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white70, size: 20),
-        const SizedBox(height: 4),
+        Icon(icon, color: Colors.white70, size: compact ? 16 : 20),
+        SizedBox(height: compact ? 2 : 4),
         Text(
           '$value',
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: compact ? 12 : 16,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white54,
-            fontSize: 10,
+            fontSize: compact ? 8 : 10,
           ),
         ),
       ],
@@ -488,6 +502,7 @@ class RAAwardsSummary extends StatelessWidget {
   final int beatenHardcore;
   final int beatenSoftcore;
   final int eventAwards;
+  final bool compact;
 
   const RAAwardsSummary({
     super.key,
@@ -496,13 +511,14 @@ class RAAwardsSummary extends StatelessWidget {
     required this.beatenHardcore,
     required this.beatenSoftcore,
     required this.eventAwards,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(compact ? 12 : 20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
@@ -517,32 +533,32 @@ class RAAwardsSummary extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.military_tech, color: Colors.white, size: 28),
-                const SizedBox(width: 8),
+                Icon(Icons.military_tech, color: Colors.white, size: compact ? 20 : 28),
+                SizedBox(width: compact ? 6 : 8),
                 Text(
                   '$totalAwards',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: compact ? 22 : 32,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: compact ? 4 : 8),
+            Text(
               'RetroAchievements Awards',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: Colors.white70, fontSize: compact ? 11 : 14),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: compact ? 10 : 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                AwardStat(icon: Icons.workspace_premium, value: masteryCount, label: 'Mastery'),
-                AwardStat(icon: Icons.verified, value: beatenHardcore, label: 'Beaten HC'),
-                AwardStat(icon: Icons.check_circle, value: beatenSoftcore, label: 'Beaten'),
+                AwardStat(icon: Icons.workspace_premium, value: masteryCount, label: 'Mastery', compact: compact),
+                AwardStat(icon: Icons.verified, value: beatenHardcore, label: 'Beaten HC', compact: compact),
+                AwardStat(icon: Icons.check_circle, value: beatenSoftcore, label: 'Beaten', compact: compact),
                 if (eventAwards > 0)
-                  AwardStat(icon: Icons.celebration, value: eventAwards, label: 'Events'),
+                  AwardStat(icon: Icons.celebration, value: eventAwards, label: 'Events', compact: compact),
               ],
             ),
           ],
@@ -555,11 +571,13 @@ class RAAwardsSummary extends StatelessWidget {
 class GoalsSummary extends StatelessWidget {
   final int completed;
   final int total;
+  final bool compact;
 
   const GoalsSummary({
     super.key,
     required this.completed,
     required this.total,
+    this.compact = false,
   });
 
   @override
@@ -568,7 +586,7 @@ class GoalsSummary extends StatelessWidget {
 
     return Card(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(compact ? 12 : 20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
@@ -583,29 +601,29 @@ class GoalsSummary extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.flag, color: Colors.white, size: 28),
-                const SizedBox(width: 8),
+                Icon(Icons.flag, color: Colors.white, size: compact ? 20 : 28),
+                SizedBox(width: compact ? 6 : 8),
                 Text(
                   '$completed / $total',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: compact ? 22 : 32,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: compact ? 4 : 8),
+            Text(
               'RetroTrack Goals',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: Colors.white70, fontSize: compact ? 11 : 14),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: compact ? 10 : 16),
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(compact ? 4 : 8),
               child: LinearProgressIndicator(
                 value: progress,
-                minHeight: 8,
+                minHeight: compact ? 6 : 8,
                 backgroundColor: Colors.white24,
                 valueColor: const AlwaysStoppedAnimation(Colors.white),
               ),

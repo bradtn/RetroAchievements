@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import '../providers/streak_provider.dart';
 import '../widgets/premium_gate.dart';
@@ -157,37 +158,44 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Widget _buildContent(StreakState streakState) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Column(
-        children: [
-          // Streak cards
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: _buildStreakCards(streakState),
-          ),
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
 
-          // Calendar
-          _buildCalendar(streakState),
-
-          // Legend
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: CalendarLegend(),
-          ),
-
-          // Tip text
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Text(
-              'Tap a day to see achievements',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 12,
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Streak cards
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: _buildStreakCards(streakState),
               ),
-            ),
+
+              // Calendar
+              _buildCalendar(streakState),
+
+              // Legend
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: CalendarLegend(),
+              ),
+
+              // Tip text
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: Text(
+                  'Tap a day to see achievements',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

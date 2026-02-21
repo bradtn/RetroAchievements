@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme_utils.dart';
+import '../../../core/responsive_layout.dart';
 import '../../providers/auth_provider.dart';
 import '../share_card/share_card_screen.dart';
 import 'milestone_data.dart';
@@ -254,120 +255,141 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
     final visibleAwards = _userAwards?['VisibleUserAwards'] as List<dynamic>? ?? [];
     final totalAwardsCount = _userAwards?['TotalAwardsCount'] ?? 0;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        16, 16, 16,
-        16 + MediaQuery.of(context).viewPadding.bottom,
-      ),
-      children: [
-        // Real RA Awards Section
-        if (visibleAwards.isNotEmpty) ...[
-          RAAwardsSummary(
-            totalAwards: totalAwardsCount,
-            masteryCount: _userAwards?['MasteryAwardsCount'] ?? 0,
-            beatenHardcore: _userAwards?['BeatenHardcoreAwardsCount'] ?? 0,
-            beatenSoftcore: _userAwards?['BeatenSoftcoreAwardsCount'] ?? 0,
-            eventAwards: _userAwards?['EventAwardsCount'] ?? 0,
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
+    // More columns and smaller badges for widescreen, also scale down for regular phones
+    final gridColumns = isWidescreen ? 5 : 4;
+    final gridSpacing = isWidescreen ? 8.0 : 8.0;
+    final childAspectRatio = isWidescreen ? 0.9 : 0.9;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            16, isWidescreen ? 8 : 16, 16,
+            16 + MediaQuery.of(context).viewPadding.bottom,
           ),
-          const SizedBox(height: 16),
-          Text(
-            'RetroAchievements Awards',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.85,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: visibleAwards.length > 30 ? 30 : visibleAwards.length,
-            itemBuilder: (ctx, i) => RAAwardBadge(
-              award: visibleAwards[i] as Map<String, dynamic>,
-              onTap: () => _showRAAwardDetail(visibleAwards[i] as Map<String, dynamic>),
-            ),
-          ),
-          if (visibleAwards.length > 30)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '+ ${visibleAwards.length - 30} more awards',
-                style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                textAlign: TextAlign.center,
+          children: [
+            // Real RA Awards Section
+            if (visibleAwards.isNotEmpty) ...[
+              RAAwardsSummary(
+                totalAwards: totalAwardsCount,
+                masteryCount: _userAwards?['MasteryAwardsCount'] ?? 0,
+                beatenHardcore: _userAwards?['BeatenHardcoreAwardsCount'] ?? 0,
+                beatenSoftcore: _userAwards?['BeatenSoftcoreAwardsCount'] ?? 0,
+                eventAwards: _userAwards?['EventAwardsCount'] ?? 0,
+                compact: true,
               ),
-            ),
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-        ],
+              SizedBox(height: isWidescreen ? 10 : 16),
+              Text(
+                'RetroAchievements Awards',
+                style: isWidescreen
+                    ? Theme.of(context).textTheme.titleSmall
+                    : Theme.of(context).textTheme.titleMedium,
+              ),
+              SizedBox(height: isWidescreen ? 8 : 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridColumns,
+                  childAspectRatio: childAspectRatio,
+                  crossAxisSpacing: gridSpacing,
+                  mainAxisSpacing: gridSpacing,
+                ),
+                itemCount: visibleAwards.length > 30 ? 30 : visibleAwards.length,
+                itemBuilder: (ctx, i) => RAAwardBadge(
+                  award: visibleAwards[i] as Map<String, dynamic>,
+                  onTap: () => _showRAAwardDetail(visibleAwards[i] as Map<String, dynamic>),
+                  compact: true,
+                ),
+              ),
+              if (visibleAwards.length > 30)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '+ ${visibleAwards.length - 30} more awards',
+                    style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              SizedBox(height: isWidescreen ? 16 : 32),
+              const Divider(),
+              SizedBox(height: isWidescreen ? 12 : 24),
+            ],
 
-        // App Goals Section
-        GoalsSummary(completed: earned.length, total: milestones.length),
-        const SizedBox(height: 12),
-        Text(
-          'Track your progress with app-exclusive goals',
-          style: TextStyle(color: context.subtitleColor, fontSize: 13),
-          textAlign: TextAlign.center,
+            // App Goals Section
+            GoalsSummary(completed: earned.length, total: milestones.length, compact: true),
+            SizedBox(height: isWidescreen ? 8 : 12),
+            Text(
+              'Track your progress with app-exclusive goals',
+              style: TextStyle(color: context.subtitleColor, fontSize: isWidescreen ? 11 : 13),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isWidescreen ? 12 : 24),
+
+            // Completed goals
+            if (earned.isNotEmpty) ...[
+              Text(
+                'Completed (${earned.length})',
+                style: isWidescreen
+                    ? Theme.of(context).textTheme.titleSmall
+                    : Theme.of(context).textTheme.titleMedium,
+              ),
+              SizedBox(height: isWidescreen ? 8 : 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridColumns,
+                  childAspectRatio: childAspectRatio,
+                  crossAxisSpacing: gridSpacing,
+                  mainAxisSpacing: gridSpacing,
+                ),
+                itemCount: earned.length,
+                itemBuilder: (ctx, i) => MilestoneBadge(
+                  milestone: earned[i],
+                  onTap: () => _showMilestoneDetail(earned[i]),
+                  compact: true,
+                ),
+              ),
+              SizedBox(height: isWidescreen ? 16 : 32),
+            ],
+
+            // In Progress goals
+            if (locked.isNotEmpty) ...[
+              Text(
+                'In Progress (${locked.length})',
+                style: isWidescreen
+                    ? Theme.of(context).textTheme.titleSmall
+                    : Theme.of(context).textTheme.titleMedium,
+              ),
+              SizedBox(height: isWidescreen ? 4 : 8),
+              Text(
+                'Keep playing to complete these goals!',
+                style: TextStyle(color: context.subtitleColor, fontSize: isWidescreen ? 11 : 13),
+              ),
+              SizedBox(height: isWidescreen ? 8 : 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridColumns,
+                  childAspectRatio: childAspectRatio,
+                  crossAxisSpacing: gridSpacing,
+                  mainAxisSpacing: gridSpacing,
+                ),
+                itemCount: locked.length,
+                itemBuilder: (ctx, i) => MilestoneBadge(
+                  milestone: locked[i],
+                  onTap: () => _showMilestoneDetail(locked[i]),
+                  compact: true,
+                ),
+              ),
+            ],
+          ],
         ),
-        const SizedBox(height: 24),
-
-        // Completed goals
-        if (earned.isNotEmpty) ...[
-          Text(
-            'Completed (${earned.length})',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.85,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: earned.length,
-            itemBuilder: (ctx, i) => MilestoneBadge(
-              milestone: earned[i],
-              onTap: () => _showMilestoneDetail(earned[i]),
-            ),
-          ),
-          const SizedBox(height: 32),
-        ],
-
-        // In Progress goals
-        if (locked.isNotEmpty) ...[
-          Text(
-            'In Progress (${locked.length})',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Keep playing to complete these goals!',
-            style: TextStyle(color: context.subtitleColor, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.85,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: locked.length,
-            itemBuilder: (ctx, i) => MilestoneBadge(
-              milestone: locked[i],
-              onTap: () => _showMilestoneDetail(locked[i]),
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 

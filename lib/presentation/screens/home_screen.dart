@@ -47,18 +47,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _isCompanionModeActive = _dualScreen.isCompanionModeActive;
     _dualScreen.addCompanionModeListener(_onCompanionModeChanged);
     _dualScreen.addSecondaryEventListener(_onSecondaryEvent);
     _loadData();
-    _autoEnableCompanionMode();
+    _initCompanionMode();
   }
 
-  /// Auto-enable companion mode on dual-screen devices
-  Future<void> _autoEnableCompanionMode() async {
+  /// Initialize companion mode based on display context
+  /// When running on secondary display (Bottom Only mode), companion mode should be OFF
+  /// When running on primary display with secondary available, auto-enable companion mode
+  Future<void> _initCompanionMode() async {
     // Small delay to let the display detection initialize
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
+
+    final isOnSecondary = await _dualScreen.isRunningOnSecondary();
+
+    if (isOnSecondary) {
+      // Running on secondary display (Bottom Only mode) - disable companion mode
+      // This ensures the nav bar is visible when full app is on bottom screen
+      debugPrint('HomeScreen: Running on secondary display, forcing companion mode OFF');
+      _dualScreen.setCompanionModeActive(false);
+      setState(() => _isCompanionModeActive = false);
+      return;
+    }
+
+    // Running on primary display - read current state and auto-enable if dual-screen
+    setState(() => _isCompanionModeActive = _dualScreen.isCompanionModeActive);
 
     final hasSecondary = await _dualScreen.hasSecondaryDisplay();
     if (hasSecondary && !_isCompanionModeActive) {

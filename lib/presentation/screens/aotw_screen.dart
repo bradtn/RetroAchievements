@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../../services/notification_service.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
@@ -147,11 +148,22 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
         : '0.0';
 
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
+
+    // Compact sizes for widescreen
+    final headerPadding = isWidescreen ? 16.0 : 24.0;
+    final headerIconSize = isWidescreen ? 32.0 : 48.0;
+    final badgeSize = isWidescreen ? 64.0 : 96.0;
+    final contentPadding = isWidescreen ? 14.0 : 20.0;
+
     return RefreshIndicator(
       onRefresh: _loadData,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
-        children: [
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(16, isWidescreen ? 8 : 16, 16, 16 + bottomPadding),
+            children: [
           // Achievement Card
           Card(
             child: Column(
@@ -159,7 +171,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                 // Header with gradient
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(headerPadding),
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                     gradient: LinearGradient(
@@ -168,18 +180,19 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                   ),
                   child: Column(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.emoji_events,
                         color: Colors.white,
-                        size: 48,
+                        size: headerIconSize,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      SizedBox(height: isWidescreen ? 4 : 8),
+                      Text(
                         'ACHIEVEMENT OF THE WEEK',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
+                          fontSize: isWidescreen ? 12 : 14,
                         ),
                       ),
                       if (startAt.isNotEmpty || endAt.isNotEmpty)
@@ -189,9 +202,9 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                               : startAt.isNotEmpty
                                   ? 'Started: $startAt'
                                   : 'Ends: $endAt',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: isWidescreen ? 10 : 12,
                           ),
                         ),
                     ],
@@ -199,7 +212,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                 ),
                 // Achievement details
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(contentPadding),
                   child: Column(
                     children: [
                       // Badge
@@ -207,34 +220,39 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                         borderRadius: BorderRadius.circular(12),
                         child: CachedNetworkImage(
                           imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                          width: 96,
-                          height: 96,
+                          width: badgeSize,
+                          height: badgeSize,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => Container(
-                            width: 96,
-                            height: 96,
+                            width: badgeSize,
+                            height: badgeSize,
                             color: Colors.grey[800],
-                            child: const Icon(Icons.emoji_events, size: 48),
+                            child: Icon(Icons.emoji_events, size: badgeSize / 2),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: isWidescreen ? 10 : 16),
                       // Title
                       Text(
                         achTitle,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: (isWidescreen
+                            ? Theme.of(context).textTheme.titleMedium
+                            : Theme.of(context).textTheme.headlineSmall)?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isWidescreen ? 4 : 8),
                       // Description
                       Text(
                         achDesc,
-                        style: TextStyle(color: context.subtitleColor),
+                        style: TextStyle(
+                          color: context.subtitleColor,
+                          fontSize: isWidescreen ? 12 : 14,
+                        ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: isWidescreen ? 10 : 16),
                       // Points and stats
                       Wrap(
                         alignment: WrapAlignment.center,
@@ -313,18 +331,18 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: isWidescreen ? 10 : 16),
 
           // Game Card
           Text(
             'From Game',
             style: TextStyle(
               color: context.subtitleColor,
-              fontSize: 12,
+              fontSize: isWidescreen ? 10 : 12,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isWidescreen ? 4 : 8),
           Card(
             child: InkWell(
               onTap: gameId != null
@@ -342,7 +360,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                   : null,
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isWidescreen ? 8 : 12),
                 child: Row(
                   children: [
                     ClipRRect(
@@ -351,8 +369,8 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                         imageUrl: gameIcon.isNotEmpty
                             ? 'https://retroachievements.org${gameIcon.startsWith('/') ? '' : '/'}$gameIcon'
                             : 'https://retroachievements.org/Images/000001.png',
-                        width: 56,
-                        height: 56,
+                        width: isWidescreen ? 40 : 56,
+                        height: isWidescreen ? 40 : 56,
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => Container(
                           width: 56,
@@ -403,7 +421,7 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
             ),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: isWidescreen ? 12 : 24),
 
           // Stats
           Row(
@@ -414,32 +432,38 @@ class _AchievementOfTheWeekScreenState extends ConsumerState<AchievementOfTheWee
                   label: 'Total Players',
                   value: '$totalPlayers',
                   color: Colors.blue,
+                  compact: isWidescreen,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isWidescreen ? 8 : 12),
               Expanded(
                 child: _StatCard(
                   icon: Icons.check_circle,
                   label: 'Unlocked',
                   value: '$unlocksCount',
                   color: Colors.green,
+                  compact: isWidescreen,
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: isWidescreen ? 12 : 24),
 
           // Recent Unlocks
           if (unlocks.isNotEmpty) ...[
             Text(
               'Recent Unlocks',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: isWidescreen
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 12),
-            ...unlocks.take(20).map((unlock) => _UnlockTile(unlock: unlock)),
+            SizedBox(height: isWidescreen ? 8 : 12),
+            ...unlocks.take(isWidescreen ? 10 : 20).map((unlock) => _UnlockTile(unlock: unlock, compact: isWidescreen)),
           ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -473,32 +497,36 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final bool compact;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(compact ? 10 : 16),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: compact ? 20 : 28),
+            SizedBox(height: compact ? 4 : 8),
             Text(
               value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: (compact
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.headlineSmall)?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               label,
-              style: TextStyle(color: context.subtitleColor, fontSize: 12),
+              style: TextStyle(color: context.subtitleColor, fontSize: compact ? 10 : 12),
             ),
           ],
         ),
@@ -509,8 +537,9 @@ class _StatCard extends StatelessWidget {
 
 class _UnlockTile extends StatelessWidget {
   final dynamic unlock;
+  final bool compact;
 
-  const _UnlockTile({required this.unlock});
+  const _UnlockTile({required this.unlock, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -519,9 +548,10 @@ class _UnlockTile extends StatelessWidget {
     final hardcoreMode = unlock['HardcoreMode'] == 1;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 4),
+      margin: EdgeInsets.only(bottom: compact ? 2 : 4),
       child: ListTile(
         dense: true,
+        visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
         onTap: user.isNotEmpty && user != 'Unknown'
             ? () {
                 Navigator.push(
@@ -533,11 +563,11 @@ class _UnlockTile extends StatelessWidget {
               }
             : null,
         leading: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(compact ? 12 : 16),
           child: CachedNetworkImage(
             imageUrl: 'https://retroachievements.org/UserPic/$user.png',
-            width: 32,
-            height: 32,
+            width: compact ? 24 : 32,
+            height: compact ? 24 : 32,
             fit: BoxFit.cover,
             errorWidget: (_, __, ___) => CircleAvatar(
               radius: 16,

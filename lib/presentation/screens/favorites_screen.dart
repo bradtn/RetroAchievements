@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
+import '../../core/responsive_layout.dart';
 import '../providers/favorites_provider.dart';
 import 'game_detail_screen.dart';
 import 'game_search_screen.dart';
@@ -143,13 +144,17 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
+
     return AnimatedBuilder(
       animation: _emptyStateController,
       builder: (context, child) {
         return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Animated star icon
@@ -214,6 +219,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                   ),
                 ),
               ],
+              ),
             ),
           ),
         );
@@ -226,15 +232,19 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     final others = state.favorites.where((f) => !f.isPinned).toList();
 
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
 
     return AnimatedBuilder(
       animation: _listAnimationController,
       builder: (context, child) {
         int itemIndex = 0;
 
-        return ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 80 + bottomPadding), // Extra padding for FAB
-          children: [
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 80 + bottomPadding), // Extra padding for FAB
+              children: [
             // Wishlist info banner
             if (_showWishlistInfo == true) ...[
               _buildAnimatedItem(
@@ -307,7 +317,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                 );
               }),
             ],
-          ],
+              ],
+            ),
+          ),
         );
       },
     );

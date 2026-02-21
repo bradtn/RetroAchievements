@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
@@ -187,35 +188,42 @@ class _LiveFeedScreenState extends ConsumerState<LiveFeedScreen> {
                   ? _buildEmptyState()
                   : RefreshIndicator(
                       onRefresh: _loadFeed,
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          8,
-                          16,
-                          16 + MediaQuery.of(context).viewPadding.bottom,
-                        ),
-                        itemCount: _feedItems.length + (_isLoadingMore ? 1 : 0),
-                        itemBuilder: (ctx, i) {
-                          if (i == _feedItems.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                          ),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              8,
+                              16,
+                              16 + MediaQuery.of(context).viewPadding.bottom,
+                            ),
+                            itemCount: _feedItems.length + (_isLoadingMore ? 1 : 0),
+                            itemBuilder: (ctx, i) {
+                              if (i == _feedItems.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              }
 
-                          final feedUser = _feedItems[i]['User'] ?? _feedItems[i]['user'] ?? '';
-                          final gameId = _feedItems[i]['GameID'] ?? _feedItems[i]['gameId'] ?? 0;
-                          final gId = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
-                          return FeedItemTile(
-                            item: _feedItems[i],
-                            gameIcon: _gameIcons[gId],
-                            isCurrentUser: feedUser.toString().toLowerCase() ==
-                                currentUser?.toLowerCase(),
-                            onUserTap: () => _viewProfile(feedUser),
-                            onGameTap: () => _viewGame(_feedItems[i]),
-                          );
-                        },
+                              final feedUser = _feedItems[i]['User'] ?? _feedItems[i]['user'] ?? '';
+                              final gameId = _feedItems[i]['GameID'] ?? _feedItems[i]['gameId'] ?? 0;
+                              final gId = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+                              return FeedItemTile(
+                                item: _feedItems[i],
+                                gameIcon: _gameIcons[gId],
+                                isCurrentUser: feedUser.toString().toLowerCase() ==
+                                    currentUser?.toLowerCase(),
+                                onUserTap: () => _viewProfile(feedUser),
+                                onGameTap: () => _viewGame(_feedItems[i]),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
     );

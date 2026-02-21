@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/animations.dart';
 import '../../../core/theme_utils.dart';
+import '../../../core/responsive_layout.dart';
 import '../../providers/auth_provider.dart';
 import '../share_card/share_card_screen.dart';
 import '../game_detail_screen.dart';
@@ -70,41 +71,50 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       return _buildShimmerLoading();
     }
 
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
+
     return RetroRefreshIndicator(
       onRefresh: () async {
         widget.onRefresh();
         await _loadStats();
       },
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const SizedBox(height: 40),
-          if (widget.profile != null) _buildProfileHeader(context),
-          const SizedBox(height: 20),
-          if (widget.profile != null) _buildStatsRow(context),
-          const SizedBox(height: 16),
-          if (_summary != null) _buildHardcoreSoftcoreBar(context),
-          const SizedBox(height: 16),
-          if (_summary != null) _buildCloseToMastery(context),
-          if (_completedGames != null) _buildMasteredGamesCompact(context),
-          const SizedBox(height: 20),
-          Text('Recently Played', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          if (widget.recentGames != null && widget.recentGames!.isNotEmpty)
-            ...widget.recentGames!.take(5).toList().asMap().entries.map((entry) =>
-              AnimatedListItem(
-                index: entry.key,
-                child: GameListTile(game: entry.value),
-              ),
-            )
-          else
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('No recent games'),
-              ),
-            ),
-        ],
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+          child: ListView(
+            padding: EdgeInsets.all(isWidescreen ? 12 : 16),
+            children: [
+              SizedBox(height: isWidescreen ? 16 : 40),
+              if (widget.profile != null) _buildProfileHeader(context, isWidescreen),
+              SizedBox(height: isWidescreen ? 12 : 20),
+              if (widget.profile != null) _buildStatsRow(context, isWidescreen),
+              SizedBox(height: isWidescreen ? 10 : 16),
+              if (_summary != null) _buildHardcoreSoftcoreBar(context, isWidescreen),
+              SizedBox(height: isWidescreen ? 10 : 16),
+              if (_summary != null) _buildCloseToMastery(context, isWidescreen),
+              if (_completedGames != null) _buildMasteredGamesCompact(context, isWidescreen),
+              SizedBox(height: isWidescreen ? 12 : 20),
+              Text('Recently Played', style: isWidescreen
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.titleLarge),
+              SizedBox(height: isWidescreen ? 8 : 12),
+              if (widget.recentGames != null && widget.recentGames!.isNotEmpty)
+                ...widget.recentGames!.take(isWidescreen ? 3 : 5).toList().asMap().entries.map((entry) =>
+                  AnimatedListItem(
+                    index: entry.key,
+                    child: GameListTile(game: entry.value, compact: isWidescreen),
+                  ),
+                )
+              else
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('No recent games'),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -134,60 +144,67 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context) {
+  Widget _buildProfileHeader(BuildContext context, [bool compact = false]) {
     final picUrl = 'https://retroachievements.org${widget.profile!['UserPic']}';
     final username = widget.profile!['User'] ?? 'User';
+    final avatarSize = compact ? 56.0 : 80.0;
+
     return Row(
       children: [
         ClipOval(
           child: CachedNetworkImage(
             imageUrl: picUrl,
-            width: 80,
-            height: 80,
+            width: avatarSize,
+            height: avatarSize,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
-              width: 80,
-              height: 80,
+              width: avatarSize,
+              height: avatarSize,
               color: Colors.grey[800],
               child: const Center(
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
             errorWidget: (context, url, error) => Container(
-              width: 80,
-              height: 80,
+              width: avatarSize,
+              height: avatarSize,
               color: Colors.grey[800],
               child: Center(
                 child: Text(
                   username.isNotEmpty ? username[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: compact ? 22 : 32, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: compact ? 12 : 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 username,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                style: (compact
+                    ? Theme.of(context).textTheme.titleMedium
+                    : Theme.of(context).textTheme.headlineSmall)?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 widget.profile!['RichPresenceMsg'] ?? 'Offline',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey,
+                  fontSize: compact ? 11 : null,
                 ),
+                maxLines: compact ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.share),
+          icon: Icon(Icons.share, size: compact ? 20 : 24),
           onPressed: () {
             Navigator.push(
               context,
@@ -204,7 +221,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     );
   }
 
-  Widget _buildStatsRow(BuildContext context) {
+  Widget _buildStatsRow(BuildContext context, [bool compact = false]) {
     final points = widget.profile!['TotalPoints'] ?? 0;
     final truePoints = widget.profile!['TotalTruePoints'] ?? 0;
     final softcore = _summary?['TotalSoftcorePoints'] ?? widget.profile!['TotalSoftcorePoints'] ?? 0;
@@ -224,27 +241,30 @@ class _HomeTabState extends ConsumerState<HomeTab> {
               label: 'Hardcore',
               value: '$points',
               color: Colors.amber,
+              compact: compact,
             )),
-            const SizedBox(width: 8),
+            SizedBox(width: compact ? 6 : 8),
             Expanded(child: StatCard(
               icon: Icons.military_tech,
               label: 'True Points',
               value: '$truePoints',
               color: Colors.purple,
+              compact: compact,
             )),
-            const SizedBox(width: 8),
+            SizedBox(width: compact ? 6 : 8),
             Expanded(child: StatCard(
               icon: Icons.star_border,
               label: 'Softcore',
               value: '$softcore',
               color: Colors.blue,
+              compact: compact,
             )),
           ],
         ),
         if (masteredCount > 0) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 6 : 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: compact ? 5 : 8),
             decoration: BoxDecoration(
               color: Colors.amber.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
@@ -252,11 +272,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
-                const SizedBox(width: 6),
+                Icon(Icons.workspace_premium, color: Colors.amber, size: compact ? 14 : 18),
+                SizedBox(width: compact ? 4 : 6),
                 Text(
                   '$masteredCount Mastered Game${masteredCount == 1 ? '' : 's'}',
-                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w600, fontSize: compact ? 11 : 14),
                 ),
               ],
             ),
@@ -266,7 +286,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     );
   }
 
-  Widget _buildHardcoreSoftcoreBar(BuildContext context) {
+  Widget _buildHardcoreSoftcoreBar(BuildContext context, [bool compact = false]) {
     final points = _summary!['TotalPoints'] ?? 0;
     final softcore = _summary!['TotalSoftcorePoints'] ?? 0;
     final total = points + softcore;
@@ -276,33 +296,35 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(compact ? 10 : 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.whatshot, color: Colors.orange, size: 18),
-                const SizedBox(width: 6),
-                Text('Hardcore vs Softcore', style: Theme.of(context).textTheme.titleSmall),
+                Icon(Icons.whatshot, color: Colors.orange, size: compact ? 14 : 18),
+                SizedBox(width: compact ? 4 : 6),
+                Text('Hardcore vs Softcore', style: compact
+                    ? Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)
+                    : Theme.of(context).textTheme.titleSmall),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 6 : 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
                 value: points / total,
-                minHeight: 16,
+                minHeight: compact ? 10 : 16,
                 backgroundColor: Colors.blue.withValues(alpha: 0.3),
                 valueColor: const AlwaysStoppedAnimation(Colors.orange),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: compact ? 4 : 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Hardcore: $hardcorePercent%', style: const TextStyle(fontSize: 11, color: Colors.orange)),
-                Text('Softcore: ${100 - hardcorePercent}%', style: TextStyle(fontSize: 11, color: Colors.blue[300])),
+                Text('Hardcore: $hardcorePercent%', style: TextStyle(fontSize: compact ? 9 : 11, color: Colors.orange)),
+                Text('Softcore: ${100 - hardcorePercent}%', style: TextStyle(fontSize: compact ? 9 : 11, color: Colors.blue[300])),
               ],
             ),
           ],
@@ -311,7 +333,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     );
   }
 
-  Widget _buildCloseToMastery(BuildContext context) {
+  Widget _buildCloseToMastery(BuildContext context, [bool compact = false]) {
     final recentlyPlayed = _summary!['RecentlyPlayed'] as List<dynamic>? ?? [];
     final awarded = _summary!['Awarded'] as Map<String, dynamic>? ?? {};
 
@@ -345,21 +367,26 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       return const SizedBox.shrink();
     }
 
+    final imageSize = compact ? 28.0 : 36.0;
+    final progressSize = compact ? 24.0 : 32.0;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(compact ? 10 : 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.emoji_events, color: Colors.amber, size: 18),
-                const SizedBox(width: 6),
-                Text('Close to Mastery', style: Theme.of(context).textTheme.titleSmall),
+                Icon(Icons.emoji_events, color: Colors.amber, size: compact ? 14 : 18),
+                SizedBox(width: compact ? 4 : 6),
+                Text('Close to Mastery', style: compact
+                    ? Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)
+                    : Theme.of(context).textTheme.titleSmall),
               ],
             ),
-            const SizedBox(height: 10),
-            ...closeToMastery.take(3).map((item) {
+            SizedBox(height: compact ? 6 : 10),
+            ...closeToMastery.take(compact ? 2 : 3).map((item) {
               final game = item['game'];
               final remaining = item['remaining'] as int;
               final progress = item['progress'] as double;
@@ -375,8 +402,8 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   }
                 },
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(10),
+                  margin: EdgeInsets.only(bottom: compact ? 4 : 8),
+                  padding: EdgeInsets.all(compact ? 6 : 10),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -387,39 +414,39 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                         borderRadius: BorderRadius.circular(4),
                         child: CachedNetworkImage(
                           imageUrl: 'https://retroachievements.org${game['ImageIcon']}',
-                          width: 36,
-                          height: 36,
+                          width: imageSize,
+                          height: imageSize,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => Container(
-                            width: 36, height: 36,
+                            width: imageSize, height: imageSize,
                             color: Colors.grey[800],
-                            child: const Icon(Icons.games, size: 18),
+                            child: Icon(Icons.games, size: imageSize / 2),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: compact ? 6 : 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               game['Title'] ?? 'Unknown',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: compact ? 11 : 13),
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               '$remaining to go!',
-                              style: TextStyle(color: Colors.amber[400], fontSize: 11),
+                              style: TextStyle(color: Colors.amber[400], fontSize: compact ? 9 : 11),
                             ),
                           ],
                         ),
                       ),
                       SizedBox(
-                        width: 32,
-                        height: 32,
+                        width: progressSize,
+                        height: progressSize,
                         child: CircularProgressIndicator(
                           value: progress,
-                          strokeWidth: 3,
+                          strokeWidth: compact ? 2 : 3,
                           backgroundColor: Colors.grey[700],
                           valueColor: const AlwaysStoppedAnimation(Colors.amber),
                         ),
@@ -435,7 +462,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     );
   }
 
-  Widget _buildMasteredGamesCompact(BuildContext context) {
+  Widget _buildMasteredGamesCompact(BuildContext context, [bool compact = false]) {
     if (_completedGames == null || _completedGames!.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -456,23 +483,25 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(compact ? 10 : 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
-                const SizedBox(width: 6),
-                Text('Mastered by Console', style: Theme.of(context).textTheme.titleSmall),
+                Icon(Icons.workspace_premium, color: Colors.amber, size: compact ? 14 : 18),
+                SizedBox(width: compact ? 4 : 6),
+                Text('Mastered by Console', style: compact
+                    ? Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)
+                    : Theme.of(context).textTheme.titleSmall),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 6 : 10),
             Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: sortedConsoles.take(6).map((e) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              spacing: compact ? 4 : 6,
+              runSpacing: compact ? 4 : 6,
+              children: sortedConsoles.take(compact ? 4 : 6).map((e) => Container(
+                padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 4),
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Colors.grey[800]
@@ -481,7 +510,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 ),
                 child: Text(
                   '${e.key}: ${e.value}',
-                  style: const TextStyle(fontSize: 11),
+                  style: TextStyle(fontSize: compact ? 9 : 11),
                 ),
               )).toList(),
             ),

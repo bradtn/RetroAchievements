@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../../services/notification_service.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
@@ -99,19 +100,30 @@ class _AchievementOfTheMonthScreenState
     final swaps = _aotmData!['swaps'] as List<dynamic>? ?? [];
 
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
+
+    // Compact sizes for widescreen
+    final headerPadding = isWidescreen ? 16.0 : 24.0;
+    final headerIconSize = isWidescreen ? 32.0 : 48.0;
+    final badgeSize = isWidescreen ? 64.0 : 96.0;
+    final contentPadding = isWidescreen ? 14.0 : 20.0;
+
     return RefreshIndicator(
       onRefresh: _loadData,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
-        children: [
-          // Achievement Card
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(16, isWidescreen ? 8 : 16, 16, 16 + bottomPadding),
+            children: [
+              // Achievement Card
           Card(
             child: Column(
               children: [
                 // Header with gradient - using a different color scheme for month
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(headerPadding),
                   decoration: BoxDecoration(
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(12)),
@@ -121,18 +133,19 @@ class _AchievementOfTheMonthScreenState
                   ),
                   child: Column(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calendar_month,
                         color: Colors.white,
-                        size: 48,
+                        size: headerIconSize,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      SizedBox(height: isWidescreen ? 4 : 8),
+                      Text(
                         'ACHIEVEMENT OF THE MONTH',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
+                          fontSize: isWidescreen ? 12 : 14,
                         ),
                       ),
                       if (startAt.isNotEmpty || endAt.isNotEmpty)
@@ -142,9 +155,9 @@ class _AchievementOfTheMonthScreenState
                               : startAt.isNotEmpty
                                   ? 'Started: $startAt'
                                   : 'Ends: $endAt',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: isWidescreen ? 10 : 12,
                           ),
                         ),
                     ],
@@ -152,7 +165,7 @@ class _AchievementOfTheMonthScreenState
                 ),
                 // Achievement details
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(contentPadding),
                   child: Column(
                     children: [
                       // Badge
@@ -161,32 +174,36 @@ class _AchievementOfTheMonthScreenState
                         child: CachedNetworkImage(
                           imageUrl:
                               'https://media.retroachievements.org/Badge/$badgeName.png',
-                          width: 96,
-                          height: 96,
+                          width: badgeSize,
+                          height: badgeSize,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => Container(
-                            width: 96,
-                            height: 96,
+                            width: badgeSize,
+                            height: badgeSize,
                             color: Colors.grey[800],
-                            child: const Icon(Icons.calendar_month, size: 48),
+                            child: Icon(Icons.calendar_month, size: badgeSize / 2),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: isWidescreen ? 10 : 16),
                       // Title
                       Text(
                         achTitle,
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: (isWidescreen
+                            ? Theme.of(context).textTheme.titleMedium
+                            : Theme.of(context).textTheme.headlineSmall)?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isWidescreen ? 4 : 8),
                       // Description
                       Text(
                         achDesc,
-                        style: TextStyle(color: context.subtitleColor),
+                        style: TextStyle(
+                          color: context.subtitleColor,
+                          fontSize: isWidescreen ? 12 : 14,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -196,44 +213,49 @@ class _AchievementOfTheMonthScreenState
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: isWidescreen ? 10 : 16),
 
           // Game Card
           Text(
             'From Game',
             style: TextStyle(
               color: context.subtitleColor,
-              fontSize: 12,
+              fontSize: isWidescreen ? 10 : 12,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isWidescreen ? 4 : 8),
           _buildGameCard(
             gameId: gameId,
             gameTitle: gameTitle,
             gameIcon: gameIcon,
             consoleName: consoleName,
+            compact: isWidescreen,
           ),
 
           // Swaps Section
           if (swaps.isNotEmpty) ...[
-            const SizedBox(height: 24),
+            SizedBox(height: isWidescreen ? 12 : 24),
             Text(
               'Alternative Achievements',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: isWidescreen
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: isWidescreen ? 2 : 4),
             Text(
               'You can earn any of these instead',
               style: TextStyle(
                 color: context.subtitleColor,
-                fontSize: 12,
+                fontSize: isWidescreen ? 10 : 12,
               ),
             ),
-            const SizedBox(height: 12),
-            ...swaps.map((swap) => _SwapCard(swap: swap)),
+            SizedBox(height: isWidescreen ? 8 : 12),
+            ...swaps.map((swap) => _SwapCard(swap: swap, compact: isWidescreen)),
           ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -243,7 +265,10 @@ class _AchievementOfTheMonthScreenState
     required String gameTitle,
     required String gameIcon,
     required String consoleName,
+    bool compact = false,
   }) {
+    final imageSize = compact ? 40.0 : 56.0;
+
     return Card(
       child: InkWell(
         onTap: gameId != null
@@ -263,7 +288,7 @@ class _AchievementOfTheMonthScreenState
             : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(compact ? 8 : 12),
           child: Row(
             children: [
               ClipRRect(
@@ -272,45 +297,45 @@ class _AchievementOfTheMonthScreenState
                   imageUrl: gameIcon.isNotEmpty
                       ? 'https://media.retroachievements.org$gameIcon'
                       : 'https://media.retroachievements.org/Images/000001.png',
-                  width: 56,
-                  height: 56,
+                  width: imageSize,
+                  height: imageSize,
                   fit: BoxFit.cover,
                   errorWidget: (_, __, ___) => Container(
-                    width: 56,
-                    height: 56,
+                    width: imageSize,
+                    height: imageSize,
                     color: Colors.grey[800],
-                    child: const Icon(Icons.games, size: 28),
+                    child: Icon(Icons.games, size: imageSize / 2),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: compact ? 8 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       gameTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                        fontSize: compact ? 13 : 15,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: compact ? 4 : 6),
                     if (consoleName.isNotEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
                         decoration: BoxDecoration(
                           color: Colors.deepPurple,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           consoleName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: compact ? 9 : 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -318,7 +343,7 @@ class _AchievementOfTheMonthScreenState
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey[500]),
+              Icon(Icons.chevron_right, color: Colors.grey[500], size: compact ? 18 : 24),
             ],
           ),
         ),
@@ -353,8 +378,9 @@ class _AchievementOfTheMonthScreenState
 
 class _SwapCard extends StatelessWidget {
   final dynamic swap;
+  final bool compact;
 
-  const _SwapCard({required this.swap});
+  const _SwapCard({required this.swap, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -369,8 +395,11 @@ class _SwapCard extends StatelessWidget {
     final achDesc = data['achievementDescription'] ?? '';
     final badgeName = data['achievementBadgeName'] ?? '';
 
+    final badgeSize = compact ? 36.0 : 48.0;
+    final gameIconSize = compact ? 16.0 : 20.0;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: compact ? 4 : 8),
       child: InkWell(
         onTap: gameId != null
             ? () {
@@ -389,7 +418,7 @@ class _SwapCard extends StatelessWidget {
             : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(compact ? 8 : 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -399,8 +428,8 @@ class _SwapCard extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl:
                       'https://media.retroachievements.org/Badge/$badgeName.png',
-                  width: 48,
-                  height: 48,
+                  width: badgeSize,
+                  height: badgeSize,
                   fit: BoxFit.cover,
                   errorWidget: (_, __, ___) => Container(
                     width: 48,

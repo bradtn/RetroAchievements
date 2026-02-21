@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
 import 'user_compare_screen.dart';
@@ -330,22 +331,29 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
                             _friendProfiles.clear();
                             await _loadFriendProfiles();
                           },
-                          child: ListView.builder(
-                            padding: EdgeInsets.fromLTRB(
-                              16, 8, 16,
-                              16 + MediaQuery.of(context).viewPadding.bottom,
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                              ),
+                              child: ListView.builder(
+                                padding: EdgeInsets.fromLTRB(
+                                  16, 8, 16,
+                                  16 + MediaQuery.of(context).viewPadding.bottom,
+                                ),
+                                itemCount: friends.length,
+                                itemBuilder: (ctx, i) {
+                                  final friend = friends[i];
+                                  return FriendTile(
+                                    username: friend.username,
+                                    profile: _friendProfiles[friend.username],
+                                    onRemove: () => _removeFriend(friend.username),
+                                    onCompare: () => _compareFriend(friend.username),
+                                    onTap: () => _viewProfile(friend.username),
+                                  );
+                                },
+                              ),
                             ),
-                            itemCount: friends.length,
-                            itemBuilder: (ctx, i) {
-                              final friend = friends[i];
-                              return FriendTile(
-                                username: friend.username,
-                                profile: _friendProfiles[friend.username],
-                                onRemove: () => _removeFriend(friend.username),
-                                onCompare: () => _compareFriend(friend.username),
-                                onTap: () => _viewProfile(friend.username),
-                              );
-                            },
                           ),
                         ),
         ),
@@ -382,18 +390,25 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadFollowing,
-            child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(
-                16, 8, 16,
-                16 + MediaQuery.of(context).viewPadding.bottom,
-              ),
-              itemCount: _following.length,
-              itemBuilder: (ctx, i) => RAUserTile(
-                userData: _following[i],
-                onTap: () => _viewProfile(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-                onCompare: () => _compareFriend(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-                onAddToFriends: () => _addToLocalFriends(_following[i]['User'] ?? _following[i]['user'] ?? ''),
-                isFollowing: true,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                ),
+                child: ListView.builder(
+                  padding: EdgeInsets.fromLTRB(
+                    16, 8, 16,
+                    16 + MediaQuery.of(context).viewPadding.bottom,
+                  ),
+                  itemCount: _following.length,
+                  itemBuilder: (ctx, i) => RAUserTile(
+                    userData: _following[i],
+                    onTap: () => _viewProfile(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+                    onCompare: () => _compareFriend(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+                    onAddToFriends: () => _addToLocalFriends(_following[i]['User'] ?? _following[i]['user'] ?? ''),
+                    isFollowing: true,
+                  ),
+                ),
               ),
             ),
           ),
@@ -431,18 +446,25 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> with SingleTicker
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadFollowers,
-            child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(
-                16, 8, 16,
-                16 + MediaQuery.of(context).viewPadding.bottom,
-              ),
-              itemCount: _followers.length,
-              itemBuilder: (ctx, i) => RAUserTile(
-                userData: _followers[i],
-                onTap: () => _viewProfile(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-                onCompare: () => _compareFriend(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-                onAddToFriends: () => _addToLocalFriends(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
-                isFollowing: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                ),
+                child: ListView.builder(
+                  padding: EdgeInsets.fromLTRB(
+                    16, 8, 16,
+                    16 + MediaQuery.of(context).viewPadding.bottom,
+                  ),
+                  itemCount: _followers.length,
+                  itemBuilder: (ctx, i) => RAUserTile(
+                    userData: _followers[i],
+                    onTap: () => _viewProfile(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+                    onCompare: () => _compareFriend(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+                    onAddToFriends: () => _addToLocalFriends(_followers[i]['User'] ?? _followers[i]['user'] ?? ''),
+                    isFollowing: false,
+                  ),
+                ),
               ),
             ),
           ),

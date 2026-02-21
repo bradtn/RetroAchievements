@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import 'profile_screen.dart';
 
@@ -51,35 +52,42 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  16, 16, 16,
-                  16 + MediaQuery.of(context).viewPadding.bottom,
-                ),
-                children: [
-                  // My Rank Card
-                  if (_myRank != null) _buildMyRankCard(),
-                  const SizedBox(height: 24),
-
-                  // Top 10 Header
-                  Row(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                  ),
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      16, 16, 16,
+                      16 + MediaQuery.of(context).viewPadding.bottom,
+                    ),
                     children: [
-                      const Icon(Icons.emoji_events, color: Colors.amber),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Top 10 Players',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      // My Rank Card
+                      if (_myRank != null) _buildMyRankCard(),
+                      const SizedBox(height: 24),
+
+                      // Top 10 Header
+                      Row(
+                        children: [
+                          const Icon(Icons.emoji_events, color: Colors.amber),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Top 10 Players',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+
+                      // Top 10 List with shuffle animation
+                      if (_topUsers != null && _topUsers!.isNotEmpty)
+                        _AnimatedLeaderboardList(users: _topUsers!)
+                      else
+                        const Center(child: Text('No leaderboard data')),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Top 10 List with shuffle animation
-                  if (_topUsers != null && _topUsers!.isNotEmpty)
-                    _AnimatedLeaderboardList(users: _topUsers!)
-                  else
-                    const Center(child: Text('No leaderboard data')),
-                ],
+                ),
               ),
             ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
@@ -109,42 +110,49 @@ class _ConsoleBrowserScreenState extends ConsumerState<ConsoleBrowserScreen> {
                     ? const Center(child: Text('No consoles found'))
                     : RefreshIndicator(
                         onRefresh: _loadConsoles,
-                        child: ListView.builder(
-                          padding: EdgeInsets.fromLTRB(
-                            16, 0, 16,
-                            16 + MediaQuery.of(context).viewPadding.bottom,
-                          ),
-                          itemCount: _filteredConsoles.length,
-                          itemBuilder: (ctx, i) {
-                            final console = _filteredConsoles[i];
-                            final name = console['Name'] ?? 'Unknown';
-                            final id = console['ID'];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: _getConsoleColor(name).withValues(alpha: 0.2),
-                                  child: Icon(
-                                    _getConsoleIcon(name),
-                                    color: _getConsoleColor(name),
-                                  ),
-                                ),
-                                title: Text(name),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => _ConsoleGamesScreen(
-                                        consoleId: int.tryParse(id.toString()) ?? 0,
-                                        consoleName: name,
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.fromLTRB(
+                                16, 0, 16,
+                                16 + MediaQuery.of(context).viewPadding.bottom,
+                              ),
+                              itemCount: _filteredConsoles.length,
+                              itemBuilder: (ctx, i) {
+                                final console = _filteredConsoles[i];
+                                final name = console['Name'] ?? 'Unknown';
+                                final id = console['ID'];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: _getConsoleColor(name).withValues(alpha: 0.2),
+                                      child: Icon(
+                                        _getConsoleIcon(name),
+                                        color: _getConsoleColor(name),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
+                                    title: Text(name),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => _ConsoleGamesScreen(
+                                            consoleId: int.tryParse(id.toString()) ?? 0,
+                                            consoleName: name,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
           ),
@@ -322,13 +330,20 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
                     ? const Center(child: Text('No games found'))
                     : RefreshIndicator(
                         onRefresh: _loadGames,
-                        child: ListView.builder(
-                          padding: EdgeInsets.fromLTRB(
-                            16, 0, 16,
-                            16 + MediaQuery.of(context).viewPadding.bottom,
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: ResponsiveLayout.isWidescreen(context) ? 600 : double.infinity,
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.fromLTRB(
+                                16, 0, 16,
+                                16 + MediaQuery.of(context).viewPadding.bottom,
+                              ),
+                              itemCount: _filteredGames.length,
+                              itemBuilder: (ctx, i) => _GameTile(game: _filteredGames[i]),
+                            ),
                           ),
-                          itemCount: _filteredGames.length,
-                          itemBuilder: (ctx, i) => _GameTile(game: _filteredGames[i]),
                         ),
                       ),
           ),

@@ -9,6 +9,7 @@ class StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final bool compact;
 
   const StatCard({
     super.key,
@@ -16,21 +17,26 @@ class StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(compact ? 10 : 16),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            Icon(icon, color: color, size: compact ? 22 : 32),
+            SizedBox(height: compact ? 4 : 8),
+            Text(value, style: (compact
+                ? Theme.of(context).textTheme.titleMedium
+                : Theme.of(context).textTheme.headlineSmall)?.copyWith(
               fontWeight: FontWeight.bold,
             )),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: compact ? 9 : null,
+            )),
           ],
         ),
       ),
@@ -40,8 +46,9 @@ class StatCard extends StatelessWidget {
 
 class GameListTile extends StatelessWidget {
   final dynamic game;
+  final bool compact;
 
-  const GameListTile({super.key, required this.game});
+  const GameListTile({super.key, required this.game, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +57,8 @@ class GameListTile extends StatelessWidget {
     final total = game['NumPossibleAchievements'] ?? 0;
     final gameId = game['GameID'] ?? game['ID'];
     final heroTag = 'game_image_$gameId';
+
+    final imageSize = compact ? 36.0 : 48.0;
 
     return TappableCard(
       onTap: gameId != null ? () {
@@ -65,67 +74,67 @@ class GameListTile extends StatelessWidget {
         );
       } : null,
       child: Card(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: EdgeInsets.only(bottom: compact ? 4 : 8),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(compact ? 8 : 12),
           child: Row(
             children: [
               Hero(
                 tag: heroTag,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(compact ? 6 : 8),
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
-                    width: 48,
-                    height: 48,
+                    width: imageSize,
+                    height: imageSize,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                      width: 48,
-                      height: 48,
+                      width: imageSize,
+                      height: imageSize,
                       color: Colors.grey[800],
                     ),
                     errorWidget: (_, __, ___) => Container(
-                      width: 48,
-                      height: 48,
+                      width: imageSize,
+                      height: imageSize,
                       color: Colors.grey[800],
-                      child: const Icon(Icons.games),
+                      child: Icon(Icons.games, size: imageSize / 2),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: compact ? 8 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       game['Title'] ?? 'Unknown Game',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: compact ? 12 : 14),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        game['ConsoleName'] ?? '',
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                    SizedBox(height: compact ? 3 : 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: compact ? 1 : 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            game['ConsoleName'] ?? '',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: compact ? 8 : 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (total > 0) ...[
-                      Row(
-                        children: [
+                        if (total > 0) ...[
+                          SizedBox(width: compact ? 4 : 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: compact ? 1 : 2),
                             decoration: BoxDecoration(
                               color: Colors.green.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
@@ -133,13 +142,13 @@ class GameListTile extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.emoji_events, size: 10, color: Colors.green),
-                                const SizedBox(width: 3),
+                                Icon(Icons.emoji_events, size: compact ? 8 : 10, color: Colors.green),
+                                SizedBox(width: compact ? 2 : 3),
                                 Text(
                                   '$earned/$total',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.green,
-                                    fontSize: 10,
+                                    fontSize: compact ? 8 : 10,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -147,16 +156,12 @@ class GameListTile extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
-                    ] else
-                      Text(
-                        'No achievements yet',
-                        style: TextStyle(color: context.subtitleColor, fontSize: 11, fontStyle: FontStyle.italic),
-                      ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              Icon(Icons.chevron_right, color: Colors.grey, size: compact ? 18 : 24),
             ],
           ),
         ),
