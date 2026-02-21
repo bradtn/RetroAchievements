@@ -43,6 +43,50 @@ class RAApiDataSource {
   bool get hasCredentials => _username != null && _apiKey != null;
   String? get username => _username;
 
+  /// Verify that the API key belongs to the specified username
+  /// The RA API validates that z (username) matches the API key owner
+  Future<bool> verifyApiKeyOwner(String username) async {
+    try {
+      // Call API_GetUsersIFollow - this endpoint requires valid z/y credentials
+      // If the API key doesn't belong to the specified username, RA returns an error
+      final response = await _dio.get(
+        'API_GetUsersIFollow.php',
+        queryParameters: {
+          'z': username,
+          'y': _apiKey,
+        },
+      );
+
+      // Check for HTTP errors
+      if (response.statusCode != 200) {
+        return false;
+      }
+
+      final data = response.data;
+
+      // Check for auth/validation errors in response
+      if (data is Map<String, dynamic>) {
+        // RA API returns errors like {"Success": false, "Error": "..."}
+        // or {"error": "Invalid API Key"}
+        final error = data['Error'] ?? data['error'];
+        final success = data['Success'] ?? data['success'];
+
+        if (error != null && error.toString().isNotEmpty) {
+          return false;
+        }
+        if (success == false) {
+          return false;
+        }
+      }
+
+      // If we got a valid response (even empty results), credentials are valid
+      return true;
+    } catch (e) {
+      // Network errors shouldn't block login - let the main flow handle it
+      return true;
+    }
+  }
+
   Map<String, dynamic> _authParams() {
     return {
       'z': _username,
@@ -629,11 +673,26 @@ class RAApiDataSource {
           'i': gameId,
         },
       );
+      print('getGameLeaderboards raw response type: ${response.data.runtimeType}');
+      print('getGameLeaderboards raw response: ${response.data}');
       if (response.statusCode == 200 && response.data != null) {
-        return response.data as List<dynamic>;
+        final data = response.data;
+        // Handle both List and Map responses
+        if (data is List) {
+          return data;
+        } else if (data is Map) {
+          final mapData = Map<String, dynamic>.from(data);
+          // API might return { Count, Total, Results: [...] }
+          final results = mapData['Results'] as List<dynamic>?;
+          if (results != null) return results;
+          // Or it might be a map of leaderboards by ID
+          return mapData.values.toList();
+        }
+        return null;
       }
       return null;
     } catch (e) {
+      print('getGameLeaderboards error: $e');
       return null;
     }
   }
@@ -652,11 +711,16 @@ class RAApiDataSource {
         'API_GetLeaderboardEntries.php',
         queryParameters: params,
       );
+      print('getLeaderboardEntries raw response: ${response.data}');
       if (response.statusCode == 200 && response.data != null) {
-        return response.data as Map<String, dynamic>;
+        if (response.data is Map) {
+          return Map<String, dynamic>.from(response.data);
+        }
+        return null;
       }
       return null;
     } catch (e) {
+      print('getLeaderboardEntries error: $e');
       return null;
     }
   }
@@ -755,5 +819,42 @@ class RAApiDataSource {
         return null;
       }
     });
+  }
+
+  /// Get user's leaderboard entries for a specific game
+  /// Returns the user's scores, ranks, and positions on all leaderboards for a game
+  /// Response format:
+  /// {
+  ///   "Count": 1,
+  ///   "Total": 1,
+  ///   "Results": [
+  ///     {
+  ///       "LeaderboardId": 84859,
+  ///       "Title": "Speed Run",
+  ///       "Description": "Complete in fastest time",
+  ///       "Rank": 1,
+  ///       "Score": 8334,
+  ///       "FormattedScore": "1:23.34",
+  ///       "DateUpdated": "2025-06-02 04:32:38"
+  ///     }
+  ///   ]
+  /// }
+  Future<Map<String, dynamic>?> getUserGameLeaderboards(String username, int gameId) async {
+    try {
+      final response = await _dio.get(
+        'API_GetUserGameLeaderboards.php',
+        queryParameters: {
+          ..._authParams(),
+          'u': username,
+          'i': gameId,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 }

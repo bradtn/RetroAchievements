@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
+import '../../core/services/dual_screen_service.dart';
+import '../../core/responsive_layout.dart';
 import '../../data/cache/game_cache.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
+import '../providers/premium_provider.dart';
 import 'share_card/share_card_screen.dart';
 import 'game_detail/achievement_tile.dart';
 import 'game_detail/leaderboard_widgets.dart';
@@ -36,18 +39,31 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   bool _isLoadingLeaderboards = false;
   Map<String, dynamic>? _userGameRank;
 
+  // User's personal leaderboard entries for this game
+  List<Map<String, dynamic>> _userGameLeaderboards = [];
+  bool _isLoadingUserLeaderboards = false;
+
   AchievementFilter _filter = AchievementFilter.all;
   AchievementSort _sort = AchievementSort.normal;
   bool _showMissable = false;
+
+  // Toggle between achievements and leaderboards view
+  bool _showLeaderboards = false;
 
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTop = false;
   bool _transitionComplete = false;
 
+  // Dual screen support
+  final DualScreenService _dualScreen = DualScreenService();
+  bool _isShowingSecondaryDialog = false; // Prevent stacking dialogs from secondary taps
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _dualScreen.addSecondaryEventListener(_handleSecondaryEvent);
+    debugPrint('GameDetailScreen: Registered secondary event listener');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 250), () {
         if (mounted) {
@@ -62,7 +78,121 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _dualScreen.removeSecondaryEventListener(_handleSecondaryEvent);
     super.dispose();
+  }
+
+  /// Handle events from secondary display
+  void _handleSecondaryEvent(String event, Map<String, dynamic> data) {
+    debugPrint('GameDetailScreen: _handleSecondaryEvent called - event=$event, mounted=$mounted');
+    if (!mounted) return;
+
+    switch (event) {
+      case 'filterChanged':
+        // Sync filter from secondary
+        setState(() {
+          _filter = AchievementFilter.values[data['filter'] as int? ?? 0];
+          _showMissable = data['showMissable'] as bool? ?? false;
+        });
+        break;
+      case 'sortChanged':
+        // Sync sort from secondary
+        setState(() {
+          _sort = AchievementSort.values[data['sort'] as int? ?? 0];
+        });
+        break;
+      case 'achievementTapped':
+        // Show achievement detail dialog on main screen
+        // Convert nested map properly (Kotlin returns Map<Object?, Object?>)
+        Map<String, dynamic>? achievement;
+        final rawAchievement = data['achievement'];
+        if (rawAchievement is Map) {
+          achievement = Map<String, dynamic>.from(rawAchievement);
+        }
+
+        if (achievement != null) {
+          _showAchievementFromSecondary(achievement);
+        } else {
+          // Fallback: try to find by achievementId
+          final achievementId = data['achievementId'];
+          if (achievementId != null && _gameData != null) {
+            final achievements = _gameData!['Achievements'] as Map<String, dynamic>? ?? {};
+            for (final entry in achievements.entries) {
+              if (entry.value is Map && entry.value['ID'] == achievementId) {
+                _showAchievementFromSecondary(Map<String, dynamic>.from(entry.value));
+                break;
+              }
+            }
+          }
+        }
+        break;
+    }
+  }
+
+  /// Show achievement detail triggered from secondary display
+  void _showAchievementFromSecondary(Map<String, dynamic> achievement) async {
+    // Prevent stacking multiple dialogs
+    if (_isShowingSecondaryDialog) {
+      return;
+    }
+    _isShowingSecondaryDialog = true;
+
+    // Find the full achievement data from our game data
+    final achievements = _gameData?['Achievements'] as Map<String, dynamic>? ?? {};
+    final numDistinctPlayersRaw = _gameData?['NumDistinctPlayers'] ?? _gameData?['NumDistinctPlayersCasual'] ?? 0;
+    final numDistinctPlayers = numDistinctPlayersRaw is int ? numDistinctPlayersRaw : int.tryParse(numDistinctPlayersRaw.toString()) ?? 0;
+
+    // Try to find full achievement data by ID
+    Map<String, dynamic>? fullAchievement;
+    final targetId = achievement['ID']?.toString();
+    for (final entry in achievements.entries) {
+      if (entry.value is Map) {
+        final entryId = entry.value['ID']?.toString();
+        if (entryId == targetId) {
+          fullAchievement = Map<String, dynamic>.from(entry.value);
+          break;
+        }
+      }
+    }
+
+    // Use the full data or fall back to what we received
+    final achData = fullAchievement ?? achievement;
+
+    // Get user info for the dialog
+    final username = ref.read(authProvider).username;
+    final gameTitle = _gameData?['Title'] ?? widget.gameTitle ?? 'Game';
+    final gameIcon = _gameData?['ImageIcon'] ?? '';
+    final consoleName = _gameData?['ConsoleName'] ?? '';
+
+    // Fetch user profile to get avatar (like AchievementTile does)
+    String userPic = _gameData?['UserPic'] ?? '';
+    if (userPic.isEmpty && username != null) {
+      final api = ref.read(apiDataSourceProvider);
+      final profile = await api.getUserProfile(username);
+      userPic = profile?['UserPic'] ?? '';
+    }
+
+    if (!mounted) {
+      _isShowingSecondaryDialog = false;
+      return;
+    }
+
+    // Show the full dialog (same as AchievementTile)
+    await showDialog(
+      context: context,
+      builder: (ctx) => _buildFullAchievementDialog(
+        ctx,
+        achData,
+        numDistinctPlayers,
+        username: username,
+        userPic: userPic,
+        gameTitle: gameTitle,
+        gameIcon: gameIcon,
+        consoleName: consoleName,
+      ),
+    );
+
+    _isShowingSecondaryDialog = false;
   }
 
   void _onScroll() {
@@ -112,13 +242,81 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       });
       _loadLeaderboards();
       _loadUserGameRank();
+      _loadUserGameLeaderboards();
+      _updateSecondaryDisplay(data);
     }
+  }
+
+  /// Send game data to secondary display (for dual-screen devices)
+  void _updateSecondaryDisplay(Map<String, dynamic> data) {
+    final authState = ref.read(authProvider);
+
+    final achievements = data['Achievements'];
+    int totalAchievements = 0;
+    int earnedAchievements = 0;
+    int totalPoints = 0;
+    List<Map<String, dynamic>> achievementsList = [];
+
+    // Get numDistinctPlayers for rarity calculation
+    final numDistinctPlayersRaw = data['NumDistinctPlayers'] ?? data['NumDistinctPlayersCasual'] ?? 0;
+    final numDistinctPlayers = numDistinctPlayersRaw is int ? numDistinctPlayersRaw : int.tryParse(numDistinctPlayersRaw.toString()) ?? 0;
+
+    if (achievements is Map) {
+      totalAchievements = achievements.length;
+      for (final entry in achievements.entries) {
+        final ach = entry.value;
+        if (ach is Map) {
+          final dateEarned = ach['DateEarned'] ?? ach['DateEarnedHardcore'];
+          if (dateEarned != null) {
+            earnedAchievements++;
+          }
+          totalPoints += (ach['Points'] as int?) ?? 0;
+
+          // Add to achievements list for secondary display
+          // Include both Type/type and Flags/flags for compatibility
+          achievementsList.add({
+            'ID': ach['ID'],
+            'Title': ach['Title'],
+            'Description': ach['Description'],
+            'Points': ach['Points'],
+            'BadgeName': ach['BadgeName'],
+            'DateEarned': ach['DateEarned'],
+            'DateEarnedHardcore': ach['DateEarnedHardcore'],
+            'Flags': ach['Flags'] ?? ach['flags'],
+            'flags': ach['flags'] ?? ach['Flags'],
+            'Type': ach['Type'] ?? ach['type'],
+            'type': ach['type'] ?? ach['Type'],
+            'NumAwarded': ach['NumAwarded'],
+          });
+        }
+      }
+    }
+
+    _dualScreen.sendToSecondary({
+      'gameTitle': data['Title'] ?? widget.gameTitle ?? 'Unknown Game',
+      'consoleName': data['ConsoleName'] ?? '',
+      'achievementCount': totalAchievements,
+      'earnedCount': earnedAchievements,
+      'points': totalPoints,
+      'numDistinctPlayers': numDistinctPlayers,
+      'username': authState.username,
+      'imageUrl': data['ImageIcon'] != null
+          ? 'https://retroachievements.org${data['ImageIcon']}'
+          : null,
+      'achievements': achievementsList,
+      // Include current filter/sort state
+      'filter': _filter.index,
+      'sort': _sort.index,
+      'showMissable': _showMissable,
+    });
   }
 
   Future<void> _loadLeaderboards() async {
     setState(() => _isLoadingLeaderboards = true);
     final api = ref.read(apiDataSourceProvider);
     final result = await api.getGameLeaderboards(widget.gameId);
+    debugPrint('GameLeaderboards API response for game ${widget.gameId}: $result');
+    debugPrint('GameLeaderboards count: ${result?.length ?? 0}');
     if (mounted) {
       setState(() {
         _leaderboards = result != null
@@ -136,6 +334,28 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final result = await api.getUserGameRankAndScore(username, widget.gameId);
     if (mounted && result != null) {
       setState(() => _userGameRank = result);
+    }
+  }
+
+  Future<void> _loadUserGameLeaderboards() async {
+    final api = ref.read(apiDataSourceProvider);
+    final username = ref.read(authProvider).username;
+    if (username == null) return;
+
+    setState(() => _isLoadingUserLeaderboards = true);
+    final result = await api.getUserGameLeaderboards(username, widget.gameId);
+    debugPrint('UserGameLeaderboards API response for game ${widget.gameId}: $result');
+    if (mounted) {
+      setState(() {
+        _isLoadingUserLeaderboards = false;
+        if (result != null) {
+          final results = result['Results'] as List<dynamic>? ?? [];
+          debugPrint('UserGameLeaderboards parsed ${results.length} entries');
+          _userGameLeaderboards = List<Map<String, dynamic>>.from(
+            results.map((e) => Map<String, dynamic>.from(e)),
+          );
+        }
+      });
     }
   }
 
@@ -201,13 +421,21 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         slivers: [
           _buildAppBar(title, imageIcon, imageTitle, isLightMode),
           _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion),
-          if (numAchievements > 0)
-            _buildRarityDistribution(achievements, numDistinctPlayers),
-          if (numAchievements > 0)
-            _buildAchievementsHeader(achievements, numAwarded, earnedPoints, totalPoints),
-          if (numAchievements > 0)
-            _buildAchievementsList(achievements, numDistinctPlayers, title, imageIcon, console),
-          _buildLeaderboardsSection(),
+          // Toggle between Achievements and Leaderboards
+          if (numAchievements > 0 || _leaderboards.isNotEmpty)
+            _buildViewToggle(numAchievements, _leaderboards.length),
+          // Show either Achievements or Leaderboards based on toggle
+          if (!_showLeaderboards) ...[
+            if (numAchievements > 0)
+              _buildRarityDistribution(achievements, numDistinctPlayers),
+            if (numAchievements > 0)
+              _buildAchievementsHeader(achievements, numAwarded, earnedPoints, totalPoints),
+            if (numAchievements > 0)
+              _buildAchievementsList(achievements, numDistinctPlayers, title, imageIcon, console),
+          ] else ...[
+            _buildUserLeaderboardsSection(),
+            _buildLeaderboardsListView(),
+          ],
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
       ),
@@ -215,9 +443,21 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Widget _buildAppBar(String title, String imageIcon, String imageTitle, bool isLightMode) {
-    // Responsive hero height - taller on iPad for better image display
+    // Responsive hero height based on screen type
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final expandedHeight = screenWidth > 600 ? 320.0 : 220.0;
+
+    // Widescreen (landscape gaming handhelds): smaller header to show more content
+    // Tablet portrait: taller header
+    // Phone: standard header
+    final double expandedHeight;
+    if (isWidescreen) {
+      expandedHeight = 160.0; // Compact for widescreen
+    } else if (screenWidth > 600) {
+      expandedHeight = 320.0; // Tablet
+    } else {
+      expandedHeight = 220.0; // Phone
+    }
 
     return SliverAppBar(
       expandedHeight: expandedHeight,
@@ -601,6 +841,100 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
+  /// Build toggle between Achievements and Leaderboards view
+  Widget _buildViewToggle(int achievementCount, int leaderboardCount) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey[850]
+                : Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Haptics.light();
+                    setState(() => _showLeaderboards = false);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: !_showLeaderboards
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.emoji_events,
+                          size: 18,
+                          color: !_showLeaderboards ? Colors.white : Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Achievements ($achievementCount)',
+                          style: TextStyle(
+                            color: !_showLeaderboards ? Colors.white : Colors.grey,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Haptics.light();
+                    setState(() => _showLeaderboards = true);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _showLeaderboards
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.leaderboard,
+                          size: 18,
+                          color: _showLeaderboards ? Colors.white : Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Leaderboards ($leaderboardCount)',
+                          style: TextStyle(
+                            color: _showLeaderboards ? Colors.white : Colors.grey,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRarityDistribution(Map<String, dynamic> achievements, int numDistinctPlayers) {
     final rarityCounts = calculateRarityDistribution(achievements, numDistinctPlayers);
 
@@ -736,7 +1070,40 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     final username = ref.watch(authProvider).username;
     final userPic = _gameData?['UserPic'] ?? '';
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
 
+    // Use grid layout for widescreen to fit more achievements on screen
+    if (isWidescreen) {
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 2.8, // Wider tiles for landscape
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 4,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index >= filtered.length) return null;
+              return AchievementTile(
+                achievement: filtered[index],
+                numDistinctPlayers: numDistinctPlayers,
+                gameTitle: title,
+                gameIcon: imageIcon,
+                consoleName: console,
+                username: username,
+                userPic: userPic is String ? userPic : '',
+                compact: true, // Use compact mode for grid
+              );
+            },
+            childCount: filtered.length,
+          ),
+        ),
+      );
+    }
+
+    // Standard list layout for phone/tablet portrait
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
@@ -763,11 +1130,229 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  Widget _buildLeaderboardsSection() {
-    if (_leaderboards.isEmpty && !_isLoadingLeaderboards) {
+  /// Build full leaderboards list view (when toggled to leaderboards)
+  Widget _buildLeaderboardsListView() {
+    if (_isLoadingLeaderboards) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (_leaderboards.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              Icon(Icons.leaderboard_outlined, size: 48, color: Colors.grey[600]),
+              const SizedBox(height: 16),
+              Text(
+                'No leaderboards available',
+                style: TextStyle(color: context.subtitleColor),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          if (index >= _leaderboards.length) return null;
+          return LeaderboardTile(
+            leaderboard: _leaderboards[index],
+            onTap: () => _showLeaderboardDetail(_leaderboards[index]),
+          );
+        },
+        childCount: _leaderboards.length,
+      ),
+    );
+  }
+
+  /// Build section showing user's personal leaderboard entries for this game
+  Widget _buildUserLeaderboardsSection() {
+    if (_userGameLeaderboards.isEmpty && !_isLoadingUserLeaderboards) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Row(
+              children: [
+                const Icon(Icons.emoji_events, size: 22, color: Colors.green),
+                const SizedBox(width: 8),
+                Text('Your Leaderboard Entries', style: Theme.of(context).textTheme.titleLarge),
+                const Spacer(),
+                if (_userGameLeaderboards.isNotEmpty)
+                  Text(
+                    '${_userGameLeaderboards.length} ${_userGameLeaderboards.length == 1 ? 'entry' : 'entries'}',
+                    style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (_isLoadingUserLeaderboards)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          )
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= _userGameLeaderboards.length) return null;
+                final entry = _userGameLeaderboards[index];
+                return _buildUserLeaderboardEntry(entry);
+              },
+              childCount: _userGameLeaderboards.length,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Build a single user leaderboard entry card
+  Widget _buildUserLeaderboardEntry(Map<String, dynamic> entry) {
+    final title = entry['Title'] ?? 'Leaderboard';
+    final description = entry['Description'] ?? '';
+    final rank = entry['Rank'] ?? 0;
+    final formattedScore = entry['FormattedScore'] ?? entry['Score']?.toString() ?? '0';
+    final dateUpdated = entry['DateUpdated'] ?? '';
+
+    // Color based on rank
+    Color rankColor = Colors.grey;
+    IconData rankIcon = Icons.workspace_premium;
+    if (rank == 1) {
+      rankColor = Colors.amber;
+      rankIcon = Icons.emoji_events;
+    } else if (rank == 2) {
+      rankColor = Colors.grey[400]!;
+    } else if (rank == 3) {
+      rankColor = Colors.orange[700]!;
+    } else if (rank <= 10) {
+      rankColor = Colors.blue;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Rank badge
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: rankColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(rankIcon, size: 16, color: rankColor),
+                  const SizedBox(height: 2),
+                  Text(
+                    '#$rank',
+                    style: TextStyle(
+                      color: rankColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Title and description
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.subtitleColor,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (dateUpdated.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Updated: ${_formatLeaderboardDate(dateUpdated)}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Score
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                formattedScore,
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Format leaderboard date for display
+  String _formatLeaderboardDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inDays == 0) return 'today';
+      if (diff.inDays == 1) return 'yesterday';
+      if (diff.inDays < 7) return '${diff.inDays} days ago';
+      if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
+      if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} months ago';
+      return '${(diff.inDays / 365).floor()} years ago';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  Widget _buildLeaderboardsSection() {
+    // Always show the section header for debugging
     return SliverMainAxisGroup(
       slivers: [
         SliverToBoxAdapter(
@@ -793,6 +1378,16 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             child: Padding(
               padding: EdgeInsets.all(32),
               child: Center(child: CircularProgressIndicator()),
+            ),
+          )
+        else if (_leaderboards.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No leaderboards available for this game',
+                style: TextStyle(color: context.subtitleColor, fontStyle: FontStyle.italic),
+              ),
             ),
           )
         else
@@ -888,6 +1483,373 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Build full achievement detail dialog (triggered from secondary display tap)
+  /// Matches AchievementTile dialog but more compact
+  Widget _buildFullAchievementDialog(
+    BuildContext ctx,
+    Map<String, dynamic> achievement,
+    int numDistinctPlayers, {
+    String? username,
+    String? userPic,
+    String? gameTitle,
+    String? gameIcon,
+    String? consoleName,
+  }) {
+    final title = achievement['Title'] ?? 'Achievement';
+    final description = achievement['Description'] ?? '';
+    final points = achievement['Points'] ?? 0;
+    final badgeName = achievement['BadgeName'] ?? '';
+    final numAwarded = achievement['NumAwarded'] ?? 0;
+    final dateEarned = achievement['DateEarned'] ?? achievement['DateEarnedHardcore'];
+    final isEarned = dateEarned != null;
+
+    // Check if missable
+    final type = (achievement['Type'] ?? achievement['type'] ?? '').toString().toLowerCase();
+    final flags = achievement['Flags'] ?? achievement['flags'] ?? 0;
+    final isMissable = type == 'missable' || type.contains('missable') || flags == 4 || (flags is int && (flags & 4) != 0);
+
+    // Calculate rarity
+    double unlockPercent = 0.0;
+    String rarityLabel = 'Common';
+    Color rarityColor = Colors.blueGrey;
+    IconData rarityIcon = Icons.circle;
+
+    if (numDistinctPlayers > 0) {
+      unlockPercent = (numAwarded / numDistinctPlayers * 100);
+      if (unlockPercent < 5) {
+        rarityLabel = 'Ultra Rare';
+        rarityColor = Colors.red;
+        rarityIcon = Icons.diamond;
+      } else if (unlockPercent < 15) {
+        rarityLabel = 'Rare';
+        rarityColor = Colors.purple;
+        rarityIcon = Icons.star;
+      } else if (unlockPercent < 40) {
+        rarityLabel = 'Uncommon';
+        rarityColor = Colors.blue;
+        rarityIcon = Icons.hexagon;
+      }
+    }
+
+    final isPremium = ref.read(isPremiumProvider);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360, maxHeight: 480),
+        child: Stack(
+          children: [
+            // Main content
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 40, 16, 16), // Extra top padding for X button
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Badge with earned/locked state - compact size
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              if (isEarned)
+                                BoxShadow(
+                                  color: Colors.amber.withValues(alpha: 0.3),
+                                  blurRadius: 12,
+                                  spreadRadius: 1,
+                                ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: ColorFiltered(
+                              colorFilter: isEarned
+                                  ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                                  : const ColorFilter.matrix(<double>[
+                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                      0, 0, 0, 0.5, 0,
+                                    ]),
+                              child: CachedNetworkImage(
+                                imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(
+                                  width: 64,
+                                  height: 64,
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.emoji_events, size: 32),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!isEarned)
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.lock, color: Colors.white, size: 16),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Earned status badge - compact
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isEarned ? Colors.green.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isEarned ? Icons.check_circle : Icons.lock_outline,
+                            color: isEarned ? Colors.green : Colors.orange,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isEarned ? 'UNLOCKED' : 'LOCKED',
+                            style: TextStyle(
+                              color: isEarned ? Colors.green : Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                // Title - compact
+                Text(
+                  title,
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+
+                // Description - compact
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Theme.of(ctx).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[700],
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+
+                // Points, rarity, missable badges - single row
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    _buildCompactBadge(Icons.star, '$points pts', Colors.amber),
+                    _buildCompactBadge(rarityIcon, rarityLabel, rarityColor),
+                    if (isMissable) _buildCompactBadge(Icons.warning_amber, 'Missable', Colors.red),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Rarity bar - compact
+                if (numDistinctPlayers > 0)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: rarityColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Rarity', style: TextStyle(color: rarityColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                            Text('${unlockPercent.toStringAsFixed(1)}%', style: TextStyle(color: rarityColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: (unlockPercent / 100).clamp(0.0, 1.0),
+                            backgroundColor: rarityColor.withValues(alpha: 0.2),
+                            valueColor: AlwaysStoppedAnimation<Color>(rarityColor),
+                            minHeight: 6,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$numAwarded of $numDistinctPlayers players',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 9),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // User info section - compact
+                if (username != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: userPic != null && userPic.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: 'https://retroachievements.org$userPic',
+                                  width: 28,
+                                  height: 28,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => _buildAvatarPlaceholder(username, 28),
+                                )
+                              : _buildAvatarPlaceholder(username, 28),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                username,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                              if (isEarned && dateEarned != null)
+                                Text(
+                                  'Earned: $dateEarned',
+                                  style: TextStyle(color: Colors.grey[500], fontSize: 9),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Share button (for all achievements)
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      // Navigate to share card screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ShareCardScreen(
+                            type: ShareCardType.achievement,
+                            data: {
+                              'Title': title,
+                              'Description': description,
+                              'Points': points,
+                              'BadgeName': badgeName,
+                              'GameTitle': gameTitle ?? '',
+                              'GameIcon': gameIcon ?? '',
+                              'ConsoleName': consoleName ?? '',
+                              'Username': username ?? '',
+                              'UserPic': userPic ?? '',
+                              'IsEarned': isEarned,
+                              'DateEarned': dateEarned,
+                              'UnlockPercent': unlockPercent,
+                              'RarityLabel': rarityLabel,
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.share, size: 14),
+                    label: const Text('Share', style: TextStyle(fontSize: 12)),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // X button in top right
+        Positioned(
+          top: 4,
+          right: 4,
+          child: IconButton(
+            onPressed: () => Navigator.pop(ctx),
+            icon: const Icon(Icons.close),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.grey.withValues(alpha: 0.2),
+              padding: const EdgeInsets.all(4),
+              minimumSize: const Size(32, 32),
+            ),
+            iconSize: 20,
+          ),
+        ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build compact badge widget
+  Widget _buildCompactBadge(IconData icon, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 3),
+          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  /// Build avatar placeholder
+  Widget _buildAvatarPlaceholder(String username, double size) {
+    return Container(
+      width: size,
+      height: size,
+      color: Colors.grey[700],
+      child: Center(
+        child: Text(
+          username[0].toUpperCase(),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: size * 0.5),
         ),
       ),
     );

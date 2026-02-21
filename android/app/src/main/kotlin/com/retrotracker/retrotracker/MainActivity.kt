@@ -14,8 +14,16 @@ class MainActivity : FlutterActivity() {
     private var pendingGameId: Int? = null
     private var pendingScreen: String? = null
 
+    // Dual-screen support
+    private var dualScreenManager: DualScreenManager? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Initialize dual-screen manager
+        dualScreenManager = DualScreenManager(this, flutterEngine).apply {
+            initialize()
+        }
 
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
         methodChannel?.setMethodCallHandler { call, result ->
@@ -141,5 +149,10 @@ class MainActivity : FlutterActivity() {
         for (appWidgetId in appWidgetIds) {
             FriendActivityWidget.updateWidget(applicationContext, appWidgetManager, appWidgetId)
         }
+    }
+
+    override fun onDestroy() {
+        dualScreenManager?.dispose()
+        super.onDestroy()
     }
 }

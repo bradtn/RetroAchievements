@@ -243,6 +243,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           color: Colors.grey,
                         ),
                   ),
+                  const SizedBox(height: 12),
+
+                  // Important reminder
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Use YOUR own username and API key. Do not use credentials from other users.',
+                            style: TextStyle(
+                              color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
 
                   // Login button

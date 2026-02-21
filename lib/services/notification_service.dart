@@ -130,11 +130,9 @@ class NotificationService {
         await android.requestNotificationsPermission();
       }
 
-      // Check and request exact alarm permission (required for scheduled notifications on Android 12+)
-      final canScheduleExact = await android.canScheduleExactNotifications();
-      if (canScheduleExact != true) {
-        await android.requestExactAlarmsPermission();
-      }
+      // Note: Exact alarm permission is NOT requested here automatically
+      // It will only be requested when the user tries to set a scheduled reminder
+      // This avoids repeatedly opening settings for users who don't want reminders
 
       return true;
     }

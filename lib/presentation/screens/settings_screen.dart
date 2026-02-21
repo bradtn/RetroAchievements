@@ -14,6 +14,7 @@ import '../../core/animations.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../data/datasources/ra_api_datasource.dart';
+import '../../core/services/dual_screen_service.dart';
 import 'settings/settings_provider.dart';
 import 'settings/settings_widgets.dart';
 
@@ -125,10 +126,8 @@ class SettingsScreen extends ConsumerWidget {
             leading: Icon(Icons.palette, color: isDark ? Colors.white70 : Colors.grey.shade700),
             title: Text('Theme', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
             subtitle: Text(_themeName(themeMode), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-            trailing: premium.isPremium ? null : const ProBadge(),
-            onTap: premium.isPremium
-                ? () => _showThemeDialog(context, ref, themeMode)
-                : () => _showPremiumRequired(context),
+            trailing: themeMode == AppThemeMode.amoled && !premium.isPremium ? const ProBadge() : null,
+            onTap: () => _showThemeDialog(context, ref, themeMode),
           ),
           _AccentColorTile(isDark: isDark, isPremium: premium.isPremium),
 
@@ -313,6 +312,12 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _openPlayStore(context),
           ),
+
+          const Divider(),
+
+          // Dual-Screen (for devices like Ayn Odin)
+          const SectionTitle('Dual-Screen'),
+          _DualScreenTile(isDark: isDark),
 
           const Divider(),
 
@@ -920,6 +925,174 @@ class _SoundEffectsTileState extends State<_SoundEffectsTile> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Dual-screen settings tile for devices like Ayn Odin
+class _DualScreenTile extends ConsumerStatefulWidget {
+  final bool isDark;
+
+  const _DualScreenTile({required this.isDark});
+
+  @override
+  ConsumerState<_DualScreenTile> createState() => _DualScreenTileState();
+}
+
+class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
+  final DualScreenService _dualScreenService = DualScreenService();
+  bool _hasSecondaryDisplay = false;
+  bool _isSecondaryActive = false;
+  List<DisplayInfo> _displays = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDisplays();
+    _dualScreenService.addDisplayChangeListener(_onDisplaysChanged);
+  }
+
+  Future<void> _checkDisplays() async {
+    final hasSecondary = await _dualScreenService.hasSecondaryDisplay();
+    final displays = await _dualScreenService.getDisplays();
+    if (mounted) {
+      setState(() {
+        _hasSecondaryDisplay = hasSecondary;
+        _displays = displays;
+      });
+    }
+  }
+
+  void _onDisplaysChanged(List<DisplayInfo> displays) {
+    if (mounted) {
+      setState(() {
+        _displays = displays;
+        _hasSecondaryDisplay = displays.length > 1;
+      });
+    }
+  }
+
+  Future<void> _toggleSecondaryDisplay() async {
+    if (_isSecondaryActive) {
+      await _dualScreenService.dismissSecondary();
+      setState(() => _isSecondaryActive = false);
+    } else {
+      await _dualScreenService.showOnSecondary(route: '/secondary');
+      setState(() => _isSecondaryActive = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(
+            Icons.connected_tv,
+            color: widget.isDark ? Colors.white70 : Colors.grey.shade700,
+          ),
+          title: Text(
+            'Secondary Display',
+            style: TextStyle(color: widget.isDark ? Colors.white : Colors.black87),
+          ),
+          subtitle: Text(
+            _hasSecondaryDisplay
+                ? '${_displays.length} display(s) detected'
+                : 'No secondary display detected',
+            style: TextStyle(color: widget.isDark ? Colors.grey[400] : Colors.grey[600]),
+          ),
+          trailing: _hasSecondaryDisplay
+              ? Switch(
+                  value: _isSecondaryActive,
+                  onChanged: (_) => _toggleSecondaryDisplay(),
+                )
+              : Icon(Icons.info_outline, color: Colors.grey[500]),
+          onTap: _hasSecondaryDisplay ? _toggleSecondaryDisplay : _showNoDisplayInfo,
+        ),
+        if (_displays.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: _displays.map((d) => _DisplayInfoRow(display: d, isDark: widget.isDark)).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showNoDisplayInfo() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.connected_tv),
+            SizedBox(width: 8),
+            Text('Dual-Screen Mode'),
+          ],
+        ),
+        content: const Text(
+          'This feature is designed for dual-screen devices like the Ayn Odin.\n\n'
+          'When a secondary display is detected, you can show game info on one screen '
+          'while navigating on the other.\n\n'
+          'No secondary display is currently connected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisplayInfoRow extends StatelessWidget {
+  final DisplayInfo display;
+  final bool isDark;
+
+  const _DisplayInfoRow({required this.display, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            display.isDefault ? Icons.smartphone : Icons.tv,
+            size: 16,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${display.name} (${display.width}x${display.height})',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: display.isWidescreen
+                  ? Colors.blue.withValues(alpha: 0.2)
+                  : Colors.orange.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              display.isWidescreen ? '16:9' : '4:3',
+              style: TextStyle(
+                fontSize: 10,
+                color: display.isWidescreen ? Colors.blue : Colors.orange,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

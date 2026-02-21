@@ -9,12 +9,18 @@ import 'services/background_sync_service.dart';
 import 'services/ad_service.dart';
 import 'services/purchase_service.dart';
 import 'services/push_notification_service.dart';
+import 'core/services/dual_screen_service.dart';
+import 'presentation/screens/secondary_display_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase (required before runApp for push notifications)
   await Firebase.initializeApp();
+
+  // Initialize DualScreenService early to set up method channel handler
+  // This ensures the handler is ready before any events from secondary display
+  DualScreenService();
 
   // Start the app immediately - don't block on service initialization
   runApp(
@@ -57,4 +63,12 @@ Future<void> _initializeServices() async {
   backgroundSyncService.checkStreakOnAppOpen();
   backgroundSyncService.checkAotwOnAppOpen();
   backgroundSyncService.checkAotmOnAppOpen();
+}
+
+/// Entry point for the secondary display (e.g., Ayn Odin bottom screen)
+/// This runs a separate Flutter engine that shows achievements only
+@pragma('vm:entry-point')
+void secondaryDisplayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const SecondaryDisplayApp());
 }

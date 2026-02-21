@@ -11,7 +11,6 @@ import '../console_browser_screen.dart';
 import '../leaderboard_screen.dart';
 import '../friends_screen.dart';
 import '../calendar_screen.dart';
-import '../stats_screen.dart';
 
 class ExploreTab extends StatefulWidget {
   final bool isSelected;
@@ -143,12 +142,6 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
         color: Colors.orange,
         isPremium: true,
         onTap: () => Navigator.push(context, SlidePageRoute(page: const CalendarScreen())),
-      ),
-      _ExploreItem(
-        icon: Icons.analytics,
-        title: 'Stats',
-        color: Colors.pink,
-        onTap: () => Navigator.push(context, SlidePageRoute(page: const StatsScreen())),
       ),
     ];
 

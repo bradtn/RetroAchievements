@@ -15,8 +15,10 @@ class AchievementTile extends ConsumerWidget {
   final String? consoleName;
   final String? username;
   final String? userPic;
+  final bool compact;
 
   const AchievementTile({
+    super.key,
     required this.achievement,
     this.numDistinctPlayers = 0,
     this.gameTitle,
@@ -24,6 +26,7 @@ class AchievementTile extends ConsumerWidget {
     this.consoleName,
     this.username,
     this.userPic,
+    this.compact = false,
   });
 
   // Get rarity info based on NumAwarded (how many players unlocked it)
@@ -75,24 +78,31 @@ class AchievementTile extends ConsumerWidget {
     final dateEarned = achievement['DateEarned'] ?? achievement['DateEarnedHardcore'];
     final isEarned = dateEarned != null;
 
+    // Sizing based on compact mode
+    final badgeSize = compact ? 36.0 : 52.0;
+    final cardPadding = compact ? 8.0 : 12.0;
+    final cardMargin = compact
+        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2)
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 4);
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: cardMargin,
       child: InkWell(
         onTap: () {
           Haptics.light();
           _showAchievementDetail(context, ref);
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(compact ? 8 : 12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(cardPadding),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Achievement badge with earned indicator
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(compact ? 6 : 8),
                     child: ColorFiltered(
                       colorFilter: isEarned
                           ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
@@ -104,13 +114,13 @@ class AchievementTile extends ConsumerWidget {
                             ]),
                       child: CachedNetworkImage(
                         imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                        width: 52,
-                        height: 52,
+                        width: badgeSize,
+                        height: badgeSize,
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => Container(
-                          width: 52, height: 52,
+                          width: badgeSize, height: badgeSize,
                           color: Colors.grey[800],
-                          child: const Icon(Icons.emoji_events),
+                          child: Icon(Icons.emoji_events, size: compact ? 16 : 24),
                         ),
                       ),
                     ),
@@ -120,17 +130,17 @@ class AchievementTile extends ConsumerWidget {
                       right: -2,
                       bottom: -2,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: EdgeInsets.all(compact ? 1 : 2),
                         decoration: const BoxDecoration(
                           color: Colors.green,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.check, color: Colors.white, size: 12),
+                        child: Icon(Icons.check, color: Colors.white, size: compact ? 8 : 12),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: compact ? 8 : 12),
               // Content
               Expanded(
                 child: Column(
@@ -367,74 +377,76 @@ class AchievementTile extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Achievement badge with earned/locked state
-                  Stack(
-                    alignment: Alignment.center,
+          constraints: const BoxConstraints(maxWidth: 340, maxHeight: 480),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 16), // Compact padding
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            if (isEarned)
-                              BoxShadow(
-                                color: Colors.amber.withValues(alpha: 0.4),
-                                blurRadius: 20,
-                                spreadRadius: 2,
-                              ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: ColorFiltered(
-                            colorFilter: isEarned
-                                ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
-                                : const ColorFilter.matrix(<double>[
-                                    0.2126, 0.7152, 0.0722, 0, 0,
-                                    0.2126, 0.7152, 0.0722, 0, 0,
-                                    0.2126, 0.7152, 0.0722, 0, 0,
-                                    0, 0, 0, 0.5, 0,
-                                  ]),
-                            child: CachedNetworkImage(
-                              imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                              width: 96,
-                              height: 96,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => Container(
-                                width: 96,
-                                height: 96,
-                                color: Colors.grey[800],
-                                child: const Icon(Icons.emoji_events, size: 48),
+                      // Achievement badge with earned/locked state
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                if (isEarned)
+                                  BoxShadow(
+                                    color: Colors.amber.withValues(alpha: 0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: 2,
+                                  ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: ColorFiltered(
+                                colorFilter: isEarned
+                                    ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                                    : const ColorFilter.matrix(<double>[
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0, 0, 0, 0.5, 0,
+                                      ]),
+                                child: CachedNetworkImage(
+                                  imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                                  width: 64,
+                                  height: 64,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => Container(
+                                    width: 64,
+                                    height: 64,
+                                    color: Colors.grey[800],
+                                    child: const Icon(Icons.emoji_events, size: 32),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      if (!isEarned)
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.7),
-                            shape: BoxShape.circle,
+                        if (!isEarned)
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.lock, color: Colors.white, size: 16),
                           ),
-                          child: const Icon(Icons.lock, color: Colors.white, size: 24),
-                        ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
                   // Earned status badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: isEarned
                           ? Colors.green.withValues(alpha: 0.2)
@@ -461,17 +473,17 @@ class AchievementTile extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
                   // Title
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // Description
                   Text(
@@ -480,41 +492,41 @@ class AchievementTile extends ConsumerWidget {
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.grey[300]
                           : Colors.grey[700],
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
                   // Points and rarity badges row
                   Wrap(
                     alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.amber.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star, size: 16, color: Colors.amber),
-                            const SizedBox(width: 4),
+                            const Icon(Icons.star, size: 12, color: Colors.amber),
+                            const SizedBox(width: 3),
                             Text(
                               '$points pts',
-                              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: (rarityInfo['color'] as Color).withValues(alpha: 0.3),
                           ),
@@ -522,39 +534,39 @@ class AchievementTile extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(rarityInfo['icon'] as IconData, size: 14, color: rarityInfo['color'] as Color),
-                            const SizedBox(width: 4),
+                            Icon(rarityInfo['icon'] as IconData, size: 12, color: rarityInfo['color'] as Color),
+                            const SizedBox(width: 3),
                             Text(
                               rarityInfo['label'] as String,
-                              style: TextStyle(color: rarityInfo['color'] as Color, fontWeight: FontWeight.bold, fontSize: 12),
+                              style: TextStyle(color: rarityInfo['color'] as Color, fontWeight: FontWeight.bold, fontSize: 11),
                             ),
                           ],
                         ),
                       ),
                       if (isMissable)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.red.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.warning_amber, size: 14, color: Colors.red),
-                              SizedBox(width: 4),
-                              Text('Missable', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                              Icon(Icons.warning_amber, size: 12, color: Colors.red),
+                              SizedBox(width: 3),
+                              Text('Missable', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
                             ],
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
                   // Enhanced rarity visualization
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: (rarityInfo['color'] as Color).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -588,12 +600,12 @@ class AchievementTile extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         // Progress bar
                         Stack(
                           children: [
                             Container(
-                              height: 10,
+                              height: 8,
                               decoration: BoxDecoration(
                                 color: (rarityInfo['color'] as Color).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(5),
@@ -602,7 +614,7 @@ class AchievementTile extends ConsumerWidget {
                             FractionallySizedBox(
                               widthFactor: (unlockPercent / 100).clamp(0.0, 1.0),
                               child: Container(
-                                height: 10,
+                                height: 8,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
@@ -610,12 +622,12 @@ class AchievementTile extends ConsumerWidget {
                                       (rarityInfo['color'] as Color).withValues(alpha: 0.7),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(5),
+                                  borderRadius: BorderRadius.circular(4),
                                   boxShadow: [
                                     BoxShadow(
                                       color: (rarityInfo['color'] as Color).withValues(alpha: 0.5),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
                                     ),
                                   ],
                                 ),
@@ -623,7 +635,7 @@ class AchievementTile extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         // Stats row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -656,12 +668,12 @@ class AchievementTile extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
                   // User info
                   if (username != null) ...[
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white.withValues(alpha: 0.05)
@@ -671,48 +683,48 @@ class AchievementTile extends ConsumerWidget {
                       child: Row(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             child: fetchedUserPic != null && fetchedUserPic.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: 'https://retroachievements.org$fetchedUserPic',
-                                    width: 40,
-                                    height: 40,
+                                    width: 32,
+                                    height: 32,
                                     fit: BoxFit.cover,
                                     errorWidget: (_, __, ___) => Container(
-                                      width: 40,
-                                      height: 40,
+                                      width: 32,
+                                      height: 32,
                                       color: Colors.grey[700],
                                       child: Center(
                                         child: Text(
                                           username![0].toUpperCase(),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                         ),
                                       ),
                                     ),
                                   )
                                 : Container(
-                                    width: 40,
-                                    height: 40,
+                                    width: 32,
+                                    height: 32,
                                     color: Colors.grey[700],
                                     child: Center(
                                       child: Text(
                                         username![0].toUpperCase(),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
                                       ),
                                     ),
                                   ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(username!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text(username!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                 Text(
                                   isEarned ? 'Unlocked ${_formatDate(dateEarned)}' : 'Not yet unlocked',
                                   style: TextStyle(
                                     color: isEarned ? Colors.green : Colors.grey,
-                                    fontSize: 12,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ],
@@ -721,56 +733,66 @@ class AchievementTile extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                   ],
 
-                  // Action buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Close'),
-                        ),
+                  // Share button (for all achievements)
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ShareCardScreen(
+                              type: ShareCardType.achievement,
+                              data: {
+                                'Title': title,
+                                'Description': description,
+                                'Points': points,
+                                'BadgeName': badgeName,
+                                'GameTitle': gameTitle ?? '',
+                                'GameIcon': gameIcon ?? '',
+                                'ConsoleName': consoleName ?? '',
+                                'Username': username ?? '',
+                                'UserPic': fetchedUserPic ?? '',
+                                'IsEarned': isEarned,
+                                'DateEarned': dateEarned,
+                                'UnlockPercent': unlockPercent,
+                                'RarityLabel': rarityInfo['label'],
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.share, size: 16),
+                      label: const Text('Share'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ShareCardScreen(
-                                  type: ShareCardType.achievement,
-                                  data: {
-                                    'Title': title,
-                                    'Description': description,
-                                    'Points': points,
-                                    'BadgeName': badgeName,
-                                    'GameTitle': gameTitle ?? '',
-                                    'GameIcon': gameIcon ?? '',
-                                    'ConsoleName': consoleName ?? '',
-                                    'Username': username ?? '',
-                                    'UserPic': fetchedUserPic ?? '',
-                                    'IsEarned': isEarned,
-                                    'DateEarned': dateEarned,
-                                    'UnlockPercent': unlockPercent,
-                                    'RarityLabel': rarityInfo['label'],
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.share, size: 18),
-                          label: const Text('Share'),
-                        ),
-                      ),
+                    ),
+                  ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+              // X button in top right
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                    padding: const EdgeInsets.all(4),
+                    minimumSize: const Size(32, 32),
+                  ),
+                  iconSize: 20,
+                ),
+              ),
+            ],
           ),
         ),
       ),

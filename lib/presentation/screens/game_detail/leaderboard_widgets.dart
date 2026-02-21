@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/animations.dart';
 import '../../providers/auth_provider.dart';
+import '../profile_screen.dart';
 
 class LeaderboardTile extends StatelessWidget {
   final Map<String, dynamic> leaderboard;
@@ -15,10 +16,21 @@ class LeaderboardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug: print all keys in leaderboard data
+    debugPrint('LeaderboardTile keys: ${leaderboard.keys.toList()}');
+    debugPrint('LeaderboardTile data: $leaderboard');
+
     final title = leaderboard['Title'] ?? 'Leaderboard';
     final description = leaderboard['Description'] ?? '';
-    final numEntries = leaderboard['NumEntries'] ?? leaderboard['NumResults'] ?? 0;
-    final format = leaderboard['Format'] ?? '';
+    // Try various field names the API might use for entry count
+    final numEntries = leaderboard['NumEntries'] ??
+                       leaderboard['NumResults'] ??
+                       leaderboard['EntryCount'] ??
+                       leaderboard['Count'] ??
+                       leaderboard['TotalEntries'] ??
+                       leaderboard['Entries'] ??
+                       0;
+    final format = leaderboard['Format'] ?? (leaderboard['LowerIsBetter'] != null ? 'time' : '');
 
     // Determine icon based on format/type
     IconData icon = Icons.leaderboard;
@@ -60,11 +72,11 @@ class LeaderboardTile extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (description.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         description,
                         style: TextStyle(
@@ -73,7 +85,7 @@ class LeaderboardTile extends StatelessWidget {
                               : Colors.grey[600],
                           fontSize: 12,
                         ),
-                        maxLines: 1,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -81,22 +93,16 @@ class LeaderboardTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              // Show "View" badge instead of count (API doesn't provide count in list)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.2),
+                  color: Colors.blue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.people, size: 12, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$numEntries',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
+                child: const Text(
+                  'View',
+                  style: TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.w500),
                 ),
               ),
               const SizedBox(width: 4),
@@ -275,10 +281,11 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
                               itemBuilder: (ctx, i) {
                                 final entry = _entries[i];
                                 final rank = entry['Rank'] ?? entry['rank'] ?? i + 1;
-                                final user = entry['User'] ?? entry['user'] ?? 'Unknown';
+                                final user = entry['User'] ?? entry['user'] ?? entry['Username'] ?? 'Unknown';
                                 final score = entry['Score'] ?? entry['score'] ?? 0;
                                 final formattedScore = entry['FormattedScore'] ?? entry['ScoreFormatted'] ?? '$score';
-                                final userPic = entry['UserPic'] ?? '';
+                                // Construct avatar URL from username (standard RA format)
+                                final userPicUrl = 'https://retroachievements.org/UserPic/$user.png';
                                 final isCurrentUser = user.toString().toLowerCase() == currentUser?.toLowerCase();
 
                                 // Rank medal colors
@@ -295,66 +302,75 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
                                   medalIcon = Icons.emoji_events;
                                 }
 
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: isCurrentUser
-                                        ? Colors.amber.withValues(alpha: 0.15)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: isCurrentUser
-                                        ? Border.all(color: Colors.amber.withValues(alpha: 0.3))
-                                        : null,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Rank
-                                      SizedBox(
-                                        width: 36,
-                                        child: medalIcon != null
-                                            ? Icon(medalIcon, color: medalColor, size: 22)
-                                            : Text(
-                                                '#$rank',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isCurrentUser ? Colors.amber : Colors.grey,
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ProfileScreen(username: user.toString()),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: isCurrentUser
+                                          ? Colors.amber.withValues(alpha: 0.15)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: isCurrentUser
+                                          ? Border.all(color: Colors.amber.withValues(alpha: 0.3))
+                                          : null,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        // Rank
+                                        SizedBox(
+                                          width: 36,
+                                          child: medalIcon != null
+                                              ? Icon(medalIcon, color: medalColor, size: 22)
+                                              : Text(
+                                                  '#$rank',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isCurrentUser ? Colors.amber : Colors.grey,
+                                                  ),
                                                 ),
-                                              ),
-                                      ),
-                                      // Avatar
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: userPic.isNotEmpty
-                                            ? CachedNetworkImage(
-                                                imageUrl: 'https://retroachievements.org$userPic',
-                                                width: 32,
-                                                height: 32,
-                                                fit: BoxFit.cover,
-                                                errorWidget: (_, __, ___) => _buildDefaultAvatar(user),
-                                              )
-                                            : _buildDefaultAvatar(user),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      // Username
-                                      Expanded(
-                                        child: Text(
-                                          user,
-                                          style: TextStyle(
-                                            fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
-                                            color: isCurrentUser ? Colors.amber : null,
+                                        ),
+                                        // Avatar
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: CachedNetworkImage(
+                                            imageUrl: userPicUrl,
+                                            width: 32,
+                                            height: 32,
+                                            fit: BoxFit.cover,
+                                            placeholder: (_, __) => _buildDefaultAvatar(user.toString()),
+                                            errorWidget: (_, __, ___) => _buildDefaultAvatar(user.toString()),
                                           ),
                                         ),
-                                      ),
-                                      // Score
-                                      Text(
-                                        formattedScore,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: medalColor ?? (isCurrentUser ? Colors.amber : null),
+                                        const SizedBox(width: 10),
+                                        // Username (tappable)
+                                        Expanded(
+                                          child: Text(
+                                            user.toString(),
+                                            style: TextStyle(
+                                              fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                                              color: isCurrentUser ? Colors.amber : null,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        // Score
+                                        Text(
+                                          formattedScore,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: medalColor ?? (isCurrentUser ? Colors.amber : null),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
