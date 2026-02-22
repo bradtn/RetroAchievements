@@ -777,9 +777,17 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.streak => '${widget.data['username']} is on a ${widget.data['currentStreak']} day streak! #RetroAchievements',
       ShareCardType.awardsSummary => '${widget.data['username']} has ${widget.data['totalAwards']} RetroAchievements awards! #RetroAchievements',
       ShareCardType.goalsSummary => '${widget.data['username']} completed ${widget.data['completed']}/${widget.data['total']} RetroTrack goals! #RetroAchievements',
-      ShareCardType.leaderboard => '${widget.data['username']} ranked #${widget.data['rank']} on "${widget.data['leaderboardTitle']}" in ${widget.data['gameTitle']}! #RetroAchievements',
+      ShareCardType.leaderboard => '${widget.data['username']} ranked #${widget.data['rank']} on "${_getLeaderboardName()}" in ${widget.data['gameTitle']}! #RetroAchievements',
       ShareCardType.globalRank => '${widget.data['username']} is ranked #${widget.data['rank']} globally on RetroAchievements with ${widget.data['points']} points! #RetroAchievements',
     };
+  }
+
+  String _getLeaderboardName() {
+    final title = widget.data['leaderboardTitle']?.toString() ?? '';
+    final description = widget.data['leaderboardDescription']?.toString() ?? '';
+    if (title.isNotEmpty) return title;
+    if (description.isNotEmpty) return description;
+    return 'Leaderboard';
   }
 }
 

@@ -1787,10 +1787,17 @@ class LeaderboardCard extends StatelessWidget {
     final userPic = data['userPic'] ?? '';
     final gameTitle = data['gameTitle'] ?? 'Unknown Game';
     final gameIcon = data['gameIcon'] ?? '';
-    final leaderboardTitle = data['leaderboardTitle'] ?? 'Leaderboard';
+    final rawTitle = data['leaderboardTitle'] ?? '';
+    final rawDescription = data['leaderboardDescription'] ?? '';
     final rank = data['rank'] ?? 0;
     final formattedScore = data['formattedScore'] ?? '';
     final isCompact = settings.layout == CardLayout.compact;
+
+    // Handle empty title - use description as main title if title is empty
+    final hasTitle = rawTitle.isNotEmpty;
+    final hasDescription = rawDescription.isNotEmpty;
+    final leaderboardTitle = hasTitle ? rawTitle : (hasDescription ? rawDescription : 'Leaderboard');
+    final leaderboardDescription = hasTitle && hasDescription ? rawDescription : null;
 
     // Rank medal colors
     Color rankColor = Colors.blue;
@@ -1844,32 +1851,52 @@ class LeaderboardCard extends StatelessWidget {
         ),
         SizedBox(height: isCompact ? 12 : 16),
 
-        // Leaderboard title
+        // Leaderboard title and description
         Container(
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 6 : 8),
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 8 : 10),
           decoration: BoxDecoration(
             color: Colors.amber.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
           ),
-          child: Row(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.leaderboard, color: Colors.amber, size: isCompact ? 16 : 20),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  leaderboardTitle,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.leaderboard, color: Colors.amber, size: isCompact ? 16 : 20),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      leaderboardTitle,
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: isCompact ? 12 : 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              // Show description below title if both exist
+              if (leaderboardDescription != null) ...[
+                SizedBox(height: isCompact ? 4 : 6),
+                Text(
+                  leaderboardDescription,
                   style: getCardTextStyle(
                     fontStyle: settings.fontStyle,
-                    fontSize: isCompact ? 12 : 14,
-                    fontWeight: FontWeight.w500,
+                    fontSize: isCompact ? 10 : 12,
+                    color: Colors.white70,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
-              ),
+              ],
             ],
           ),
         ),

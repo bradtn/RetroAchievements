@@ -1394,6 +1394,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   'gameTitle': gameTitle,
                   'gameIcon': gameIcon,
                   'leaderboardTitle': title,
+                  'leaderboardDescription': description,
                   'rank': rank,
                   'formattedScore': formattedScore,
                 },
