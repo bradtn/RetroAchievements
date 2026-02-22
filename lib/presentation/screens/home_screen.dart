@@ -189,6 +189,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         api.getUserProfile(username),
         api.getRecentlyPlayedGames(username),
         api.getAchievementsEarnedBetween(username, thirtyDaysAgo, now),
+        api.getUserRankAndScore(username),
       ]);
 
       var achievements = results[2] as List<dynamic>?;
@@ -204,8 +205,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       }
 
+      // Merge rank data into profile
+      var profile = results[0] as Map<String, dynamic>?;
+      final rankData = results[3] as Map<String, dynamic>?;
+      if (profile != null && rankData != null) {
+        profile = Map<String, dynamic>.from(profile);
+        profile['Rank'] = rankData['Rank'];
+      }
+
       setState(() {
-        _profile = results[0] as Map<String, dynamic>?;
+        _profile = profile;
         _recentGames = results[1] as List<dynamic>?;
         _recentAchievements = achievements;
         _isLoading = false;
