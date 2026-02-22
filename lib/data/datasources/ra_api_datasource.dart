@@ -671,6 +671,7 @@ class RAApiDataSource {
         queryParameters: {
           ..._authParams(),
           'i': gameId,
+          'c': 500, // Request up to 500 to get all leaderboards
         },
       );
       print('getGameLeaderboards raw response type: ${response.data.runtimeType}');
