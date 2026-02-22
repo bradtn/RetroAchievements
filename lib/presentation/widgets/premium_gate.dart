@@ -61,7 +61,7 @@ class PremiumGate extends ConsumerWidget {
 }
 
 /// Shows a preview of premium content with the actual content visible
-class _PremiumPreviewScreen extends StatelessWidget {
+class _PremiumPreviewScreen extends ConsumerWidget {
   final String featureName;
   final Widget preview;
   final VoidCallback onUpgrade;
@@ -73,8 +73,9 @@ class _PremiumPreviewScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final priceString = ref.read(premiumProvider.notifier).priceString;
 
     return Stack(
       children: [
@@ -155,7 +156,7 @@ class _PremiumPreviewScreen extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: onUpgrade,
                     icon: const Icon(Icons.lock_open, size: 18),
-                    label: const Text('Unlock for \$4.99'),
+                    label: Text('Unlock for $priceString'),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.amber,
                       foregroundColor: Colors.black,
@@ -382,7 +383,7 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
   }
 }
 
-class _PremiumRequiredScreen extends StatelessWidget {
+class _PremiumRequiredScreen extends ConsumerWidget {
   final String featureName;
   final String description;
   final IconData icon;
@@ -396,8 +397,9 @@ class _PremiumRequiredScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final priceString = ref.read(premiumProvider.notifier).priceString;
     final size = MediaQuery.of(context).size;
     final isWidescreen = size.width > size.height && size.width > 600;
 
@@ -471,7 +473,7 @@ class _PremiumRequiredScreen extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onUpgrade,
                 icon: const Icon(Icons.star, size: 16),
-                label: const Text('Unlock \$4.99'),
+                label: Text('Unlock $priceString'),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.amber,
                   foregroundColor: Colors.black,
@@ -542,7 +544,7 @@ class _PremiumRequiredScreen extends StatelessWidget {
             FilledButton.icon(
               onPressed: onUpgrade,
               icon: const Icon(Icons.star),
-              label: const Text('Unlock for \$4.99'),
+              label: Text('Unlock for $priceString'),
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.amber,
                 foregroundColor: Colors.black,
