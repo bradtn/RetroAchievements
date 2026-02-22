@@ -4,6 +4,7 @@ import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -163,12 +164,46 @@ class DualScreenManager(
     }
 
     fun hasSecondaryDisplay(): Boolean {
-        val displays = displayManager.displays
-        return displays.size > 1
+        // Only enable dual-screen on supported devices (Ayn Odin/Thor)
+        // This prevents crashes on devices like Galaxy Z Fold that have presentation displays
+        // but don't support our dual-screen implementation
+        if (!isSupportedDualScreenDevice()) {
+            return false
+        }
+
+        // Use DISPLAY_CATEGORY_PRESENTATION to only detect real physical secondary displays
+        // This filters out virtual displays (screen recording, casting, simulated displays)
+        val presentationDisplays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+        return presentationDisplays.isNotEmpty()
     }
 
     private fun getSecondaryDisplay(): Display? {
-        return displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        // Only return secondary display on supported devices
+        if (!isSupportedDualScreenDevice()) {
+            return null
+        }
+
+        // Use DISPLAY_CATEGORY_PRESENTATION to get real physical secondary displays only
+        val presentationDisplays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+        return presentationDisplays.firstOrNull()
+    }
+
+    /**
+     * Check if this is a supported dual-screen device (Ayn Odin/Thor)
+     * We restrict to these devices because other dual-screen devices (like Galaxy Z Fold)
+     * have different display architectures that don't work with our implementation
+     */
+    private fun isSupportedDualScreenDevice(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val model = Build.MODEL.lowercase()
+        val device = Build.DEVICE.lowercase()
+
+        // Ayn devices (Odin, Odin 2, Thor, etc.)
+        return manufacturer.contains("ayn") ||
+            model.contains("odin") ||
+            model.contains("thor") ||
+            device.contains("odin") ||
+            device.contains("thor")
     }
 
     private fun getSecondaryDisplayInfo(): Map<String, Any>? {

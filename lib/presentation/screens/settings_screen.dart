@@ -1104,8 +1104,7 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Full App: Run RetroTrack independently on secondary display\n'
-              'Companion: Show achievements list while browsing on main',
+              'Launch RetroTrack on either display independently',
               style: TextStyle(
                 fontSize: 11,
                 color: widget.isDark ? Colors.grey[500] : Colors.grey[600],
@@ -1132,9 +1131,7 @@ class _DualScreenTileState extends ConsumerState<_DualScreenTile> {
         ),
         content: const Text(
           'This feature is designed for multi-display devices like the Ayn Thor.\n\n'
-          'When a secondary display is detected, you can:\n'
-          '• Launch the full app on either display\n'
-          '• Show a companion view (achievements list) on one screen while browsing on the other\n\n'
+          'When a secondary display is detected, you can launch RetroTrack on either display independently.\n\n'
           'No secondary display is currently connected.',
         ),
         actions: [

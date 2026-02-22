@@ -146,49 +146,80 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
       ),
     ];
 
-    // Calculate responsive column count based on screen width and aspect ratio
-    final crossAxisCount = context.gridColumns(min: 2, max: 6);
-    // Adjust aspect ratio for square screens
-    final childAspectRatio = context.isSquareScreen ? 0.85 : 0.95;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Explore')),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return GridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: childAspectRatio,
-              ),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                if (!_hasAnimated || _animationController.isCompleted) {
-                  return _ExploreGridItem(item: items[index]);
-                }
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate optimal grid layout to fit all tiles without scrolling
+          final padding = 12.0;
+          final spacing = 12.0;
+          final availableWidth = constraints.maxWidth - (padding * 2);
+          final availableHeight = constraints.maxHeight - (padding * 2);
 
-                final itemDelay = index * 0.06;
-                final itemEnd = (itemDelay + 0.5).clamp(0.0, 1.0);
-                final progress = ((_animationController.value - itemDelay) / (itemEnd - itemDelay)).clamp(0.0, 1.0);
+          // Determine columns based on screen width
+          int crossAxisCount;
+          if (availableWidth < 400) {
+            crossAxisCount = 2;
+          } else if (availableWidth < 600) {
+            crossAxisCount = 3;
+          } else if (availableWidth < 900) {
+            crossAxisCount = 4;
+          } else {
+            crossAxisCount = 5;
+          }
 
-                final scale = Curves.elasticOut.transform(progress);
-                final opacity = Curves.easeOut.transform(progress);
+          // Calculate rows needed
+          final rowCount = (items.length / crossAxisCount).ceil();
 
-                return Transform.scale(
-                  scale: 0.6 + (0.4 * scale),
-                  child: Opacity(
-                    opacity: opacity,
-                    child: _ExploreGridItem(item: items[index]),
+          // Calculate tile dimensions to fit everything
+          final totalHorizontalSpacing = (crossAxisCount - 1) * spacing;
+          final tileWidth = (availableWidth - totalHorizontalSpacing) / crossAxisCount;
+
+          final totalVerticalSpacing = (rowCount - 1) * spacing;
+          final tileHeight = (availableHeight - totalVerticalSpacing) / rowCount;
+
+          // Use aspect ratio that fits the available space
+          final childAspectRatio = tileWidth / tileHeight;
+
+          return Padding(
+            padding: EdgeInsets.all(padding),
+            child: AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisSpacing: spacing,
+                    crossAxisSpacing: spacing,
+                    childAspectRatio: childAspectRatio,
                   ),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    if (!_hasAnimated || _animationController.isCompleted) {
+                      return _ExploreGridItem(item: items[index]);
+                    }
+
+                    final itemDelay = index * 0.06;
+                    final itemEnd = (itemDelay + 0.5).clamp(0.0, 1.0);
+                    final progress = ((_animationController.value - itemDelay) / (itemEnd - itemDelay)).clamp(0.0, 1.0);
+
+                    final scale = Curves.elasticOut.transform(progress);
+                    final opacity = Curves.easeOut.transform(progress);
+
+                    return Transform.scale(
+                      scale: 0.6 + (0.4 * scale),
+                      child: Opacity(
+                        opacity: opacity,
+                        child: _ExploreGridItem(item: items[index]),
+                      ),
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

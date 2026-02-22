@@ -1264,9 +1264,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   Widget _buildUserLeaderboardEntry(Map<String, dynamic> entry) {
     final title = entry['Title'] ?? 'Leaderboard';
     final description = entry['Description'] ?? '';
-    final rank = entry['Rank'] ?? 0;
-    final formattedScore = entry['FormattedScore'] ?? entry['Score']?.toString() ?? '0';
-    final dateUpdated = entry['DateUpdated'] ?? '';
+
+    // Extract user's rank and score from UserEntry (nested in API response)
+    final userEntry = entry['UserEntry'] as Map<String, dynamic>? ?? {};
+    final rank = userEntry['Rank'] ?? entry['Rank'] ?? 0;
+    final formattedScore = userEntry['FormattedScore'] ?? userEntry['Score']?.toString() ?? entry['FormattedScore'] ?? entry['Score']?.toString() ?? '0';
+    final dateUpdated = userEntry['DateUpdated'] ?? entry['DateUpdated'] ?? '';
 
     // Color based on rank
     Color rankColor = Colors.grey;
@@ -1284,89 +1287,99 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Rank badge
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: rankColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(rankIcon, size: 16, color: rankColor),
-                  const SizedBox(height: 2),
-                  Text(
-                    '#$rank',
-                    style: TextStyle(
-                      color: rankColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Title and description
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (description.isNotEmpty) ...[
+      child: InkWell(
+        onTap: () {
+          Haptics.light();
+          _showLeaderboardDetail(entry);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Rank badge
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: rankColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(rankIcon, size: 16, color: rankColor),
                     const SizedBox(height: 2),
                     Text(
-                      description,
+                      '#$rank',
                       style: TextStyle(
+                        color: rankColor,
+                        fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: context.subtitleColor,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  if (dateUpdated.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Updated: ${_formatLeaderboardDate(dateUpdated)}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey[500],
                       ),
                     ),
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Score
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                formattedScore,
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              // Title and description
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.subtitleColor,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (dateUpdated.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Updated: ${_formatLeaderboardDate(dateUpdated)}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Score
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  formattedScore,
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Chevron to indicate tappable
+              Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+            ],
+          ),
         ),
       ),
     );
