@@ -2106,16 +2106,16 @@ class GlobalRankCard extends StatelessWidget {
               '#',
               style: getCardTextStyle(
                 fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 28 : 36,
+                fontSize: isCompact ? 18 : 24,
                 fontWeight: FontWeight.bold,
                 color: rankColor,
               ),
             ),
             Text(
-              _formatRank(rank),
+              _formatRankWithCommas(rank),
               style: getCardTextStyle(
                 fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 48 : 64,
+                fontSize: isCompact ? 36 : 48,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -2207,13 +2207,17 @@ class GlobalRankCard extends StatelessWidget {
     );
   }
 
-  String _formatRank(int rank) {
-    if (rank >= 1000000) {
-      return '${(rank / 1000000).toStringAsFixed(1)}M';
-    } else if (rank >= 10000) {
-      return '${(rank / 1000).toStringAsFixed(0)}K';
+  String _formatRankWithCommas(int rank) {
+    // Format with commas: 60304 -> 60,304
+    final str = rank.toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(str[i]);
     }
-    return rank.toString();
+    return buffer.toString();
   }
 
   String _formatNumber(dynamic num) {
