@@ -300,7 +300,6 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
                 const SizedBox(height: 20),
                 const CheckItem('Remove all ads'),
                 const CheckItem('Theme customization'),
-                const CheckItem('AMOLED dark mode'),
                 const CheckItem('Share cards'),
                 const SizedBox(height: 24),
                 SizedBox(
