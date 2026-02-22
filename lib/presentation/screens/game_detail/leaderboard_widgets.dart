@@ -227,15 +227,22 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
   }
 
   Future<void> _loadEntries() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    final api = ref.read(apiDataSourceProvider);
-    final result = await api.getLeaderboardEntries(widget.leaderboardId, count: 100);
+    try {
+      final api = ref.read(apiDataSourceProvider);
 
-    if (mounted) {
+      // Add a local timeout to prevent indefinite hangs
+      final result = await api.getLeaderboardEntries(widget.leaderboardId, count: 100)
+          .timeout(const Duration(seconds: 15), onTimeout: () => null);
+
+      if (!mounted) return;
+
       if (result != null) {
         // The API returns entries in a 'Results' or 'Entries' key typically
         final entries = result['Results'] ?? result['Entries'] ?? result['entries'] ?? [];
@@ -249,20 +256,35 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
           _isLoading = false;
         });
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Error loading leaderboard';
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(authProvider).username;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
     // Use up to 85% of screen height to ensure all entries are visible
     final maxDialogHeight = (screenHeight * 0.85).clamp(400.0, 800.0);
+    final maxDialogWidth = (screenWidth * 0.9).clamp(300.0, 500.0);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 500, maxHeight: maxDialogHeight),
+        constraints: BoxConstraints(
+          maxWidth: maxDialogWidth,
+          maxHeight: maxDialogHeight,
+          minWidth: 280,
+          minHeight: 200,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
