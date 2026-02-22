@@ -196,6 +196,9 @@ class LeaderboardDetailDialog extends ConsumerStatefulWidget {
   final String description;
   final String format;
   final Map<String, dynamic>? userEntry; // User's entry for this leaderboard (if any)
+  final String? gameTitle;
+  final String? gameIcon;
+  final VoidCallback? onShare;
 
   const LeaderboardDetailDialog({
     required this.leaderboardId,
@@ -203,6 +206,9 @@ class LeaderboardDetailDialog extends ConsumerStatefulWidget {
     required this.description,
     required this.format,
     this.userEntry,
+    this.gameTitle,
+    this.gameIcon,
+    this.onShare,
   });
 
   @override
@@ -306,6 +312,12 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
                           ],
                         ),
                       ),
+                      if (widget.onShare != null && widget.userEntry != null)
+                        IconButton(
+                          onPressed: widget.onShare,
+                          icon: const Icon(Icons.share, size: 20),
+                          tooltip: 'Share',
+                        ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close),

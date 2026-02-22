@@ -20,7 +20,7 @@ export 'share_card_widgets.dart';
 export 'card_builders.dart';
 export 'share_card_settings.dart';
 
-enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak, awardsSummary, goalsSummary }
+enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak, awardsSummary, goalsSummary, leaderboard }
 enum ExportFormat { png, gif }
 
 Uint8List? _encodeGifInIsolate(Map<String, dynamic> data) {
@@ -701,6 +701,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.streak => StreakCard(data: widget.data, settings: _settings),
       ShareCardType.awardsSummary => AwardsSummaryCard(data: widget.data, settings: _settings),
       ShareCardType.goalsSummary => GoalsSummaryCard(data: widget.data, settings: _settings),
+      ShareCardType.leaderboard => LeaderboardCard(data: widget.data, settings: _settings),
     };
   }
 
@@ -775,6 +776,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.streak => '${widget.data['username']} is on a ${widget.data['currentStreak']} day streak! #RetroAchievements',
       ShareCardType.awardsSummary => '${widget.data['username']} has ${widget.data['totalAwards']} RetroAchievements awards! #RetroAchievements',
       ShareCardType.goalsSummary => '${widget.data['username']} completed ${widget.data['completed']}/${widget.data['total']} RetroTrack goals! #RetroAchievements',
+      ShareCardType.leaderboard => '${widget.data['username']} ranked #${widget.data['rank']} on "${widget.data['leaderboardTitle']}" in ${widget.data['gameTitle']}! #RetroAchievements',
     };
   }
 }

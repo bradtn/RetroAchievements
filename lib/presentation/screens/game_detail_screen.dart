@@ -1361,6 +1361,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final title = leaderboard['Title'] ?? 'Leaderboard';
     final description = leaderboard['Description'] ?? '';
     final format = leaderboard['Format'] ?? '';
+    final gameTitle = _gameData?['Title'] ?? 'Unknown Game';
+    final gameIcon = _gameData?['ImageIcon'] ?? '';
+    final username = ref.read(authProvider).username ?? '';
 
     showDialog(
       context: context,
@@ -1370,6 +1373,34 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         description: description,
         format: format,
         userEntry: userEntry,
+        gameTitle: gameTitle,
+        gameIcon: gameIcon,
+        onShare: userEntry != null ? () {
+          Navigator.pop(ctx);
+          final nestedUserEntry = userEntry['UserEntry'] as Map<String, dynamic>? ?? userEntry;
+          final rank = nestedUserEntry['Rank'] ?? userEntry['Rank'] ?? 0;
+          final formattedScore = nestedUserEntry['FormattedScore'] ??
+                                 nestedUserEntry['Score']?.toString() ??
+                                 userEntry['FormattedScore'] ??
+                                 userEntry['Score']?.toString() ?? '';
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ShareCardScreen(
+                type: ShareCardType.leaderboard,
+                data: {
+                  'username': username,
+                  'userPic': '/UserPic/$username.png',
+                  'gameTitle': gameTitle,
+                  'gameIcon': gameIcon,
+                  'leaderboardTitle': title,
+                  'rank': rank,
+                  'formattedScore': formattedScore,
+                },
+              ),
+            ),
+          );
+        } : null,
       ),
     );
   }

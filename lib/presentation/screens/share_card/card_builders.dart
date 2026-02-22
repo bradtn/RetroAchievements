@@ -1770,3 +1770,199 @@ class GoalsSummaryCard extends StatelessWidget {
     );
   }
 }
+
+class LeaderboardCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const LeaderboardCard({
+    super.key,
+    required this.data,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final gameTitle = data['gameTitle'] ?? 'Unknown Game';
+    final gameIcon = data['gameIcon'] ?? '';
+    final leaderboardTitle = data['leaderboardTitle'] ?? 'Leaderboard';
+    final rank = data['rank'] ?? 0;
+    final formattedScore = data['formattedScore'] ?? '';
+    final isCompact = settings.layout == CardLayout.compact;
+
+    // Rank medal colors
+    Color rankColor = Colors.blue;
+    if (rank == 1) {
+      rankColor = Colors.amber;
+    } else if (rank == 2) {
+      rankColor = Colors.grey[400]!;
+    } else if (rank == 3) {
+      rankColor = Colors.orange[700]!;
+    } else if (rank <= 10) {
+      rankColor = Colors.green;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Game icon and title
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: 'https://retroachievements.org$gameIcon',
+                width: isCompact ? 36 : 48,
+                height: isCompact ? 36 : 48,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Container(
+                  width: isCompact ? 36 : 48,
+                  height: isCompact ? 36 : 48,
+                  color: Colors.grey[800],
+                  child: Icon(Icons.videogame_asset, size: isCompact ? 20 : 28, color: Colors.grey),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                gameTitle,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 14 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isCompact ? 12 : 16),
+
+        // Leaderboard title
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 6 : 8),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.leaderboard, color: Colors.amber, size: isCompact ? 16 : 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  leaderboardTitle,
+                  style: getCardTextStyle(
+                    fontStyle: settings.fontStyle,
+                    fontSize: isCompact ? 12 : 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        // User avatar
+        _buildAvatar(username, userPic, isCompact ? 40 : 50),
+        SizedBox(height: isCompact ? 8 : 12),
+
+        // Username
+        Text(
+          username,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 16 : 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: isCompact ? 12 : 16),
+
+        // Rank display
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 20 : 28, vertical: isCompact ? 10 : 14),
+          decoration: BoxDecoration(
+            color: rankColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                rank <= 3 ? Icons.emoji_events : Icons.tag,
+                color: rankColor,
+                size: isCompact ? 28 : 36,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '#$rank',
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 32 : 42,
+                  fontWeight: FontWeight.bold,
+                  color: rankColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Score
+        if (formattedScore.isNotEmpty) ...[
+          SizedBox(height: isCompact ? 10 : 14),
+          Text(
+            formattedScore,
+            style: getCardTextStyle(
+              fontStyle: settings.fontStyle,
+              fontSize: isCompact ? 18 : 24,
+              fontWeight: FontWeight.w500,
+              color: Colors.tealAccent,
+            ),
+          ),
+        ],
+        SizedBox(height: isCompact ? 14 : 20),
+
+        const Branding(),
+      ],
+    );
+  }
+
+  Widget _buildAvatar(String username, String userPic, double size) {
+    final imageUrl = userPic.startsWith('http')
+        ? userPic
+        : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white24, width: 2),
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+}
