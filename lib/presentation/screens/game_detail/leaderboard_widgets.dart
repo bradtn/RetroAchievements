@@ -249,11 +249,14 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(authProvider).username;
+    final screenHeight = MediaQuery.of(context).size.height;
+    // Use up to 85% of screen height to ensure all entries are visible
+    final maxDialogHeight = (screenHeight * 0.85).clamp(400.0, 800.0);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+        constraints: BoxConstraints(maxWidth: 500, maxHeight: maxDialogHeight),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
