@@ -436,7 +436,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             if (numAchievements > 0)
               _buildAchievementsList(achievements, numDistinctPlayers, title, imageIcon, console, isWidescreen),
           ] else ...[
-            _buildUserLeaderboardsSection(isWidescreen),
+            _buildLeaderboardsHeader(isWidescreen),
             _buildLeaderboardsListView(isWidescreen),
           ],
           SliverToBoxAdapter(child: _wrapForWidescreen(const SizedBox(height: 32), isWidescreen)),
@@ -1169,6 +1169,58 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
+  /// Build unified leaderboards header with user entry count
+  Widget _buildLeaderboardsHeader(bool isWidescreen) {
+    if (_isLoadingLeaderboards && _isLoadingUserLeaderboards) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final userEntryCount = _userGameLeaderboards.length;
+    final totalCount = _leaderboards.length;
+
+    return SliverToBoxAdapter(
+      child: _wrapForWidescreen(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Row(
+          children: [
+            const Icon(Icons.leaderboard, size: 22, color: Colors.amber),
+            const SizedBox(width: 8),
+            Text('Leaderboards', style: Theme.of(context).textTheme.titleLarge),
+            const Spacer(),
+            if (userEntryCount > 0 && totalCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.emoji_events, size: 14, color: Colors.green),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$userEntryCount of $totalCount',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (totalCount > 0)
+              Text(
+                '$totalCount ${totalCount == 1 ? 'leaderboard' : 'leaderboards'}',
+                style: TextStyle(color: context.subtitleColor, fontSize: 12),
+              ),
+          ],
+        ),
+      ), isWidescreen),
+    );
+  }
+
   /// Build full leaderboards list view (when toggled to leaderboards)
   Widget _buildLeaderboardsListView(bool isWidescreen) {
     if (_isLoadingLeaderboards) {
@@ -1198,209 +1250,44 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       );
     }
 
+    // Build a lookup map of user's leaderboard entries by ID
+    final userEntryMap = <int, Map<String, dynamic>>{};
+    for (final entry in _userGameLeaderboards) {
+      final id = entry['ID'] ?? entry['LeaderboardId'];
+      if (id != null) {
+        userEntryMap[id is int ? id : int.tryParse(id.toString()) ?? 0] = entry;
+      }
+    }
+
+    // Sort leaderboards: user's entries first, then the rest
+    final sortedLeaderboards = List<Map<String, dynamic>>.from(_leaderboards);
+    sortedLeaderboards.sort((a, b) {
+      final aId = a['ID'] ?? a['LeaderboardId'] ?? 0;
+      final bId = b['ID'] ?? b['LeaderboardId'] ?? 0;
+      final aHasEntry = userEntryMap.containsKey(aId is int ? aId : int.tryParse(aId.toString()) ?? 0);
+      final bHasEntry = userEntryMap.containsKey(bId is int ? bId : int.tryParse(bId.toString()) ?? 0);
+      if (aHasEntry && !bHasEntry) return -1;
+      if (!aHasEntry && bHasEntry) return 1;
+      return 0;
+    });
+
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          if (index >= _leaderboards.length) return null;
+          if (index >= sortedLeaderboards.length) return null;
+          final leaderboard = sortedLeaderboards[index];
+          final leaderboardId = leaderboard['ID'] ?? leaderboard['LeaderboardId'] ?? 0;
+          final userEntry = userEntryMap[leaderboardId is int ? leaderboardId : int.tryParse(leaderboardId.toString()) ?? 0];
+
           return _wrapForWidescreen(LeaderboardTile(
-            leaderboard: _leaderboards[index],
-            onTap: () => _showLeaderboardDetail(_leaderboards[index]),
+            leaderboard: leaderboard,
+            userEntry: userEntry,
+            onTap: () => _showLeaderboardDetail(leaderboard, userEntry: userEntry),
           ), isWidescreen);
         },
-        childCount: _leaderboards.length,
+        childCount: sortedLeaderboards.length,
       ),
     );
-  }
-
-  /// Build section showing user's personal leaderboard entries for this game
-  Widget _buildUserLeaderboardsSection(bool isWidescreen) {
-    if (_userGameLeaderboards.isEmpty && !_isLoadingUserLeaderboards) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverToBoxAdapter(
-          child: _wrapForWidescreen(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Row(
-              children: [
-                const Icon(Icons.emoji_events, size: 22, color: Colors.green),
-                const SizedBox(width: 8),
-                Text('Your Leaderboard Entries', style: Theme.of(context).textTheme.titleLarge),
-                const Spacer(),
-                if (_userGameLeaderboards.isNotEmpty)
-                  Text(
-                    '${_userGameLeaderboards.length} ${_userGameLeaderboards.length == 1 ? 'entry' : 'entries'}',
-                    style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                  ),
-              ],
-            ),
-          ), isWidescreen),
-        ),
-        if (_isLoadingUserLeaderboards)
-          SliverToBoxAdapter(
-            child: _wrapForWidescreen(const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            ), isWidescreen),
-          )
-        else
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index >= _userGameLeaderboards.length) return null;
-                final entry = _userGameLeaderboards[index];
-                return _wrapForWidescreen(_buildUserLeaderboardEntry(entry), isWidescreen);
-              },
-              childCount: _userGameLeaderboards.length,
-            ),
-          ),
-      ],
-    );
-  }
-
-  /// Build a single user leaderboard entry card
-  Widget _buildUserLeaderboardEntry(Map<String, dynamic> entry) {
-    final title = entry['Title'] ?? 'Leaderboard';
-    final description = entry['Description'] ?? '';
-
-    // Extract user's rank and score from UserEntry (nested in API response)
-    final userEntry = entry['UserEntry'] as Map<String, dynamic>? ?? {};
-    final rank = userEntry['Rank'] ?? entry['Rank'] ?? 0;
-    final formattedScore = userEntry['FormattedScore'] ?? userEntry['Score']?.toString() ?? entry['FormattedScore'] ?? entry['Score']?.toString() ?? '0';
-    final dateUpdated = userEntry['DateUpdated'] ?? entry['DateUpdated'] ?? '';
-
-    // Color based on rank
-    Color rankColor = Colors.grey;
-    IconData rankIcon = Icons.workspace_premium;
-    if (rank == 1) {
-      rankColor = Colors.amber;
-      rankIcon = Icons.emoji_events;
-    } else if (rank == 2) {
-      rankColor = Colors.grey[400]!;
-    } else if (rank == 3) {
-      rankColor = Colors.orange[700]!;
-    } else if (rank <= 10) {
-      rankColor = Colors.blue;
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: () {
-          Haptics.light();
-          _showLeaderboardDetail(entry);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Rank badge
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: rankColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(rankIcon, size: 16, color: rankColor),
-                    const SizedBox(height: 2),
-                    Text(
-                      '#$rank',
-                      style: TextStyle(
-                        color: rankColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Title and description
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (description.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.subtitleColor,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (dateUpdated.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Updated: ${_formatLeaderboardDate(dateUpdated)}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Score
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  formattedScore,
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              // Chevron to indicate tappable
-              Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Format leaderboard date for display
-  String _formatLeaderboardDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inDays == 0) return 'today';
-      if (diff.inDays == 1) return 'yesterday';
-      if (diff.inDays < 7) return '${diff.inDays} days ago';
-      if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
-      if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} months ago';
-      return '${(diff.inDays / 365).floor()} years ago';
-    } catch (e) {
-      return dateStr;
-    }
   }
 
   Widget _buildLeaderboardsSection() {
@@ -1469,7 +1356,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  void _showLeaderboardDetail(Map<String, dynamic> leaderboard) {
+  void _showLeaderboardDetail(Map<String, dynamic> leaderboard, {Map<String, dynamic>? userEntry}) {
     final id = leaderboard['ID'] ?? leaderboard['LeaderboardId'] ?? 0;
     final title = leaderboard['Title'] ?? 'Leaderboard';
     final description = leaderboard['Description'] ?? '';
@@ -1482,6 +1369,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         title: title,
         description: description,
         format: format,
+        userEntry: userEntry,
       ),
     );
   }
@@ -1525,13 +1413,29 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 controller: scrollController,
                 padding: const EdgeInsets.all(16),
                 itemCount: _leaderboards.length,
-                itemBuilder: (ctx, i) => LeaderboardTile(
-                  leaderboard: _leaderboards[i],
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showLeaderboardDetail(_leaderboards[i]);
-                  },
-                ),
+                itemBuilder: (ctx, i) {
+                  // Look up user entry for this leaderboard
+                  final leaderboard = _leaderboards[i];
+                  final leaderboardId = leaderboard['ID'] ?? leaderboard['LeaderboardId'] ?? 0;
+                  final userEntry = _userGameLeaderboards.firstWhere(
+                    (e) {
+                      final id = e['ID'] ?? e['LeaderboardId'];
+                      return (id is int ? id : int.tryParse(id.toString()) ?? 0) ==
+                             (leaderboardId is int ? leaderboardId : int.tryParse(leaderboardId.toString()) ?? 0);
+                    },
+                    orElse: () => <String, dynamic>{},
+                  );
+                  final hasUserEntry = userEntry.isNotEmpty;
+
+                  return LeaderboardTile(
+                    leaderboard: leaderboard,
+                    userEntry: hasUserEntry ? userEntry : null,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showLeaderboardDetail(leaderboard, userEntry: hasUserEntry ? userEntry : null);
+                    },
+                  );
+                },
               ),
             ),
           ],

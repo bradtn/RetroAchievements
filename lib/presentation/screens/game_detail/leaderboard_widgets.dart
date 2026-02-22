@@ -8,10 +8,12 @@ import '../profile_screen.dart';
 class LeaderboardTile extends StatelessWidget {
   final Map<String, dynamic> leaderboard;
   final VoidCallback onTap;
+  final Map<String, dynamic>? userEntry; // User's entry for this leaderboard (if any)
 
   const LeaderboardTile({
     required this.leaderboard,
     required this.onTap,
+    this.userEntry,
   });
 
   @override
@@ -93,24 +95,97 @@ class LeaderboardTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Show "View" badge instead of count (API doesn't provide count in list)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
+              // Show user's rank if they have an entry, otherwise show "View" badge
+              if (userEntry != null) ...[
+                _buildUserRankBadge(context),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'View',
+                    style: TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.w500),
+                  ),
                 ),
-                child: const Text(
-                  'View',
-                  style: TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.w500),
-                ),
-              ),
+              ],
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildUserRankBadge(BuildContext context) {
+    final userEntryData = userEntry!['UserEntry'] as Map<String, dynamic>? ?? userEntry!;
+    final rank = userEntryData['Rank'] ?? userEntry!['Rank'] ?? 0;
+    final formattedScore = userEntryData['FormattedScore'] ??
+                           userEntryData['Score']?.toString() ??
+                           userEntry!['FormattedScore'] ??
+                           userEntry!['Score']?.toString() ?? '';
+
+    // Color based on rank
+    Color rankColor = Colors.green;
+    if (rank == 1) {
+      rankColor = Colors.amber;
+    } else if (rank == 2) {
+      rankColor = Colors.grey[400]!;
+    } else if (rank == 3) {
+      rankColor = Colors.orange[700]!;
+    } else if (rank <= 10) {
+      rankColor = Colors.blue;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Rank badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: rankColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.emoji_events, size: 12, color: rankColor),
+              const SizedBox(width: 3),
+              Text(
+                '#$rank',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: rankColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (formattedScore.isNotEmpty) ...[
+          const SizedBox(width: 6),
+          // Score badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              formattedScore,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -120,12 +195,14 @@ class LeaderboardDetailDialog extends ConsumerStatefulWidget {
   final String title;
   final String description;
   final String format;
+  final Map<String, dynamic>? userEntry; // User's entry for this leaderboard (if any)
 
   const LeaderboardDetailDialog({
     required this.leaderboardId,
     required this.title,
     required this.description,
     required this.format,
+    this.userEntry,
   });
 
   @override
@@ -274,107 +351,185 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
                                 ],
                               ),
                             )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              itemCount: _entries.length,
-                              itemBuilder: (ctx, i) {
-                                final entry = _entries[i];
-                                final rank = entry['Rank'] ?? entry['rank'] ?? i + 1;
-                                final user = entry['User'] ?? entry['user'] ?? entry['Username'] ?? 'Unknown';
-                                final score = entry['Score'] ?? entry['score'] ?? 0;
-                                final formattedScore = entry['FormattedScore'] ?? entry['ScoreFormatted'] ?? '$score';
-                                // Construct avatar URL from username (standard RA format)
-                                final userPicUrl = 'https://retroachievements.org/UserPic/$user.png';
-                                final isCurrentUser = user.toString().toLowerCase() == currentUser?.toLowerCase();
+                          : _buildEntriesListWithUserPosition(currentUser),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                                // Rank medal colors
-                                Color? medalColor;
-                                IconData? medalIcon;
-                                if (rank == 1) {
-                                  medalColor = Colors.amber;
-                                  medalIcon = Icons.emoji_events;
-                                } else if (rank == 2) {
-                                  medalColor = Colors.grey[400];
-                                  medalIcon = Icons.emoji_events;
-                                } else if (rank == 3) {
-                                  medalColor = Colors.orange[700];
-                                  medalIcon = Icons.emoji_events;
-                                }
+  /// Build entries list showing top 10 + user's position at bottom if not in top 10
+  Widget _buildEntriesListWithUserPosition(String? currentUser) {
+    // Take top 10 entries for display
+    final displayEntries = _entries.take(10).toList();
 
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ProfileScreen(username: user.toString()),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: isCurrentUser
-                                          ? Colors.amber.withValues(alpha: 0.15)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: isCurrentUser
-                                          ? Border.all(color: Colors.amber.withValues(alpha: 0.3))
-                                          : null,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Rank
-                                        SizedBox(
-                                          width: 36,
-                                          child: medalIcon != null
-                                              ? Icon(medalIcon, color: medalColor, size: 22)
-                                              : Text(
-                                                  '#$rank',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isCurrentUser ? Colors.amber : Colors.grey,
-                                                  ),
-                                                ),
-                                        ),
-                                        // Avatar
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(16),
-                                          child: CachedNetworkImage(
-                                            imageUrl: userPicUrl,
-                                            width: 32,
-                                            height: 32,
-                                            fit: BoxFit.cover,
-                                            placeholder: (_, __) => _buildDefaultAvatar(user.toString()),
-                                            errorWidget: (_, __, ___) => _buildDefaultAvatar(user.toString()),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        // Username (tappable)
-                                        Expanded(
-                                          child: Text(
-                                            user.toString(),
-                                            style: TextStyle(
-                                              fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
-                                              color: isCurrentUser ? Colors.amber : null,
-                                            ),
-                                          ),
-                                        ),
-                                        // Score
-                                        Text(
-                                          formattedScore,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: medalColor ?? (isCurrentUser ? Colors.amber : null),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+    // Check if user is in the displayed entries
+    bool userInTopEntries = false;
+    for (final entry in displayEntries) {
+      final user = entry['User'] ?? entry['user'] ?? entry['Username'] ?? '';
+      if (user.toString().toLowerCase() == currentUser?.toLowerCase()) {
+        userInTopEntries = true;
+        break;
+      }
+    }
+
+    // Get user entry from widget prop if not in top entries
+    final userEntryData = widget.userEntry;
+    final showUserAtBottom = !userInTopEntries && userEntryData != null;
+
+    return ListView.builder(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: displayEntries.length + (showUserAtBottom ? 2 : 0), // +1 separator +1 user entry
+      itemBuilder: (ctx, i) {
+        // Show separator before user entry
+        if (showUserAtBottom && i == displayEntries.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(child: Divider(color: Colors.grey[600])),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'Your Position',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: Colors.grey[600])),
+              ],
+            ),
+          );
+        }
+
+        // Show user entry at bottom
+        if (showUserAtBottom && i == displayEntries.length + 1) {
+          final nestedUserEntry = userEntryData['UserEntry'] as Map<String, dynamic>? ?? userEntryData;
+          final rank = nestedUserEntry['Rank'] ?? userEntryData['Rank'] ?? 0;
+          final formattedScore = nestedUserEntry['FormattedScore'] ??
+                                 nestedUserEntry['Score']?.toString() ??
+                                 userEntryData['FormattedScore'] ??
+                                 userEntryData['Score']?.toString() ?? '';
+          return _buildEntryRow(
+            rank: rank,
+            user: currentUser ?? 'You',
+            formattedScore: formattedScore,
+            isCurrentUser: true,
+          );
+        }
+
+        // Show regular entry
+        final entry = displayEntries[i];
+        final rank = entry['Rank'] ?? entry['rank'] ?? i + 1;
+        final user = entry['User'] ?? entry['user'] ?? entry['Username'] ?? 'Unknown';
+        final score = entry['Score'] ?? entry['score'] ?? 0;
+        final formattedScore = entry['FormattedScore'] ?? entry['ScoreFormatted'] ?? '$score';
+        final isCurrentUser = user.toString().toLowerCase() == currentUser?.toLowerCase();
+
+        return _buildEntryRow(
+          rank: rank,
+          user: user.toString(),
+          formattedScore: formattedScore,
+          isCurrentUser: isCurrentUser,
+        );
+      },
+    );
+  }
+
+  /// Build a single entry row
+  Widget _buildEntryRow({
+    required dynamic rank,
+    required String user,
+    required String formattedScore,
+    required bool isCurrentUser,
+  }) {
+    final userPicUrl = 'https://retroachievements.org/UserPic/$user.png';
+
+    // Rank medal colors
+    Color? medalColor;
+    IconData? medalIcon;
+    if (rank == 1) {
+      medalColor = Colors.amber;
+      medalIcon = Icons.emoji_events;
+    } else if (rank == 2) {
+      medalColor = Colors.grey[400];
+      medalIcon = Icons.emoji_events;
+    } else if (rank == 3) {
+      medalColor = Colors.orange[700];
+      medalIcon = Icons.emoji_events;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProfileScreen(username: user),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isCurrentUser
+              ? Colors.amber.withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: isCurrentUser
+              ? Border.all(color: Colors.amber.withValues(alpha: 0.3))
+              : null,
+        ),
+        child: Row(
+          children: [
+            // Rank
+            SizedBox(
+              width: 36,
+              child: medalIcon != null
+                  ? Icon(medalIcon, color: medalColor, size: 22)
+                  : Text(
+                      '#$rank',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isCurrentUser ? Colors.amber : Colors.grey,
+                      ),
+                    ),
+            ),
+            // Avatar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedNetworkImage(
+                imageUrl: userPicUrl,
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => _buildDefaultAvatar(user),
+                errorWidget: (_, __, ___) => _buildDefaultAvatar(user),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Username
+            Expanded(
+              child: Text(
+                user,
+                style: TextStyle(
+                  fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                  color: isCurrentUser ? Colors.amber : null,
+                ),
+              ),
+            ),
+            // Score
+            Text(
+              formattedScore,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: medalColor ?? (isCurrentUser ? Colors.amber : null),
+              ),
             ),
           ],
         ),
