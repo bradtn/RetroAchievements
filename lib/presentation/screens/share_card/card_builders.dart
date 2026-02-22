@@ -1890,48 +1890,42 @@ class LeaderboardCard extends StatelessWidget {
         ),
         SizedBox(height: isCompact ? 12 : 16),
 
-        // Rank display
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 20 : 28, vertical: isCompact ? 10 : 14),
-          decoration: BoxDecoration(
-            color: rankColor.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                rank <= 3 ? Icons.emoji_events : Icons.tag,
+        // Rank display - fancy for top 3, simple for others
+        if (rank <= 3) ...[
+          // Trophy layout for top 3
+          _buildTrophyRank(rank, rankColor, formattedScore, isCompact),
+        ] else ...[
+          // Standard rank display
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: isCompact ? 20 : 28, vertical: isCompact ? 10 : 14),
+            decoration: BoxDecoration(
+              color: rankColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
+            ),
+            child: Text(
+              '#$rank',
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 32 : 42,
+                fontWeight: FontWeight.bold,
                 color: rankColor,
-                size: isCompact ? 28 : 36,
               ),
-              const SizedBox(width: 8),
-              Text(
-                '#$rank',
-                style: getCardTextStyle(
-                  fontStyle: settings.fontStyle,
-                  fontSize: isCompact ? 32 : 42,
-                  fontWeight: FontWeight.bold,
-                  color: rankColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Score
-        if (formattedScore.isNotEmpty) ...[
-          SizedBox(height: isCompact ? 10 : 14),
-          Text(
-            formattedScore,
-            style: getCardTextStyle(
-              fontStyle: settings.fontStyle,
-              fontSize: isCompact ? 18 : 24,
-              fontWeight: FontWeight.w500,
-              color: Colors.tealAccent,
             ),
           ),
+          // Score for non-trophy ranks
+          if (formattedScore.isNotEmpty) ...[
+            SizedBox(height: isCompact ? 10 : 14),
+            Text(
+              formattedScore,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 18 : 24,
+                fontWeight: FontWeight.w500,
+                color: Colors.tealAccent,
+              ),
+            ),
+          ],
         ],
         SizedBox(height: isCompact ? 14 : 20),
 
@@ -1962,6 +1956,81 @@ class LeaderboardCard extends StatelessWidget {
             child: Icon(Icons.person, size: size / 2, color: Colors.grey),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTrophyRank(int rank, Color rankColor, String formattedScore, bool isCompact) {
+    // Position label
+    final positionLabel = switch (rank) {
+      1 => '1ST PLACE',
+      2 => '2ND PLACE',
+      3 => '3RD PLACE',
+      _ => '#$rank',
+    };
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 16 : 24, vertical: isCompact ? 14 : 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            rankColor.withValues(alpha: 0.3),
+            rankColor.withValues(alpha: 0.15),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: rankColor.withValues(alpha: 0.6), width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: rankColor.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Large trophy icon
+          Icon(
+            Icons.emoji_events,
+            color: rankColor,
+            size: isCompact ? 48 : 64,
+          ),
+          SizedBox(height: isCompact ? 8 : 12),
+          // Position label
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 4 : 6),
+            decoration: BoxDecoration(
+              color: rankColor.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              positionLabel,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 18 : 24,
+                fontWeight: FontWeight.bold,
+                color: rankColor,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          // Score below trophy
+          if (formattedScore.isNotEmpty) ...[
+            SizedBox(height: isCompact ? 10 : 14),
+            Text(
+              formattedScore,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 16 : 20,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
