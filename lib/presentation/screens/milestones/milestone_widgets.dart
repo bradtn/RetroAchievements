@@ -503,6 +503,7 @@ class RAAwardsSummary extends StatelessWidget {
   final int beatenSoftcore;
   final int eventAwards;
   final bool compact;
+  final VoidCallback? onShare;
 
   const RAAwardsSummary({
     super.key,
@@ -512,6 +513,7 @@ class RAAwardsSummary extends StatelessWidget {
     required this.beatenSoftcore,
     required this.eventAwards,
     this.compact = false,
+    this.onShare,
   });
 
   @override
@@ -528,39 +530,55 @@ class RAAwardsSummary extends StatelessWidget {
             ],
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                Icon(Icons.military_tech, color: Colors.white, size: compact ? 20 : 28),
-                SizedBox(width: compact ? 6 : 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.military_tech, color: Colors.white, size: compact ? 20 : 28),
+                    SizedBox(width: compact ? 6 : 8),
+                    Text(
+                      '$totalAwards',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: compact ? 22 : 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? 4 : 8),
                 Text(
-                  '$totalAwards',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: compact ? 22 : 32,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'RetroAchievements Awards',
+                  style: TextStyle(color: Colors.white70, fontSize: compact ? 11 : 14),
+                ),
+                SizedBox(height: compact ? 10 : 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    AwardStat(icon: Icons.workspace_premium, value: masteryCount, label: 'Mastery', compact: compact),
+                    AwardStat(icon: Icons.verified, value: beatenHardcore, label: 'Beaten HC', compact: compact),
+                    AwardStat(icon: Icons.check_circle, value: beatenSoftcore, label: 'Beaten', compact: compact),
+                    if (eventAwards > 0)
+                      AwardStat(icon: Icons.celebration, value: eventAwards, label: 'Events', compact: compact),
+                  ],
                 ),
               ],
             ),
-            SizedBox(height: compact ? 4 : 8),
-            Text(
-              'RetroAchievements Awards',
-              style: TextStyle(color: Colors.white70, fontSize: compact ? 11 : 14),
-            ),
-            SizedBox(height: compact ? 10 : 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                AwardStat(icon: Icons.workspace_premium, value: masteryCount, label: 'Mastery', compact: compact),
-                AwardStat(icon: Icons.verified, value: beatenHardcore, label: 'Beaten HC', compact: compact),
-                AwardStat(icon: Icons.check_circle, value: beatenSoftcore, label: 'Beaten', compact: compact),
-                if (eventAwards > 0)
-                  AwardStat(icon: Icons.celebration, value: eventAwards, label: 'Events', compact: compact),
-              ],
-            ),
+            if (onShare != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.share, color: Colors.white70, size: 20),
+                  onPressed: onShare,
+                  tooltip: 'Share',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ),
           ],
         ),
       ),
@@ -572,12 +590,14 @@ class GoalsSummary extends StatelessWidget {
   final int completed;
   final int total;
   final bool compact;
+  final VoidCallback? onShare;
 
   const GoalsSummary({
     super.key,
     required this.completed,
     required this.total,
     this.compact = false,
+    this.onShare,
   });
 
   @override
@@ -596,38 +616,54 @@ class GoalsSummary extends StatelessWidget {
             ],
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                Icon(Icons.flag, color: Colors.white, size: compact ? 20 : 28),
-                SizedBox(width: compact ? 6 : 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.flag, color: Colors.white, size: compact ? 20 : 28),
+                    SizedBox(width: compact ? 6 : 8),
+                    Text(
+                      '$completed / $total',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: compact ? 22 : 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? 4 : 8),
                 Text(
-                  '$completed / $total',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: compact ? 22 : 32,
-                    fontWeight: FontWeight.bold,
+                  'RetroTrack Goals',
+                  style: TextStyle(color: Colors.white70, fontSize: compact ? 11 : 14),
+                ),
+                SizedBox(height: compact ? 10 : 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(compact ? 4 : 8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: compact ? 6 : 8,
+                    backgroundColor: Colors.white24,
+                    valueColor: const AlwaysStoppedAnimation(Colors.white),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: compact ? 4 : 8),
-            Text(
-              'RetroTrack Goals',
-              style: TextStyle(color: Colors.white70, fontSize: compact ? 11 : 14),
-            ),
-            SizedBox(height: compact ? 10 : 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(compact ? 4 : 8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: compact ? 6 : 8,
-                backgroundColor: Colors.white24,
-                valueColor: const AlwaysStoppedAnimation(Colors.white),
+            if (onShare != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.share, color: Colors.white70, size: 20),
+                  onPressed: onShare,
+                  tooltip: 'Share',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ),
-            ),
           ],
         ),
       ),

@@ -279,6 +279,7 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
                 beatenSoftcore: _userAwards?['BeatenSoftcoreAwardsCount'] ?? 0,
                 eventAwards: _userAwards?['EventAwardsCount'] ?? 0,
                 compact: true,
+                onShare: () => _shareAwardsSummary(totalAwardsCount),
               ),
               SizedBox(height: isWidescreen ? 10 : 16),
               Text(
@@ -319,7 +320,12 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
             ],
 
             // App Goals Section
-            GoalsSummary(completed: earned.length, total: milestones.length, compact: true),
+            GoalsSummary(
+              completed: earned.length,
+              total: milestones.length,
+              compact: true,
+              onShare: () => _shareGoalsSummary(earned.length, milestones.length),
+            ),
             SizedBox(height: isWidescreen ? 8 : 12),
             Text(
               'Track your progress with app-exclusive goals',
@@ -608,6 +614,43 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _shareAwardsSummary(int totalAwards) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareCardScreen(
+          type: ShareCardType.awardsSummary,
+          data: {
+            'username': _viewingUsername ?? '',
+            'userPic': _profile?['UserPic'] ?? '',
+            'totalAwards': totalAwards,
+            'masteryCount': _userAwards?['MasteryAwardsCount'] ?? 0,
+            'beatenHardcore': _userAwards?['BeatenHardcoreAwardsCount'] ?? 0,
+            'beatenSoftcore': _userAwards?['BeatenSoftcoreAwardsCount'] ?? 0,
+            'eventAwards': _userAwards?['EventAwardsCount'] ?? 0,
+          },
+        ),
+      ),
+    );
+  }
+
+  void _shareGoalsSummary(int completed, int total) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareCardScreen(
+          type: ShareCardType.goalsSummary,
+          data: {
+            'username': _viewingUsername ?? '',
+            'userPic': _profile?['UserPic'] ?? '',
+            'completed': completed,
+            'total': total,
+          },
+        ),
       ),
     );
   }

@@ -1509,3 +1509,264 @@ class StreakCard extends StatelessWidget {
     );
   }
 }
+
+class AwardsSummaryCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const AwardsSummaryCard({
+    super.key,
+    required this.data,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final totalAwards = data['totalAwards'] ?? 0;
+    final masteryCount = data['masteryCount'] ?? 0;
+    final beatenHardcore = data['beatenHardcore'] ?? 0;
+    final beatenSoftcore = data['beatenSoftcore'] ?? 0;
+    final eventAwards = data['eventAwards'] ?? 0;
+    final isCompact = settings.layout == CardLayout.compact;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Avatar
+        _buildAvatar(username, userPic, isCompact ? 35 : 45),
+        SizedBox(height: isCompact ? 10 : 14),
+
+        // Username
+        Text(
+          username,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 18 : 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: isCompact ? 12 : 16),
+
+        // Total awards with icon
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.military_tech, color: Colors.amber, size: isCompact ? 28 : 36),
+            const SizedBox(width: 8),
+            Text(
+              '$totalAwards',
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 36 : 48,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isCompact ? 4 : 8),
+        Text(
+          'RetroAchievements Awards',
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 12 : 14,
+            color: Colors.white70,
+          ),
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        // Stats row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildStatColumn(Icons.workspace_premium, masteryCount, 'Mastery', Colors.amber, isCompact),
+            _buildStatColumn(Icons.verified, beatenHardcore, 'Beaten HC', Colors.orange, isCompact),
+            _buildStatColumn(Icons.check_circle, beatenSoftcore, 'Beaten', Colors.green, isCompact),
+            if (eventAwards > 0)
+              _buildStatColumn(Icons.celebration, eventAwards, 'Events', Colors.purple, isCompact),
+          ],
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        const Branding(),
+      ],
+    );
+  }
+
+  Widget _buildAvatar(String username, String userPic, double size) {
+    final imageUrl = userPic.startsWith('http')
+        ? userPic
+        : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white24, width: 2),
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatColumn(IconData icon, int value, String label, Color color, bool isCompact) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: isCompact ? 18 : 22),
+        const SizedBox(height: 4),
+        Text(
+          '$value',
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 16 : 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 10 : 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class GoalsSummaryCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const GoalsSummaryCard({
+    super.key,
+    required this.data,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final completed = data['completed'] ?? 0;
+    final total = data['total'] ?? 0;
+    final progress = total > 0 ? completed / total : 0.0;
+    final isCompact = settings.layout == CardLayout.compact;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Avatar
+        _buildAvatar(username, userPic, isCompact ? 35 : 45),
+        SizedBox(height: isCompact ? 10 : 14),
+
+        // Username
+        Text(
+          username,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 18 : 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: isCompact ? 12 : 16),
+
+        // Progress with icon
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.flag, color: Colors.tealAccent, size: isCompact ? 28 : 36),
+            const SizedBox(width: 8),
+            Text(
+              '$completed / $total',
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 36 : 48,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isCompact ? 4 : 8),
+        Text(
+          'RetroTrack Goals',
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 12 : 14,
+            color: Colors.white70,
+          ),
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        // Progress bar
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 20 : 30),
+          child: Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: isCompact ? 10 : 14,
+                  backgroundColor: Colors.white24,
+                  valueColor: const AlwaysStoppedAnimation(Colors.tealAccent),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${(progress * 100).toStringAsFixed(1)}% Complete',
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 12 : 14,
+                  color: Colors.tealAccent,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        const Branding(),
+      ],
+    );
+  }
+
+  Widget _buildAvatar(String username, String userPic, double size) {
+    final imageUrl = userPic.startsWith('http')
+        ? userPic
+        : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white24, width: 2),
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+}
