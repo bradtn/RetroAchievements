@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import 'profile_screen.dart';
+import 'share_card/share_card_screen.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -138,6 +139,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final textColor = isLightMode ? Colors.grey.shade800 : Colors.white;
     final subtleTextColor = isLightMode ? Colors.grey.shade600 : Colors.white70;
 
+    final username = ref.read(authProvider).username ?? '';
+
     return Card(
       elevation: isLightMode ? 2 : 0,
       child: Container(
@@ -153,7 +156,21 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               ? Border.all(color: accentColor.withValues(alpha: 0.3), width: 1)
               : null,
         ),
-        child: Column(
+        child: Stack(
+          children: [
+            // Share button (only if ranked)
+            if (!isUnranked)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  onPressed: () => _shareGlobalRank(username, rank, score, truePoints),
+                  icon: Icon(Icons.share, size: 20, color: subtleTextColor),
+                  tooltip: 'Share',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -248,6 +265,26 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               ),
             ),
           ],
+        ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _shareGlobalRank(String username, int rank, dynamic score, dynamic truePoints) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareCardScreen(
+          type: ShareCardType.globalRank,
+          data: {
+            'username': username,
+            'userPic': '/UserPic/$username.png',
+            'rank': rank,
+            'points': score,
+            'truePoints': truePoints,
+          },
         ),
       ),
     );

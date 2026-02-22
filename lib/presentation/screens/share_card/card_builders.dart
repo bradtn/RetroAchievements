@@ -2017,3 +2017,213 @@ class LeaderboardCard extends StatelessWidget {
     );
   }
 }
+
+class GlobalRankCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const GlobalRankCard({
+    super.key,
+    required this.data,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final rank = data['rank'] ?? 0;
+    final points = data['points'] ?? 0;
+    final truePoints = data['truePoints'] ?? 0;
+    final isCompact = settings.layout == CardLayout.compact;
+
+    // Determine rank tier color
+    Color rankColor;
+    String tierLabel;
+    if (rank <= 10) {
+      rankColor = Colors.amber;
+      tierLabel = 'TOP 10';
+    } else if (rank <= 100) {
+      rankColor = Colors.deepPurple;
+      tierLabel = 'TOP 100';
+    } else if (rank <= 1000) {
+      rankColor = Colors.blue;
+      tierLabel = 'TOP 1K';
+    } else if (rank <= 10000) {
+      rankColor = Colors.teal;
+      tierLabel = 'TOP 10K';
+    } else {
+      rankColor = Colors.grey;
+      tierLabel = 'RANKED';
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Avatar
+        _buildAvatar(username, userPic, isCompact ? 50 : 64),
+        SizedBox(height: isCompact ? 10 : 14),
+
+        // Username
+        Text(
+          username,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 20 : 26,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        // Tier badge
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 4 : 6),
+          decoration: BoxDecoration(
+            color: rankColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: rankColor.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            tierLabel,
+            style: getCardTextStyle(
+              fontStyle: settings.fontStyle,
+              fontSize: isCompact ? 11 : 13,
+              fontWeight: FontWeight.bold,
+              color: rankColor,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+        SizedBox(height: isCompact ? 10 : 14),
+
+        // Global rank display
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '#',
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 28 : 36,
+                fontWeight: FontWeight.bold,
+                color: rankColor,
+              ),
+            ),
+            Text(
+              _formatRank(rank),
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 48 : 64,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isCompact ? 4 : 8),
+        Text(
+          'GLOBAL RANK',
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 11 : 13,
+            color: Colors.white70,
+            letterSpacing: 2,
+          ),
+        ),
+        SizedBox(height: isCompact ? 16 : 22),
+
+        // Stats row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildStatItem(Icons.stars, _formatNumber(points), 'Points', Colors.amber, isCompact),
+            SizedBox(width: isCompact ? 24 : 36),
+            _buildStatItem(Icons.military_tech, _formatNumber(truePoints), 'True Points', Colors.purple, isCompact),
+          ],
+        ),
+        SizedBox(height: isCompact ? 14 : 20),
+
+        const Branding(),
+      ],
+    );
+  }
+
+  Widget _buildAvatar(String username, String userPic, double size) {
+    final imageUrl = userPic.startsWith('http')
+        ? userPic
+        : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white24, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String value, String label, Color color, bool isCompact) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: isCompact ? 22 : 28),
+        SizedBox(height: isCompact ? 4 : 6),
+        Text(
+          value,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 18 : 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 10 : 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatRank(int rank) {
+    if (rank >= 1000000) {
+      return '${(rank / 1000000).toStringAsFixed(1)}M';
+    } else if (rank >= 10000) {
+      return '${(rank / 1000).toStringAsFixed(0)}K';
+    }
+    return rank.toString();
+  }
+
+  String _formatNumber(dynamic num) {
+    if (num == null) return '0';
+    final n = int.tryParse(num.toString()) ?? 0;
+    if (n >= 1000000) {
+      return '${(n / 1000000).toStringAsFixed(1)}M';
+    } else if (n >= 1000) {
+      return '${(n / 1000).toStringAsFixed(1)}K';
+    }
+    return n.toString();
+  }
+}
