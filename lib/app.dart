@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/game_detail_screen.dart';
@@ -130,9 +131,12 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     final themeMode = ref.watch(themeProvider);
     final accentColor = ref.watch(accentColorProvider);
     final isPremium = ref.watch(isPremiumProvider);
+    final usePixelFont = ref.watch(pixelFontProvider);
 
     // Non-premium users get default blue accent (accent color is premium-only)
     final effectiveColor = isPremium ? accentColor.color : Colors.blue;
+    // Pixel font is premium-only
+    final effectivePixelFont = isPremium && usePixelFont;
 
     // Request notification permission and trigger background tasks after user is authenticated
     if (authState.isAuthenticated) {
@@ -147,10 +151,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       debugShowCheckedModeBanner: false,
       // Use iOS-style scrolling on all platforms for smoother feel
       scrollBehavior: const _SmoothScrollBehavior(),
-      theme: _buildLightTheme(effectiveColor),
+      theme: _buildLightTheme(effectiveColor, effectivePixelFont),
       darkTheme: themeMode == AppThemeMode.amoled
-          ? _buildAmoledTheme(effectiveColor)
-          : _buildDarkTheme(effectiveColor),
+          ? _buildAmoledTheme(effectiveColor, effectivePixelFont)
+          : _buildDarkTheme(effectiveColor, effectivePixelFont),
       themeMode: _getThemeMode(themeMode),
       // Smooth theme transition animation
       themeAnimationDuration: const Duration(milliseconds: 300),
@@ -202,7 +206,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     }
   }
 
-  ThemeData _buildLightTheme(Color seedColor) {
+  ThemeData _buildLightTheme(Color seedColor, bool usePixelFont) {
+    final textTheme = usePixelFont
+        ? GoogleFonts.pressStart2pTextTheme(ThemeData.light().textTheme)
+        : null;
     // Create base scheme then override with vibrant colors
     final baseScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
@@ -288,18 +295,30 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
           return Colors.grey.shade300;
         }),
       ),
-      // Improve text contrast
-      textTheme: TextTheme(
-        bodySmall: TextStyle(color: Colors.grey.shade700),
-        bodyMedium: TextStyle(color: Colors.grey.shade800),
-        bodyLarge: TextStyle(color: Colors.grey.shade900),
-        labelSmall: TextStyle(color: Colors.grey.shade600),
-        labelMedium: TextStyle(color: Colors.grey.shade700),
-        labelLarge: TextStyle(color: Colors.grey.shade800),
-        titleSmall: TextStyle(color: Colors.grey.shade800),
-        titleMedium: TextStyle(color: Colors.grey.shade900),
-        titleLarge: TextStyle(color: Colors.grey.shade900),
-      ),
+      // Improve text contrast (with optional pixel font - smaller sizes to prevent overflow)
+      textTheme: usePixelFont
+          ? textTheme?.copyWith(
+              bodySmall: textTheme.bodySmall?.copyWith(color: Colors.grey.shade700, fontSize: 6),
+              bodyMedium: textTheme.bodyMedium?.copyWith(color: Colors.grey.shade800, fontSize: 7),
+              bodyLarge: textTheme.bodyLarge?.copyWith(color: Colors.grey.shade900, fontSize: 8),
+              labelSmall: textTheme.labelSmall?.copyWith(color: Colors.grey.shade600, fontSize: 5),
+              labelMedium: textTheme.labelMedium?.copyWith(color: Colors.grey.shade700, fontSize: 6),
+              labelLarge: textTheme.labelLarge?.copyWith(color: Colors.grey.shade800, fontSize: 7),
+              titleSmall: textTheme.titleSmall?.copyWith(color: Colors.grey.shade800, fontSize: 8),
+              titleMedium: textTheme.titleMedium?.copyWith(color: Colors.grey.shade900, fontSize: 9),
+              titleLarge: textTheme.titleLarge?.copyWith(color: Colors.grey.shade900, fontSize: 10),
+            )
+          : TextTheme(
+              bodySmall: TextStyle(color: Colors.grey.shade700),
+              bodyMedium: TextStyle(color: Colors.grey.shade800),
+              bodyLarge: TextStyle(color: Colors.grey.shade900),
+              labelSmall: TextStyle(color: Colors.grey.shade600),
+              labelMedium: TextStyle(color: Colors.grey.shade700),
+              labelLarge: TextStyle(color: Colors.grey.shade800),
+              titleSmall: TextStyle(color: Colors.grey.shade800),
+              titleMedium: TextStyle(color: Colors.grey.shade900),
+              titleLarge: TextStyle(color: Colors.grey.shade900),
+            ),
       // Divider styling
       dividerTheme: DividerThemeData(
         color: Colors.grey.shade300,
@@ -350,7 +369,10 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
     );
   }
 
-  ThemeData _buildDarkTheme(Color seedColor) {
+  ThemeData _buildDarkTheme(Color seedColor, bool usePixelFont) {
+    final textTheme = usePixelFont
+        ? GoogleFonts.pressStart2pTextTheme(ThemeData.dark().textTheme)
+        : null;
     // Create base scheme then override with vibrant colors
     final baseScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
@@ -442,11 +464,26 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF1E1E1E),
       ),
+      // Apply pixel font if enabled (smaller sizes to prevent overflow)
+      textTheme: usePixelFont ? textTheme?.copyWith(
+        bodySmall: textTheme.bodySmall?.copyWith(fontSize: 6),
+        bodyMedium: textTheme.bodyMedium?.copyWith(fontSize: 7),
+        bodyLarge: textTheme.bodyLarge?.copyWith(fontSize: 8),
+        labelSmall: textTheme.labelSmall?.copyWith(fontSize: 5),
+        labelMedium: textTheme.labelMedium?.copyWith(fontSize: 6),
+        labelLarge: textTheme.labelLarge?.copyWith(fontSize: 7),
+        titleSmall: textTheme.titleSmall?.copyWith(fontSize: 8),
+        titleMedium: textTheme.titleMedium?.copyWith(fontSize: 9),
+        titleLarge: textTheme.titleLarge?.copyWith(fontSize: 10),
+      ) : null,
       useMaterial3: true,
     );
   }
 
-  ThemeData _buildAmoledTheme(Color seedColor) {
+  ThemeData _buildAmoledTheme(Color seedColor, bool usePixelFont) {
+    final textTheme = usePixelFont
+        ? GoogleFonts.pressStart2pTextTheme(ThemeData.dark().textTheme)
+        : null;
     // Create base scheme then override with vibrant colors
     final baseScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
@@ -538,6 +575,18 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF121212),
       ),
+      // Apply pixel font if enabled (smaller sizes to prevent overflow)
+      textTheme: usePixelFont ? textTheme?.copyWith(
+        bodySmall: textTheme.bodySmall?.copyWith(fontSize: 6),
+        bodyMedium: textTheme.bodyMedium?.copyWith(fontSize: 7),
+        bodyLarge: textTheme.bodyLarge?.copyWith(fontSize: 8),
+        labelSmall: textTheme.labelSmall?.copyWith(fontSize: 5),
+        labelMedium: textTheme.labelMedium?.copyWith(fontSize: 6),
+        labelLarge: textTheme.labelLarge?.copyWith(fontSize: 7),
+        titleSmall: textTheme.titleSmall?.copyWith(fontSize: 8),
+        titleMedium: textTheme.titleMedium?.copyWith(fontSize: 9),
+        titleLarge: textTheme.titleLarge?.copyWith(fontSize: 10),
+      ) : null,
       useMaterial3: true,
     );
   }

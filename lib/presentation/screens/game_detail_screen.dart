@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 import '../../core/theme_utils.dart';
 import '../../core/animations.dart';
 import '../../core/services/dual_screen_service.dart';
 import '../../core/responsive_layout.dart';
 import '../../data/cache/game_cache.dart';
+import '../../data/cache/leaderboard_cache.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
 import '../providers/premium_provider.dart';
@@ -57,6 +59,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   // Dual screen support
   final DualScreenService _dualScreen = DualScreenService();
   bool _isShowingSecondaryDialog = false; // Prevent stacking dialogs from secondary taps
+
+  // Title typewriter animation
+  bool _titleAnimationComplete = false;
 
   @override
   void initState() {
@@ -356,6 +361,57 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           );
         }
       });
+
+      // Prefetch leaderboard entries AFTER setState completes
+      if (result != null && _userGameLeaderboards.isNotEmpty) {
+        _prefetchUserLeaderboardEntries();
+      }
+    }
+  }
+
+  /// Prefetch leaderboard entries for leaderboards where user has entries
+  /// This runs in the background and caches results for faster dialog loads
+  Future<void> _prefetchUserLeaderboardEntries() async {
+    if (_userGameLeaderboards.isEmpty) return;
+
+    final api = ref.read(apiDataSourceProvider);
+    final cache = LeaderboardCache.instance;
+
+    // Only prefetch first 5 leaderboards to avoid too many API calls
+    final leaderboardsToFetch = _userGameLeaderboards.take(5).toList();
+
+    for (final entry in leaderboardsToFetch) {
+      final leaderboardId = entry['LeaderboardID'] ?? entry['ID'];
+      if (leaderboardId == null) continue;
+
+      final id = leaderboardId is int ? leaderboardId : int.tryParse(leaderboardId.toString());
+      if (id == null) continue;
+
+      // Skip if already cached
+      if (cache.has(id)) continue;
+
+      // Fetch in background - don't await each one, fire and forget
+      _fetchAndCacheLeaderboard(api, id);
+    }
+  }
+
+  /// Fetch a single leaderboard's entries and cache them
+  Future<void> _fetchAndCacheLeaderboard(dynamic api, int leaderboardId) async {
+    try {
+      final result = await api.getLeaderboardEntries(leaderboardId, count: 100)
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
+
+      if (result != null) {
+        final entries = result['Results'] ?? result['Entries'] ?? result['entries'] ?? [];
+        LeaderboardCache.instance.put(
+          leaderboardId,
+          List<Map<String, dynamic>>.from(entries),
+        );
+        debugPrint('Prefetched leaderboard $leaderboardId: ${entries.length} entries');
+      }
+    } catch (e) {
+      // Silent fail for prefetch - dialog will fetch fresh if needed
+      debugPrint('Prefetch failed for leaderboard $leaderboardId: $e');
     }
   }
 
@@ -516,32 +572,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ),
                     ),
                   ),
-                // Title text
+                // Title text with typewriter animation
                 Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: titleColor,
-                      fontSize: collapseRatio > 0.7 ? 16 : 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.3,
-                      height: 1.2,
-                      shadows: collapseRatio > 0.7
-                          ? null
-                          : [
-                              Shadow(
-                                blurRadius: 8,
-                                color: Colors.black.withValues(alpha: 0.8),
-                              ),
-                              Shadow(
-                                blurRadius: 16,
-                                color: Colors.black.withValues(alpha: 0.5),
-                              ),
-                            ],
-                    ),
-                    maxLines: collapseRatio > 0.7 ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: _buildAnimatedTitle(title, titleColor, collapseRatio),
                 ),
               ],
             ),
@@ -640,6 +673,57 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           );
         },
       ),
+    );
+  }
+
+  /// Build animated title with typewriter effect on first load
+  Widget _buildAnimatedTitle(String title, Color titleColor, double collapseRatio) {
+    final baseStyle = TextStyle(
+      color: titleColor,
+      fontSize: collapseRatio > 0.7 ? 16 : 18,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.3,
+      height: 1.2,
+      shadows: collapseRatio > 0.7
+          ? null
+          : [
+              Shadow(
+                blurRadius: 8,
+                color: Colors.black.withValues(alpha: 0.8),
+              ),
+              Shadow(
+                blurRadius: 16,
+                color: Colors.black.withValues(alpha: 0.5),
+              ),
+            ],
+    );
+
+    // Show static text when collapsed or animation complete
+    if (collapseRatio > 0.5 || _titleAnimationComplete) {
+      return Text(
+        title,
+        style: baseStyle,
+        maxLines: collapseRatio > 0.7 ? 1 : 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // Typewriter animation when expanded and not yet complete
+    return AnimatedTextKit(
+      animatedTexts: [
+        TypewriterAnimatedText(
+          title,
+          textStyle: baseStyle,
+          speed: Duration(milliseconds: (40 + (800 ~/ title.length)).clamp(30, 80)),
+        ),
+      ],
+      totalRepeatCount: 1,
+      displayFullTextOnTap: true,
+      onFinished: () {
+        if (mounted) {
+          setState(() => _titleAnimationComplete = true);
+        }
+      },
     );
   }
 
@@ -767,8 +851,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                     children: [
                                       const Icon(Icons.emoji_events, size: 14, color: Colors.green),
                                       const SizedBox(width: 4),
+                                      AnimatedCounter(
+                                        value: numAwarded,
+                                        duration: const Duration(milliseconds: 800),
+                                        style: const TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                       Text(
-                                        '$numAwarded/$numAchievements',
+                                        '/$numAchievements',
                                         style: const TextStyle(
                                           color: Colors.green,
                                           fontSize: 13,
@@ -791,8 +884,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                       children: [
                                         Icon(Icons.stars, size: 14, color: Colors.amber[600]),
                                         const SizedBox(width: 4),
+                                        AnimatedCounter(
+                                          value: earnedPoints,
+                                          duration: const Duration(milliseconds: 800),
+                                          style: TextStyle(
+                                            color: Colors.amber[600],
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                         Text(
-                                          '$earnedPoints/$totalPoints pts',
+                                          '/$totalPoints pts',
                                           style: TextStyle(
                                             color: Colors.amber[600],
                                             fontSize: 13,
@@ -805,16 +907,25 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                               ],
                             ),
                             const SizedBox(height: 10),
-                            LinearProgressIndicator(
-                              value: progress,
+                            AnimatedProgressBar(
+                              progress: progress,
+                              height: 6,
+                              duration: const Duration(milliseconds: 1000),
+                              color: Theme.of(context).colorScheme.primary,
                               backgroundColor: Theme.of(context).brightness == Brightness.light
-                                  ? Colors.grey[300]
-                                  : Colors.grey[700],
+                                  ? Colors.grey[300]!
+                                  : Colors.grey[700]!,
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              completion,
-                              style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                            Row(
+                              children: [
+                                AnimatedCounter(
+                                  value: (progress * 100).round(),
+                                  duration: const Duration(milliseconds: 1000),
+                                  suffix: '% complete',
+                                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                                ),
+                              ],
                             ),
                           ] else
                             Text(
@@ -1334,9 +1445,27 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 if (index >= _leaderboards.length) return null;
+                final leaderboard = _leaderboards[index];
+                final leaderboardId = leaderboard['ID'] ?? leaderboard['LeaderboardId'] ?? 0;
+
+                // Find user's entry for this leaderboard
+                Map<String, dynamic>? userEntry;
+                for (final entry in _userGameLeaderboards) {
+                  final entryId = entry['ID'] ?? entry['LeaderboardId'];
+                  if (entryId != null) {
+                    final entryIdInt = entryId is int ? entryId : int.tryParse(entryId.toString()) ?? 0;
+                    final lbIdInt = leaderboardId is int ? leaderboardId : int.tryParse(leaderboardId.toString()) ?? 0;
+                    if (entryIdInt == lbIdInt) {
+                      userEntry = entry;
+                      break;
+                    }
+                  }
+                }
+
                 return LeaderboardTile(
-                  leaderboard: _leaderboards[index],
-                  onTap: () => _showLeaderboardDetail(_leaderboards[index]),
+                  leaderboard: leaderboard,
+                  userEntry: userEntry,
+                  onTap: () => _showLeaderboardDetail(leaderboard, userEntry: userEntry),
                 );
               },
               childCount: _leaderboards.length > 5 ? 5 : _leaderboards.length,

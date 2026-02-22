@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/animations.dart';
+import '../../../data/cache/leaderboard_cache.dart';
 import '../../providers/auth_provider.dart';
 import '../profile_screen.dart';
 
@@ -22,8 +23,15 @@ class LeaderboardTile extends StatelessWidget {
     debugPrint('LeaderboardTile keys: ${leaderboard.keys.toList()}');
     debugPrint('LeaderboardTile data: $leaderboard');
 
-    final title = leaderboard['Title'] ?? 'Leaderboard';
-    final description = leaderboard['Description'] ?? '';
+    final rawTitle = (leaderboard['Title'] ?? '').toString().trim();
+    final rawDescription = (leaderboard['Description'] ?? '').toString().trim();
+
+    // If title is empty, use description as title
+    final hasTitle = rawTitle.isNotEmpty;
+    final hasDescription = rawDescription.isNotEmpty;
+    final title = hasTitle ? rawTitle : (hasDescription ? rawDescription : 'Leaderboard');
+    // Only show description separately if both exist
+    final description = hasTitle && hasDescription ? rawDescription : '';
     // Try various field names the API might use for entry count
     final numEntries = leaderboard['NumEntries'] ??
                        leaderboard['NumResults'] ??
@@ -219,6 +227,8 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
   List<Map<String, dynamic>> _entries = [];
   bool _isLoading = true;
   String? _error;
+  int _retryCount = 0;
+  static const int _maxRetries = 2;
 
   @override
   void initState() {
@@ -234,6 +244,25 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
       _error = null;
     });
 
+    // Check cache first
+    final cache = LeaderboardCache.instance;
+    final cachedEntries = cache.get(widget.leaderboardId);
+
+    if (cachedEntries != null) {
+      debugPrint('Leaderboard ${widget.leaderboardId}: Using cached entries (${cachedEntries.length} entries)');
+      if (!mounted) return;
+      setState(() {
+        _entries = cachedEntries;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Not cached, fetch from API
+    await _fetchFromApi();
+  }
+
+  Future<void> _fetchFromApi() async {
     try {
       final api = ref.read(apiDataSourceProvider);
 
@@ -246,22 +275,44 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
       if (result != null) {
         // The API returns entries in a 'Results' or 'Entries' key typically
         final entries = result['Results'] ?? result['Entries'] ?? result['entries'] ?? [];
+        final entriesList = List<Map<String, dynamic>>.from(entries);
+
+        // Cache the results
+        LeaderboardCache.instance.put(widget.leaderboardId, entriesList);
+
         setState(() {
-          _entries = List<Map<String, dynamic>>.from(entries);
+          _entries = entriesList;
           _isLoading = false;
         });
       } else {
-        setState(() {
-          _error = 'Failed to load leaderboard entries';
-          _isLoading = false;
-        });
+        // Retry on failure
+        if (_retryCount < _maxRetries) {
+          _retryCount++;
+          debugPrint('Leaderboard ${widget.leaderboardId}: Retry $_retryCount/$_maxRetries');
+          await Future.delayed(Duration(milliseconds: 500 * _retryCount));
+          if (mounted) await _fetchFromApi();
+        } else {
+          setState(() {
+            _error = 'Failed to load leaderboard entries';
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = 'Error loading leaderboard';
-        _isLoading = false;
-      });
+
+      // Retry on error
+      if (_retryCount < _maxRetries) {
+        _retryCount++;
+        debugPrint('Leaderboard ${widget.leaderboardId}: Retry $_retryCount/$_maxRetries after error');
+        await Future.delayed(Duration(milliseconds: 500 * _retryCount));
+        if (mounted) await _fetchFromApi();
+      } else {
+        setState(() {
+          _error = 'Error loading leaderboard';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -313,13 +364,15 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // If title is empty, use description as title
                             Text(
-                              widget.title,
+                              widget.title.isNotEmpty ? widget.title : (widget.description.isNotEmpty ? widget.description : 'Leaderboard'),
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (widget.description.isNotEmpty)
+                            // Only show description if title exists AND description exists
+                            if (widget.title.isNotEmpty && widget.description.isNotEmpty)
                               Text(
                                 widget.description,
                                 style: TextStyle(

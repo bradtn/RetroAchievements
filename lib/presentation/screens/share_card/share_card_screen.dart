@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/premium_gate.dart';
 import 'share_card_settings.dart';
@@ -140,6 +141,9 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
   }
 
   String? _getGameImageUrl() {
+    // Prefer hero/title image over icon for better background visuals
+    final heroImage = widget.data['ImageTitle'] ?? '';
+    if (heroImage.isNotEmpty) return heroImage;
     final icon = widget.data['ImageIcon'] ?? widget.data['GameIcon'] ?? '';
     return icon.isEmpty ? null : icon;
   }
@@ -281,6 +285,9 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
   }
 
   Widget _buildColorsTab() {
+    final gameImageUrl = _getGameImageUrl();
+    final isGameBgSelected = _settings.pattern == BackgroundPattern.gameBlur;
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -288,13 +295,56 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
           height: 50,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: ShareCardSettings.presets.length,
+            itemCount: ShareCardSettings.presets.length + (gameImageUrl != null ? 1 : 0),
             itemBuilder: (ctx, i) {
-              final preset = ShareCardSettings.presets[i];
-              final sel = _selectedPresetIndex == i;
+              // First item: Game image background (if available)
+              if (gameImageUrl != null && i == 0) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedPresetIndex = -1; // Deselect color presets
+                      _settings = _settings.copyWith(pattern: BackgroundPattern.gameBlur);
+                    });
+                  },
+                  child: Container(
+                    width: 50,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: isGameBgSelected ? Border.all(color: Colors.white, width: 2) : null,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(isGameBgSelected ? 8 : 10),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: gameImageUrl.startsWith('http') ? gameImageUrl : 'https://retroachievements.org$gameImageUrl',
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Container(color: Colors.grey[800]),
+                          ),
+                          Container(color: Colors.black.withValues(alpha: 0.3)),
+                          const Center(child: Icon(Icons.image, color: Colors.white, size: 18)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              // Adjust index for presets when game image is present
+              final presetIndex = gameImageUrl != null ? i - 1 : i;
+              final preset = ShareCardSettings.presets[presetIndex];
+              final sel = _selectedPresetIndex == presetIndex && !isGameBgSelected;
               if (preset.isCustom) return _buildCustomColorButton(sel);
               return GestureDetector(
-                onTap: () => _selectPreset(i),
+                onTap: () {
+                  _selectPreset(presetIndex);
+                  // Clear game background when selecting a color preset
+                  if (_settings.pattern == BackgroundPattern.gameBlur) {
+                    setState(() => _settings = _settings.copyWith(pattern: BackgroundPattern.diagonal));
+                  }
+                },
                 child: Container(
                   width: 50,
                   margin: const EdgeInsets.only(right: 8),
@@ -366,13 +416,14 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _buildOptionRow('Pattern', [
-          _buildOptionButton('None', _settings.pattern == BackgroundPattern.none, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.none))),
-          _buildOptionButton('Lines', _settings.pattern == BackgroundPattern.diagonal, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.diagonal))),
-          _buildOptionButton('Dots', _settings.pattern == BackgroundPattern.dots, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.dots))),
-          _buildOptionButton('Grid', _settings.pattern == BackgroundPattern.grid, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.grid))),
-          if (_getGameImageUrl() != null) _buildOptionButton('Game', _settings.pattern == BackgroundPattern.gameBlur, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.gameBlur))),
-        ]),
+        // Pattern only applies when not using game background
+        if (_settings.pattern != BackgroundPattern.gameBlur)
+          _buildOptionRow('Pattern', [
+            _buildOptionButton('None', _settings.pattern == BackgroundPattern.none, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.none))),
+            _buildOptionButton('Lines', _settings.pattern == BackgroundPattern.diagonal, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.diagonal))),
+            _buildOptionButton('Dots', _settings.pattern == BackgroundPattern.dots, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.dots))),
+            _buildOptionButton('Grid', _settings.pattern == BackgroundPattern.grid, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.grid))),
+          ]),
         const SizedBox(height: 8),
         _buildOptionRow('Font', [
           _buildOptionButton('Modern', _settings.fontStyle == CardFontStyle.modern, () => _updateSettings(_settings.copyWith(fontStyle: CardFontStyle.modern))),

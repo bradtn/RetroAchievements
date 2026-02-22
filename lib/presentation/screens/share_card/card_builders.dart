@@ -319,7 +319,7 @@ class GameCard extends StatelessWidget {
         SizedBox(height: isCompact ? 14 : 20),
 
         // Player info
-        PlayerTag(username: username),
+        PlayerTag(username: username, frame: settings.avatarFrame),
         SizedBox(height: isCompact ? 12 : 16),
 
         const Branding(),
@@ -613,11 +613,15 @@ class AchievementCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                  decoration: getAvatarDecoration(
+                    frame: settings.avatarFrame,
+                    size: 28,
+                    borderColor: Colors.white.withValues(alpha: 0.5),
+                    borderWidth: 2,
                   ),
-                  child: ClipOval(
+                  child: clipAvatar(
+                    frame: settings.avatarFrame,
+                    size: 28,
                     child: userPic.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: 'https://retroachievements.org$userPic',
@@ -1535,7 +1539,7 @@ class AwardsSummaryCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Avatar
-        _buildAvatar(username, userPic, isCompact ? 35 : 45),
+        _buildAvatar(username, userPic, isCompact ? 35 : 45, settings.avatarFrame),
         SizedBox(height: isCompact ? 10 : 14),
 
         // Username
@@ -1594,16 +1598,20 @@ class AwardsSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(String username, String userPic, double size) {
+  Widget _buildAvatar(String username, String userPic, double size, AvatarFrame frame) {
     final imageUrl = userPic.startsWith('http')
         ? userPic
         : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
     return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24, width: 2),
+      decoration: getAvatarDecoration(
+        frame: frame,
+        size: size,
+        borderColor: Colors.white24,
+        borderWidth: 2,
       ),
-      child: ClipOval(
+      child: clipAvatar(
+        frame: frame,
+        size: size,
         child: CachedNetworkImage(
           imageUrl: imageUrl,
           width: size,
@@ -1669,7 +1677,7 @@ class GoalsSummaryCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Avatar
-        _buildAvatar(username, userPic, isCompact ? 35 : 45),
+        _buildAvatar(username, userPic, isCompact ? 35 : 45, settings.avatarFrame),
         SizedBox(height: isCompact ? 10 : 14),
 
         // Username
@@ -1744,16 +1752,20 @@ class GoalsSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(String username, String userPic, double size) {
+  Widget _buildAvatar(String username, String userPic, double size, AvatarFrame frame) {
     final imageUrl = userPic.startsWith('http')
         ? userPic
         : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
     return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24, width: 2),
+      decoration: getAvatarDecoration(
+        frame: frame,
+        size: size,
+        borderColor: Colors.white24,
+        borderWidth: 2,
       ),
-      child: ClipOval(
+      child: clipAvatar(
+        frame: frame,
+        size: size,
         child: CachedNetworkImage(
           imageUrl: imageUrl,
           width: size,
@@ -1903,7 +1915,7 @@ class LeaderboardCard extends StatelessWidget {
         SizedBox(height: isCompact ? 14 : 20),
 
         // User avatar
-        _buildAvatar(username, userPic, isCompact ? 40 : 50),
+        _buildAvatar(username, userPic, isCompact ? 40 : 50, settings.avatarFrame),
         SizedBox(height: isCompact ? 8 : 12),
 
         // Username
@@ -1961,16 +1973,20 @@ class LeaderboardCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(String username, String userPic, double size) {
+  Widget _buildAvatar(String username, String userPic, double size, AvatarFrame frame) {
     final imageUrl = userPic.startsWith('http')
         ? userPic
         : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
     return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24, width: 2),
+      decoration: getAvatarDecoration(
+        frame: frame,
+        size: size,
+        borderColor: Colors.white24,
+        borderWidth: 2,
       ),
-      child: ClipOval(
+      child: clipAvatar(
+        frame: frame,
+        size: size,
         child: CachedNetworkImage(
           imageUrl: imageUrl,
           width: size,
@@ -2088,7 +2104,7 @@ class GlobalRankCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Avatar
-        _buildAvatar(username, userPic, isCompact ? 50 : 64),
+        _buildAvatar(username, userPic, isCompact ? 50 : 64, settings.avatarFrame),
         SizedBox(height: isCompact ? 10 : 14),
 
         // Username
@@ -2176,14 +2192,16 @@ class GlobalRankCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(String username, String userPic, double size) {
+  Widget _buildAvatar(String username, String userPic, double size, AvatarFrame frame) {
     final imageUrl = userPic.startsWith('http')
         ? userPic
         : 'https://retroachievements.org${userPic.isNotEmpty ? userPic : '/UserPic/$username.png'}';
     return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24, width: 3),
+      decoration: getAvatarDecoration(
+        frame: frame,
+        size: size,
+        borderColor: Colors.white24,
+        borderWidth: 3,
         boxShadow: [
           BoxShadow(
             color: Colors.amber.withValues(alpha: 0.3),
@@ -2192,7 +2210,9 @@ class GlobalRankCard extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipOval(
+      child: clipAvatar(
+        frame: frame,
+        size: size,
         child: CachedNetworkImage(
           imageUrl: imageUrl,
           width: size,

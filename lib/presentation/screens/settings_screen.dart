@@ -128,6 +128,7 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => _showThemeDialog(context, ref, themeMode),
           ),
           _AccentColorTile(isDark: isDark, isPremium: premium.isPremium),
+          _PixelFontTile(isDark: isDark, isPremium: premium.isPremium),
 
           const Divider(),
 
@@ -832,6 +833,48 @@ class _AccentColorTile extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Pixel font toggle tile
+class _PixelFontTile extends ConsumerWidget {
+  final bool isDark;
+  final bool isPremium;
+
+  const _PixelFontTile({required this.isDark, required this.isPremium});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usePixelFont = ref.watch(pixelFontProvider);
+    // Non-premium users can't use pixel font
+    final isEnabled = isPremium && usePixelFont;
+
+    return SwitchListTile(
+      secondary: Icon(Icons.font_download, color: isDark ? Colors.white70 : Colors.grey.shade700),
+      title: Text('Retro Pixel Font', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+      subtitle: Row(
+        children: [
+          Text(
+            'Use "Press Start 2P" font',
+            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+          ),
+          if (!isPremium) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.lock, size: 14, color: Colors.grey[500]),
+          ],
+        ],
+      ),
+      value: isEnabled,
+      onChanged: isPremium
+          ? (value) => ref.read(pixelFontProvider.notifier).setEnabled(value)
+          : (_) => _showPremiumRequired(context),
+    );
+  }
+
+  void _showPremiumRequired(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Retro pixel font is a premium feature')),
     );
   }
 }

@@ -218,3 +218,26 @@ ThemeMode getThemeMode(AppThemeMode mode) {
       return ThemeMode.system;
   }
 }
+
+/// Pixel font setting (retro-style "Press Start 2P" font)
+class PixelFontNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    _loadSetting();
+    return false;
+  }
+
+  Future<void> _loadSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getBool('pixel_font_enabled') ?? false;
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('pixel_font_enabled', enabled);
+  }
+}
+
+/// Pixel font provider
+final pixelFontProvider = NotifierProvider<PixelFontNotifier, bool>(PixelFontNotifier.new);

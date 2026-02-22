@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -381,16 +382,37 @@ Widget buildPatternOverlay(BackgroundPattern pattern, {String? gameImageUrl}) {
       );
     case BackgroundPattern.gameBlur:
       if (gameImageUrl != null && gameImageUrl.isNotEmpty) {
+        final imageUrl = gameImageUrl.startsWith('http')
+            ? gameImageUrl
+            : 'https://retroachievements.org$gameImageUrl';
         return Positioned.fill(
-          child: Opacity(
-            opacity: 0.15,
-            child: CachedNetworkImage(
-              imageUrl: gameImageUrl.startsWith('http')
-                  ? gameImageUrl
-                  : 'https://retroachievements.org$gameImageUrl',
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => const SizedBox.shrink(),
-            ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Blurred game image at higher opacity
+              ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              // Dark gradient overlay for text readability
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.6),
+                      Colors.black.withValues(alpha: 0.75),
+                      Colors.black.withValues(alpha: 0.6),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       }
@@ -400,11 +422,17 @@ Widget buildPatternOverlay(BackgroundPattern pattern, {String? gameImageUrl}) {
 
 class PlayerTag extends StatelessWidget {
   final String username;
+  final AvatarFrame frame;
 
-  const PlayerTag({super.key, required this.username});
+  const PlayerTag({
+    super.key,
+    required this.username,
+    this.frame = AvatarFrame.circle,
+  });
 
   @override
   Widget build(BuildContext context) {
+    const size = 24.0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -414,13 +442,28 @@ class PlayerTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundImage: CachedNetworkImageProvider(
-              'https://retroachievements.org/UserPic/$username.png',
+          Container(
+            width: size,
+            height: size,
+            decoration: getAvatarDecoration(
+              frame: frame,
+              size: size,
+              borderWidth: 0,
             ),
-            backgroundColor: Colors.grey[700],
-            onBackgroundImageError: (_, __) {},
+            child: clipAvatar(
+              frame: frame,
+              size: size,
+              child: CachedNetworkImage(
+                imageUrl: 'https://retroachievements.org/UserPic/$username.png',
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Container(
+                  color: Colors.grey[700],
+                  child: const Icon(Icons.person, size: 14, color: Colors.white54),
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Text(
