@@ -206,12 +206,23 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         IconButton(
           icon: Icon(Icons.share, size: compact ? 20 : 24),
           onPressed: () {
+            // Count mastered games for share card
+            int masteredCount = 0;
+            if (_completedGames != null) {
+              masteredCount = _completedGames!.where((g) => g['HardcoreMode'] == 1).length;
+            }
+            // Combine all profile data for share card
+            final shareData = {
+              ...widget.profile!,
+              'TotalSoftcorePoints': _summary?['TotalSoftcorePoints'] ?? widget.profile!['TotalSoftcorePoints'] ?? 0,
+              'MasteredCount': masteredCount,
+            };
             Navigator.push(
               context,
               FadeScalePageRoute(
                 page: ShareCardScreen(
                   type: ShareCardType.profile,
-                  data: widget.profile!,
+                  data: shareData,
                 ),
               ),
             );

@@ -170,8 +170,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
           return const SizedBox.shrink();
         }
 
+        // Apply text scaling for pixel font mode
+        // The pixel font renders larger, so we scale it down proportionally
+        Widget result = child;
+        if (effectivePixelFont) {
+          result = MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(0.65), // Scale down pixel font
+            ),
+            child: result,
+          );
+        }
+
         // Wrap with widget that removes focus highlight decorations
-        Widget result = _FocusDisabler(child: child);
+        result = _FocusDisabler(child: result);
 
         if (authState.isAuthenticated) {
           result = Stack(
@@ -295,18 +307,11 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
           return Colors.grey.shade300;
         }),
       ),
-      // Improve text contrast (with optional pixel font - smaller sizes to prevent overflow)
+      // Improve text contrast (with optional pixel font)
       textTheme: usePixelFont
-          ? textTheme?.copyWith(
-              bodySmall: textTheme.bodySmall?.copyWith(color: Colors.grey.shade700, fontSize: 6),
-              bodyMedium: textTheme.bodyMedium?.copyWith(color: Colors.grey.shade800, fontSize: 7),
-              bodyLarge: textTheme.bodyLarge?.copyWith(color: Colors.grey.shade900, fontSize: 8),
-              labelSmall: textTheme.labelSmall?.copyWith(color: Colors.grey.shade600, fontSize: 5),
-              labelMedium: textTheme.labelMedium?.copyWith(color: Colors.grey.shade700, fontSize: 6),
-              labelLarge: textTheme.labelLarge?.copyWith(color: Colors.grey.shade800, fontSize: 7),
-              titleSmall: textTheme.titleSmall?.copyWith(color: Colors.grey.shade800, fontSize: 8),
-              titleMedium: textTheme.titleMedium?.copyWith(color: Colors.grey.shade900, fontSize: 9),
-              titleLarge: textTheme.titleLarge?.copyWith(color: Colors.grey.shade900, fontSize: 10),
+          ? textTheme?.apply(
+              bodyColor: Colors.grey.shade800,
+              displayColor: Colors.grey.shade900,
             )
           : TextTheme(
               bodySmall: TextStyle(color: Colors.grey.shade700),
@@ -464,18 +469,8 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF1E1E1E),
       ),
-      // Apply pixel font if enabled (smaller sizes to prevent overflow)
-      textTheme: usePixelFont ? textTheme?.copyWith(
-        bodySmall: textTheme.bodySmall?.copyWith(fontSize: 6),
-        bodyMedium: textTheme.bodyMedium?.copyWith(fontSize: 7),
-        bodyLarge: textTheme.bodyLarge?.copyWith(fontSize: 8),
-        labelSmall: textTheme.labelSmall?.copyWith(fontSize: 5),
-        labelMedium: textTheme.labelMedium?.copyWith(fontSize: 6),
-        labelLarge: textTheme.labelLarge?.copyWith(fontSize: 7),
-        titleSmall: textTheme.titleSmall?.copyWith(fontSize: 8),
-        titleMedium: textTheme.titleMedium?.copyWith(fontSize: 9),
-        titleLarge: textTheme.titleLarge?.copyWith(fontSize: 10),
-      ) : null,
+      // Apply pixel font if enabled
+      textTheme: textTheme,
       useMaterial3: true,
     );
   }
@@ -575,18 +570,8 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0xFF121212),
       ),
-      // Apply pixel font if enabled (smaller sizes to prevent overflow)
-      textTheme: usePixelFont ? textTheme?.copyWith(
-        bodySmall: textTheme.bodySmall?.copyWith(fontSize: 6),
-        bodyMedium: textTheme.bodyMedium?.copyWith(fontSize: 7),
-        bodyLarge: textTheme.bodyLarge?.copyWith(fontSize: 8),
-        labelSmall: textTheme.labelSmall?.copyWith(fontSize: 5),
-        labelMedium: textTheme.labelMedium?.copyWith(fontSize: 6),
-        labelLarge: textTheme.labelLarge?.copyWith(fontSize: 7),
-        titleSmall: textTheme.titleSmall?.copyWith(fontSize: 8),
-        titleMedium: textTheme.titleMedium?.copyWith(fontSize: 9),
-        titleLarge: textTheme.titleLarge?.copyWith(fontSize: 10),
-      ) : null,
+      // Apply pixel font if enabled
+      textTheme: textTheme,
       useMaterial3: true,
     );
   }

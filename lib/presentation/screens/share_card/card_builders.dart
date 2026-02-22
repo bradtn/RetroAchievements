@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'share_card_settings.dart';
 import 'share_card_widgets.dart';
+import '../game_detail/game_detail_helpers.dart';
 
 class ProfileCard extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -13,67 +14,70 @@ class ProfileCard extends StatelessWidget {
     this.settings = const ShareCardSettings(),
   });
 
+  /// Format number with commas (exact, no rounding)
+  String _formatWithCommas(dynamic num) {
+    final n = int.tryParse(num.toString()) ?? 0;
+    final str = n.toString();
+    final result = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) result.write(',');
+      result.write(str[i]);
+    }
+    return result.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final username = data['Username'] ?? data['User'] ?? 'Player';
     final points = data['TotalPoints'] ?? 0;
     final truePoints = data['TotalTruePoints'] ?? 0;
+    final softcorePoints = data['TotalSoftcorePoints'] ?? 0;
+    final masteredCount = data['MasteredCount'] ?? 0;
     final rank = data['Rank'] ?? '-';
     final userPic = data['UserPic'] ?? '';
-    final isCompact = settings.layout == CardLayout.compact;
 
+    // Square-optimized layout with all stats
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Avatar
-        _buildAvatar(username, userPic, isCompact ? 40 : 50),
-        SizedBox(height: isCompact ? 12 : 16),
-
-        // Username
-        Text(
-          username,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 22 : 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: isCompact ? 2 : 4),
-        Text(
-          'Rank #$rank',
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 14 : 16,
-            color: Colors.white.withValues(alpha: 0.8),
-          ),
-        ),
-        SizedBox(height: isCompact ? 16 : 24),
-
-        // Stats
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        // Avatar + Username + Rank
+        Column(
           children: [
-            _buildStatBadge(
-              Icons.stars,
-              formatNumber(points),
-              'Points',
-              Colors.amber,
-              isCompact,
+            _buildAvatar(username, userPic, 32),
+            const SizedBox(height: 8),
+            Text(username, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 3),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
+              child: Text('Rank #$rank', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 10, color: Colors.white.withValues(alpha: 0.8))),
             ),
-            if (!isCompact)
-              _buildStatBadge(
-                Icons.military_tech,
-                formatNumber(truePoints),
-                'True Points',
-                Colors.purple[200]!,
-                isCompact,
-              ),
           ],
         ),
-        SizedBox(height: isCompact ? 16 : 24),
+
+        // Stats grid - 2x2 layout
+        Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStatBadge(Icons.stars, _formatWithCommas(points), 'Hardcore', Colors.amber),
+                _buildStatBadge(Icons.military_tech, _formatWithCommas(truePoints), 'True Points', Colors.purple[200]!),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStatBadge(Icons.star_border, _formatWithCommas(softcorePoints), 'Softcore', Colors.blue),
+                _buildStatBadge(Icons.workspace_premium, _formatWithCommas(masteredCount), 'Mastered', Colors.amber),
+              ],
+            ),
+          ],
+        ),
 
         // Branding
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -94,18 +98,9 @@ class ProfileCard extends StatelessWidget {
       decoration: getAvatarDecoration(
         frame: settings.avatarFrame,
         size: avatarSize,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8)],
       ),
-      child: clipAvatar(
-        frame: settings.avatarFrame,
-        size: avatarSize,
-        child: content,
-      ),
+      child: clipAvatar(frame: settings.avatarFrame, size: avatarSize, child: content),
     );
   }
 
@@ -114,44 +109,28 @@ class ProfileCard extends StatelessWidget {
       width: size,
       height: size,
       color: Colors.grey[800],
-      child: Center(
-        child: Text(
-          username.isNotEmpty ? username[0].toUpperCase() : '?',
-          style: TextStyle(fontSize: size * 0.36, color: Colors.white),
-        ),
-      ),
+      child: Center(child: Text(username.isNotEmpty ? username[0].toUpperCase() : '?', style: TextStyle(fontSize: size * 0.36, color: Colors.white))),
     );
   }
 
-  Widget _buildStatBadge(IconData icon, String value, String label, Color color, bool isCompact) {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(isCompact ? 8 : 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(16),
+  Widget _buildStatBadge(IconData icon, String value, String label, Color color) {
+    return SizedBox(
+      width: 140,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 20),
           ),
-          child: Icon(icon, color: color, size: isCompact ? 22 : 28),
-        ),
-        SizedBox(height: isCompact ? 6 : 8),
-        Text(
-          value,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 16 : 20,
-            fontWeight: FontWeight.bold,
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 14, fontWeight: FontWeight.bold)),
           ),
-        ),
-        Text(
-          label,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 10 : 12,
-            color: Colors.white.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
+          Text(label, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 9, color: Colors.white.withValues(alpha: 0.7))),
+        ],
+      ),
     );
   }
 }
@@ -179,151 +158,306 @@ class GameCard extends StatelessWidget {
     final earnedPoints = data['ScoreAchieved'] ?? 0;
     final progress = total > 0 ? earned / total : 0.0;
     final isMastered = earned == total && total > 0;
-    final isCompact = settings.layout == CardLayout.compact;
 
+    // Square-optimized layout
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Game icon
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 10,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8)],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             child: CachedNetworkImage(
               imageUrl: 'https://retroachievements.org$imageIcon',
-              width: isCompact ? 72 : 96,
-              height: isCompact ? 72 : 96,
+              width: 70,
+              height: 70,
               fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => Container(
-                width: isCompact ? 72 : 96,
-                height: isCompact ? 72 : 96,
-                color: Colors.grey[800],
-                child: Icon(Icons.games, size: isCompact ? 36 : 48, color: Colors.white),
-              ),
+              errorWidget: (_, __, ___) => Container(width: 70, height: 70, color: Colors.grey[800], child: const Icon(Icons.games, size: 36, color: Colors.white)),
             ),
           ),
         ),
-        SizedBox(height: isCompact ? 12 : 16),
 
-        // Mastery badge
-        if (isMastered)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            margin: EdgeInsets.only(bottom: isCompact ? 6 : 8),
-            decoration: BoxDecoration(
-              color: Colors.amber,
-              borderRadius: BorderRadius.circular(12),
+        // Title + Console
+        Column(
+          children: [
+            Text(
+              title,
+              style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            if (consoleName.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                child: Text(consoleName, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 10, fontWeight: FontWeight.w600, color: Colors.blue)),
+              ),
+          ],
+        ),
+
+        // Progress section
+        Column(
+          children: [
+            // Progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 12,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation(isMastered ? Colors.amber : Colors.green),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Stats row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.workspace_premium, color: Colors.black, size: 16),
+                const Icon(Icons.emoji_events, color: Colors.green, size: 14),
                 const SizedBox(width: 4),
-                Text(
-                  'MASTERED',
-                  style: getCardTextStyle(
-                    fontStyle: settings.fontStyle,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                Text('$earned/$total (${(progress * 100).toStringAsFixed(0)}%)', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11)),
+                const SizedBox(width: 12),
+                Icon(Icons.stars, color: Colors.amber[300], size: 14),
+                const SizedBox(width: 4),
+                Text('$earnedPoints pts', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, color: Colors.amber[300]!)),
+              ],
+            ),
+          ],
+        ),
+
+        // Player info
+        PlayerTag(username: username, frame: settings.avatarFrame, fontStyle: settings.fontStyle),
+
+        // Branding
+        Branding(fontStyle: settings.fontStyle),
+      ],
+    );
+  }
+}
+
+/// Epic share card for mastered games (100% completion)
+/// Special gold-trimmed card that users get automatically for mastery
+class MasteredGameCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String username;
+  final ShareCardSettings settings;
+
+  const MasteredGameCard({
+    super.key,
+    required this.data,
+    required this.username,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['Title'] ?? 'Game';
+    final consoleName = data['ConsoleName'] ?? '';
+    final imageIcon = data['ImageIcon'] ?? '';
+    final earned = data['NumAwardedToUser'] ?? data['NumAchieved'] ?? 0;
+    final total = data['NumAchievements'] ?? data['NumPossibleAchievements'] ?? 0;
+    final earnedPoints = data['ScoreAchieved'] ?? data['Points'] ?? 0;
+    final achievements = data['Achievements'] as Map<String, dynamic>? ?? {};
+
+    // Calculate mastery time
+    final masteryInfo = calculateMasteryTime(achievements, earned, total);
+    final masteryDuration = masteryInfo?.formattedDuration ?? 'Unknown';
+
+    // Gold trim container - optimized for 380x380 square with breathing room
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.amber.shade300, Colors.orange.shade600, Colors.amber.shade400, Colors.yellow.shade600, Colors.amber.shade300],
+          stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+        ),
+        boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8)],
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f0f23)],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Top: Player tag (who mastered it)
+            PlayerTag(username: username, frame: settings.avatarFrame, fontStyle: settings.fontStyle),
+
+            // Game icon with trophy badge
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Subtle glow
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(colors: [Colors.amber.withValues(alpha: 0.3), Colors.transparent]),
+                  ),
+                ),
+                // Game icon with gold border
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(colors: [Colors.amber.shade300, Colors.orange.shade600, Colors.amber.shade400]),
+                    boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 10)],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: CachedNetworkImage(
+                      imageUrl: 'https://retroachievements.org$imageIcon',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(width: 60, height: 60, color: Colors.grey[800], child: const Icon(Icons.games, size: 30, color: Colors.amber)),
+                    ),
+                  ),
+                ),
+                // Trophy badge
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.amber.shade400, Colors.orange.shade700]),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const Icon(Icons.workspace_premium, color: Colors.white, size: 12),
                   ),
                 ),
               ],
             ),
-          ),
 
-        // Title
-        Text(
-          title,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 18 : 22,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        SizedBox(height: isCompact ? 6 : 8),
-        if (consoleName.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              consoleName,
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.blue,
-              ),
-            ),
-          ),
-        SizedBox(height: isCompact ? 14 : 20),
-
-        // Progress bar
-        Column(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: isCompact ? 10 : 12,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation(
-                  isMastered ? Colors.amber : Colors.green,
+            // MASTERED banner + Title + Console
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [Colors.amber.shade600, Colors.orange.shade700, Colors.amber.shade600]),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.amber.shade300, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.military_tech, color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text('MASTERED', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.verified, color: Colors.white, size: 12),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(colors: [Colors.white, Colors.amber.shade100, Colors.white]).createShader(bounds),
+                  child: Text(
+                    title,
+                    style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (consoleName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(consoleName, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 10, color: Colors.amber.shade200)),
+                  ),
+              ],
             ),
-            SizedBox(height: isCompact ? 6 : 8),
-            Text(
-              '$earned / $total achievements (${(progress * 100).toStringAsFixed(0)}%)',
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 12 : 14,
-              ),
+
+            // Stats row: achievements + points + time
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.emoji_events, color: Colors.green.shade400, size: 12),
+                          const SizedBox(width: 4),
+                          Text('$earned/$total', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green.shade400)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.stars, color: Colors.amber, size: 12),
+                          const SizedBox(width: 4),
+                          Text('$earnedPoints pts', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Completion time inline
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timer_outlined, color: Colors.amber.shade300, size: 14),
+                      const SizedBox(width: 6),
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(colors: [Colors.amber.shade300, Colors.orange.shade400, Colors.amber.shade300]).createShader(bounds),
+                        child: Text(masteryDuration, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+
+            // Bottom: Branding centered
+            Branding(fontStyle: settings.fontStyle, logoSize: 45),
           ],
         ),
-        if (!isCompact) ...[
-          const SizedBox(height: 16),
-          // Points
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.stars, color: Colors.amber[300], size: 20),
-              const SizedBox(width: 4),
-              Text(
-                '$earnedPoints / $points points',
-                style: getCardTextStyle(
-                  fontStyle: settings.fontStyle,
-                  fontSize: 14,
-                  color: Colors.amber[300]!,
-                ),
-              ),
-            ],
-          ),
-        ],
-        SizedBox(height: isCompact ? 14 : 20),
-
-        // Player info
-        PlayerTag(username: username, frame: settings.avatarFrame),
-        SizedBox(height: isCompact ? 12 : 16),
-
-        const Branding(),
-      ],
+      ),
     );
   }
 }
@@ -352,34 +486,34 @@ class AchievementCard extends StatelessWidget {
     final isEarned = data['IsEarned'] == true;
     final unlockPercent = data['UnlockPercent'];
     final isHardcore = data['HardcoreMode'] == 1;
-    final isCompact = settings.layout == CardLayout.compact;
 
+    // Square card optimized layout
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Game info row at top with cover art
-        if (!isCompact && (gameTitle.isNotEmpty || gameIcon.isNotEmpty)) ...[
+        // Top: Game info row
+        if (gameTitle.isNotEmpty || gameIcon.isNotEmpty)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (gameIcon.isNotEmpty)
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(5),
                     border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(4),
                     child: CachedNetworkImage(
                       imageUrl: 'https://retroachievements.org$gameIcon',
-                      width: 28,
-                      height: 28,
+                      width: 24,
+                      height: 24,
                       fit: BoxFit.cover,
                       errorWidget: (_, __, ___) => Container(
-                        width: 28,
-                        height: 28,
+                        width: 24,
+                        height: 24,
                         color: Colors.grey[700],
-                        child: const Icon(Icons.games, size: 16, color: Colors.white),
+                        child: const Icon(Icons.games, size: 14, color: Colors.white),
                       ),
                     ),
                   ),
@@ -389,12 +523,13 @@ class AchievementCard extends StatelessWidget {
               if (gameTitle.isNotEmpty)
                 Flexible(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         gameTitle,
                         style: getCardTextStyle(
                           fontStyle: settings.fontStyle,
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: Colors.white.withValues(alpha: 0.7),
                         ),
@@ -407,7 +542,7 @@ class AchievementCard extends StatelessWidget {
                           consoleName,
                           style: getCardTextStyle(
                             fontStyle: settings.fontStyle,
-                            fontSize: 10,
+                            fontSize: 9,
                             color: Colors.white.withValues(alpha: 0.5),
                           ),
                           textAlign: TextAlign.center,
@@ -416,11 +551,11 @@ class AchievementCard extends StatelessWidget {
                   ),
                 ),
             ],
-          ),
-          const SizedBox(height: 16),
-        ],
+          )
+        else
+          const SizedBox.shrink(),
 
-        // Badge with lock overlay for unearned
+        // Badge with lock overlay - scaled down
         Stack(
           alignment: Alignment.center,
           children: [
@@ -435,8 +570,8 @@ class AchievementCard extends StatelessWidget {
                   if (isEarned)
                     BoxShadow(
                       color: Colors.amber.withValues(alpha: 0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+                      blurRadius: 15,
+                      spreadRadius: 1,
                     ),
                 ],
               ),
@@ -452,203 +587,170 @@ class AchievementCard extends StatelessWidget {
                         ]),
                   child: CachedNetworkImage(
                     imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
-                    width: isCompact ? 80 : 100,
-                    height: isCompact ? 80 : 100,
+                    width: 70,
+                    height: 70,
                     fit: BoxFit.cover,
                     errorWidget: (_, __, ___) => Container(
-                      width: isCompact ? 80 : 100,
-                      height: isCompact ? 80 : 100,
+                      width: 70,
+                      height: 70,
                       color: Colors.grey[800],
-                      child: Icon(Icons.emoji_events, size: isCompact ? 36 : 48, color: Colors.amber),
+                      child: const Icon(Icons.emoji_events, size: 32, color: Colors.amber),
                     ),
                   ),
                 ),
               ),
             ),
-            // Lock icon overlay for unearned
             if (!isEarned)
               Container(
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.lock, color: Colors.white, size: 20),
+                child: const Icon(Icons.lock, color: Colors.white, size: 16),
               ),
           ],
         ),
-        SizedBox(height: isCompact ? 8 : 12),
 
-        // Earned/Not earned status badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: isEarned
-                ? Colors.green.withValues(alpha: 0.3)
-                : Colors.red.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isEarned
-                  ? Colors.green.withValues(alpha: 0.5)
-                  : Colors.red.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isEarned ? Icons.check_circle : Icons.lock_outline,
-                color: isEarned ? Colors.green : Colors.red[300],
-                size: 14,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                isEarned ? 'UNLOCKED' : 'NOT YET UNLOCKED',
-                style: getCardTextStyle(
-                  fontStyle: settings.fontStyle,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isEarned ? Colors.green : Colors.red[300]!,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: isCompact ? 10 : 14),
-
-        // Hardcore badge
-        if (isHardcore)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            margin: EdgeInsets.only(bottom: isCompact ? 6 : 8),
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'HARDCORE',
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-
-        // Title
-        Text(
-          title,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 16 : 20,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        if (!isCompact) ...[
-          const SizedBox(height: 6),
-          // Description
-          Text(
-            description,
-            style: getCardTextStyle(
-              fontStyle: settings.fontStyle,
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.8),
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-        SizedBox(height: isCompact ? 10 : 14),
-
-        // Points and rarity
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8,
-          runSpacing: 8,
+        // Status + Title + Description
+        Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.stars, color: Colors.amber, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$points pts',
-                    style: getCardTextStyle(
-                      fontStyle: settings.fontStyle,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber,
+            // Earned/Hardcore badges row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isEarned
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.red.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isEarned
+                          ? Colors.green.withValues(alpha: 0.5)
+                          : Colors.red.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isEarned ? Icons.check_circle : Icons.lock_outline,
+                        color: isEarned ? Colors.green : Colors.red[300],
+                        size: 12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isEarned ? 'UNLOCKED' : 'LOCKED',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isEarned ? Colors.green : Colors.red[300]!,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isHardcore) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'HC',
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
-            if (unlockPercent != null && unlockPercent > 0)
-              _buildRarityBadge(unlockPercent),
-          ],
-        ),
-        SizedBox(height: isCompact ? 12 : 16),
-
-        // User info row
-        if (username.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  decoration: getAvatarDecoration(
-                    frame: settings.avatarFrame,
-                    size: 28,
-                    borderColor: Colors.white.withValues(alpha: 0.5),
-                    borderWidth: 2,
-                  ),
-                  child: clipAvatar(
-                    frame: settings.avatarFrame,
-                    size: 28,
-                    child: userPic.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: 'https://retroachievements.org$userPic',
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => _buildUserPlaceholder(username),
-                          )
-                        : _buildUserPlaceholder(username),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  username,
-                  style: getCardTextStyle(
-                    fontStyle: settings.fontStyle,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
               ],
             ),
-          ),
-          SizedBox(height: isCompact ? 12 : 16),
-        ],
+            const SizedBox(height: 8),
+            // Title
+            Text(
+              title,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            // Description
+            Text(
+              description,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: 11,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
 
-        const Branding(),
+        // User tag + Points/rarity
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (username.isNotEmpty) ...[
+              PlayerTag(username: username, frame: settings.avatarFrame, fontStyle: settings.fontStyle),
+              const SizedBox(height: 8),
+            ],
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.stars, color: Colors.amber, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$points pts',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (unlockPercent != null && unlockPercent > 0)
+                  _buildRarityBadge(unlockPercent),
+              ],
+            ),
+          ],
+        ),
+
+        // Bottom: Branding centered
+        Branding(fontStyle: settings.fontStyle, logoSize: 45),
       ],
     );
   }
@@ -686,10 +788,10 @@ class AchievementCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: rarityColor.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: rarityColor.withValues(alpha: 0.5)),
       ),
       child: Row(
@@ -707,7 +809,7 @@ class AchievementCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Icon(Icons.people, color: rarityColor.withValues(alpha: 0.7), size: 12),
+          Icon(Icons.people, color: rarityColor.withValues(alpha: 0.7), size: 14),
         ],
       ),
     );
@@ -807,7 +909,7 @@ class ComparisonCard extends StatelessWidget {
         ],
         SizedBox(height: isCompact ? 16 : 24),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -1113,7 +1215,7 @@ class MilestoneCard extends StatelessWidget {
         _buildUserInfo(username, userPic),
         SizedBox(height: isCompact ? 14 : 20),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -1300,7 +1402,7 @@ class RAAwardCard extends StatelessWidget {
         _buildUserInfo(username, userPic),
         SizedBox(height: isCompact ? 14 : 20),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -1508,7 +1610,7 @@ class StreakCard extends StatelessWidget {
         ),
         SizedBox(height: isCompact ? 14 : 20),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -1593,7 +1695,7 @@ class AwardsSummaryCard extends StatelessWidget {
         ),
         SizedBox(height: isCompact ? 14 : 20),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -1747,7 +1849,7 @@ class GoalsSummaryCard extends StatelessWidget {
         ),
         SizedBox(height: isCompact ? 14 : 20),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -1803,7 +1905,6 @@ class LeaderboardCard extends StatelessWidget {
     final rawDescription = data['leaderboardDescription'] ?? '';
     final rank = data['rank'] ?? 0;
     final formattedScore = data['formattedScore'] ?? '';
-    final isCompact = settings.layout == CardLayout.compact;
 
     // Handle empty title - use description as main title if title is empty
     final hasTitle = rawTitle.isNotEmpty;
@@ -1823,152 +1924,158 @@ class LeaderboardCard extends StatelessWidget {
       rankColor = Colors.green;
     }
 
+    // Square-optimized layout - all components scaled down to fit 380x380
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Game icon and title
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Top section: Game info
+        Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: 'https://retroachievements.org$gameIcon',
-                width: isCompact ? 36 : 48,
-                height: isCompact ? 36 : 48,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
-                  width: isCompact ? 36 : 48,
-                  height: isCompact ? 36 : 48,
-                  color: Colors.grey[800],
-                  child: Icon(Icons.videogame_asset, size: isCompact ? 20 : 28, color: Colors.grey),
+            // Game icon and title
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: CachedNetworkImage(
+                    imageUrl: 'https://retroachievements.org$gameIcon',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => Container(
+                      width: 32,
+                      height: 32,
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.videogame_asset, size: 18, color: Colors.grey),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                gameTitle,
-                style: getCardTextStyle(
-                  fontStyle: settings.fontStyle,
-                  fontSize: isCompact ? 14 : 18,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    gameTitle,
+                    style: getCardTextStyle(
+                      fontStyle: settings.fontStyle,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
+              ],
             ),
-          ],
-        ),
-        SizedBox(height: isCompact ? 12 : 16),
+            const SizedBox(height: 8),
 
-        // Leaderboard title and description
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 8 : 10),
-          decoration: BoxDecoration(
-            color: Colors.amber.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+            // Leaderboard title badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+              ),
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.leaderboard, color: Colors.amber, size: isCompact ? 16 : 20),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      leaderboardTitle,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.leaderboard, color: Colors.amber, size: 14),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          leaderboardTitle,
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (leaderboardDescription != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      leaderboardDescription,
                       style: getCardTextStyle(
                         fontStyle: settings.fontStyle,
-                        fontSize: isCompact ? 12 : 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 9,
+                        color: Colors.white70,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                     ),
-                  ),
+                  ],
                 ],
-              ),
-              // Show description below title if both exist
-              if (leaderboardDescription != null) ...[
-                SizedBox(height: isCompact ? 4 : 6),
-                Text(
-                  leaderboardDescription,
-                  style: getCardTextStyle(
-                    fontStyle: settings.fontStyle,
-                    fontSize: isCompact ? 10 : 12,
-                    color: Colors.white70,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ],
-          ),
-        ),
-        SizedBox(height: isCompact ? 14 : 20),
-
-        // User avatar
-        _buildAvatar(username, userPic, isCompact ? 40 : 50, settings.avatarFrame),
-        SizedBox(height: isCompact ? 8 : 12),
-
-        // Username
-        Text(
-          username,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 16 : 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: isCompact ? 12 : 16),
-
-        // Rank display - fancy for top 3, simple for others
-        if (rank <= 3) ...[
-          // Trophy layout for top 3
-          _buildTrophyRank(rank, rankColor, formattedScore, isCompact),
-        ] else ...[
-          // Standard rank display
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: isCompact ? 20 : 28, vertical: isCompact ? 10 : 14),
-            decoration: BoxDecoration(
-              color: rankColor.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
-            ),
-            child: Text(
-              '#$rank',
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 32 : 42,
-                fontWeight: FontWeight.bold,
-                color: rankColor,
-              ),
-            ),
-          ),
-          // Score for non-trophy ranks
-          if (formattedScore.isNotEmpty) ...[
-            SizedBox(height: isCompact ? 10 : 14),
-            Text(
-              formattedScore,
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 18 : 24,
-                fontWeight: FontWeight.w500,
-                color: Colors.tealAccent,
               ),
             ),
           ],
-        ],
-        SizedBox(height: isCompact ? 14 : 20),
+        ),
 
-        const Branding(),
+        // Middle section: User + Rank
+        Column(
+          children: [
+            // User avatar
+            _buildAvatar(username, userPic, 36, settings.avatarFrame),
+            const SizedBox(height: 6),
+
+            // Username
+            Text(
+              username,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Rank display - scaled down
+            if (rank <= 3) ...[
+              _buildTrophyRank(rank, rankColor, formattedScore, true),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: rankColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
+                ),
+                child: Text(
+                  '#$rank',
+                  style: getCardTextStyle(
+                    fontStyle: settings.fontStyle,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: rankColor,
+                  ),
+                ),
+              ),
+              if (formattedScore.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  formattedScore,
+                  style: getCardTextStyle(
+                    fontStyle: settings.fontStyle,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.tealAccent,
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+
+        // Bottom section: Branding
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }
@@ -2013,44 +2120,45 @@ class LeaderboardCard extends StatelessWidget {
     };
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Large trophy icon with glow
+        // Trophy icon with glow - scaled down for square card
         Container(
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: rankColor.withValues(alpha: 0.5),
-                blurRadius: 30,
-                spreadRadius: 5,
+                color: rankColor.withValues(alpha: 0.4),
+                blurRadius: 20,
+                spreadRadius: 3,
               ),
             ],
           ),
           child: Icon(
             Icons.emoji_events,
             color: rankColor,
-            size: isCompact ? 56 : 72,
+            size: 40,
           ),
         ),
-        SizedBox(height: isCompact ? 8 : 12),
+        const SizedBox(height: 6),
         // Position label
         Text(
           positionLabel,
           style: getCardTextStyle(
             fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 20 : 26,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: rankColor,
-            letterSpacing: 2,
+            letterSpacing: 1.5,
           ),
         ),
         // Score below
         if (formattedScore.isNotEmpty) ...[
-          SizedBox(height: isCompact ? 8 : 12),
+          const SizedBox(height: 4),
           Text(
             formattedScore,
             style: getCardTextStyle(
               fontStyle: settings.fontStyle,
-              fontSize: isCompact ? 16 : 20,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: Colors.tealAccent,
             ),
@@ -2187,7 +2295,7 @@ class GlobalRankCard extends StatelessWidget {
         ),
         SizedBox(height: isCompact ? 14 : 20),
 
-        const Branding(),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }

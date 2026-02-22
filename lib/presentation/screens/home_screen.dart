@@ -404,37 +404,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       // Hide bottom nav when companion mode is active (nav is on secondary screen)
-      bottomNavigationBar: _isCompanionModeActive ? null : NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) {
-          setState(() => _currentIndex = i);
-          // Sync to secondary if companion mode is active
-          if (_isCompanionModeActive) {
-            _dualScreen.sendNavigationEvent(i);
-          }
-        },
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined, color: Colors.grey.shade600),
-            selectedIcon: Icon(Icons.home, color: Theme.of(context).colorScheme.primary),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined, color: Colors.grey.shade600),
-            selectedIcon: Icon(Icons.explore, color: Theme.of(context).colorScheme.primary),
-            label: 'Explore',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined, color: Colors.grey.shade600),
-            selectedIcon: Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary),
-            label: 'Achievements',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined, color: Colors.grey.shade600),
-            selectedIcon: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
-            label: 'Settings',
-          ),
-        ],
+      // Wrap in Theme to reset both textScaler and font so pixel font doesn't affect nav
+      bottomNavigationBar: _isCompanionModeActive ? null : Theme(
+        data: Theme.of(context).copyWith(
+          // Reset text theme to default (non-pixel) font for nav labels
+          textTheme: ThemeData(brightness: Theme.of(context).brightness).textTheme,
+        ),
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) {
+            setState(() => _currentIndex = i);
+            // Sync to secondary if companion mode is active
+            if (_isCompanionModeActive) {
+              _dualScreen.sendNavigationEvent(i);
+            }
+          },
+          destinations: [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined, color: Colors.grey.shade600),
+              selectedIcon: Icon(Icons.home, color: Theme.of(context).colorScheme.primary),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.explore_outlined, color: Colors.grey.shade600),
+              selectedIcon: Icon(Icons.explore, color: Theme.of(context).colorScheme.primary),
+              label: 'Explore',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.emoji_events_outlined, color: Colors.grey.shade600),
+              selectedIcon: Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary),
+              label: 'Achievements',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined, color: Colors.grey.shade600),
+              selectedIcon: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
+              label: 'Settings',
+            ),
+          ],
+        ),
+        ),
       ),
     );
   }

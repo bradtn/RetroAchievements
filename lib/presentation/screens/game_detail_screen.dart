@@ -219,6 +219,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _titleAnimationComplete = false; // Reset to replay animation on refresh
     });
 
     final api = ref.read(apiDataSourceProvider);
@@ -479,7 +480,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           // Hero/AppBar spans full width
           _buildAppBar(title, imageIcon, imageTitle, isLightMode),
           // All other content is containerized on widescreen
-          _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion, isWidescreen),
+          _buildGameInfoCard(title, console, imageIcon, developer, publisher, genre, released, numAchievements, numAwarded, totalPoints, earnedPoints, progress, completion, isWidescreen, achievements),
           // Toggle between Achievements and Leaderboards
           if (numAchievements > 0 || _leaderboards.isNotEmpty)
             _buildViewToggle(numAchievements, _leaderboards.length, isWidescreen),
@@ -678,9 +679,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   /// Build animated title with typewriter effect on first load
   Widget _buildAnimatedTitle(String title, Color titleColor, double collapseRatio) {
+    // Get the text scaler to apply consistent sizing for animated text
+    final textScaler = MediaQuery.of(context).textScaler;
+    final baseFontSize = collapseRatio > 0.7 ? 16.0 : 18.0;
+    // Apply text scaler to font size so animated text matches static text
+    final scaledFontSize = textScaler.scale(baseFontSize);
+
     final baseStyle = TextStyle(
       color: titleColor,
-      fontSize: collapseRatio > 0.7 ? 16 : 18,
+      fontSize: baseFontSize,
       fontWeight: FontWeight.w600,
       letterSpacing: -0.3,
       height: 1.2,
@@ -709,11 +716,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     }
 
     // Typewriter animation when expanded and not yet complete
+    // Use scaled font size since AnimatedTextKit doesn't respect textScaler
+    final animatedStyle = baseStyle.copyWith(fontSize: scaledFontSize);
     return AnimatedTextKit(
       animatedTexts: [
         TypewriterAnimatedText(
           title,
-          textStyle: baseStyle,
+          textStyle: animatedStyle,
           speed: Duration(milliseconds: (40 + (800 ~/ title.length)).clamp(30, 80)),
         ),
       ],
@@ -753,6 +762,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     dynamic developer, dynamic publisher, dynamic genre, dynamic released,
     int numAchievements, int numAwarded, int totalPoints, int earnedPoints,
     double progress, String completion, bool isWidescreen,
+    Map<String, dynamic> achievements,
   ) {
     return SliverToBoxAdapter(
       child: _wrapForWidescreen(Padding(
@@ -785,60 +795,75 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Console name and buttons row
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  console,
-                                  style: const TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                              // Console name - flexible, wraps only if needed, tight to text
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    console,
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
-                              const Spacer(),
-                              // Share button
-                              _buildIconButton(
-                                icon: Icons.share,
-                                color: Colors.blue,
-                                onTap: () {
-                                  final shareData = Map<String, dynamic>.from(_gameData!);
-                                  shareData['PossibleScore'] = totalPoints;
-                                  shareData['ScoreAchieved'] = earnedPoints;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ShareCardScreen(
-                                        type: ShareCardType.game,
-                                        data: shareData,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
                               const SizedBox(width: 8),
-                              // Favorite button
-                              FavoriteIconButton(
-                                gameId: widget.gameId,
-                                title: title,
-                                imageIcon: imageIcon,
-                                consoleName: console,
-                                numAchievements: numAchievements,
-                                earnedAchievements: numAwarded,
-                                totalPoints: totalPoints,
-                                earnedPoints: earnedPoints,
+                              // Buttons group
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Share button
+                                  _buildIconButton(
+                                    icon: Icons.share,
+                                    color: Colors.blue,
+                                    onTap: () {
+                                      final shareData = Map<String, dynamic>.from(_gameData!);
+                                      shareData['PossibleScore'] = totalPoints;
+                                      shareData['ScoreAchieved'] = earnedPoints;
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ShareCardScreen(
+                                            type: ShareCardType.game,
+                                            data: shareData,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Favorite button
+                                  FavoriteIconButton(
+                                    gameId: widget.gameId,
+                                    title: title,
+                                    imageIcon: imageIcon,
+                                    consoleName: console,
+                                    numAchievements: numAchievements,
+                                    earnedAchievements: numAwarded,
+                                    totalPoints: totalPoints,
+                                    earnedPoints: earnedPoints,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 10),
                           if (numAchievements > 0) ...[
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -871,7 +896,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
                                 if (totalPoints > 0)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -944,6 +968,23 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   const SizedBox(height: 12),
                   UserGameRankCard(rankData: _userGameRank!),
                 ],
+                // Show mastery badge if all achievements are completed
+                if (numAchievements > 0 && numAwarded == numAchievements) ...[
+                  const SizedBox(height: 12),
+                  Builder(
+                    builder: (context) {
+                      final masteryInfo = calculateMasteryTime(
+                        achievements,
+                        numAwarded,
+                        numAchievements,
+                      );
+                      if (masteryInfo != null) {
+                        return MasteryBadge(masteryInfo: masteryInfo);
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
                 const Divider(height: 24),
                 if (developer != null && developer.toString().isNotEmpty)
                   DetailRow(Icons.code, 'Developer', developer.toString()),
@@ -999,12 +1040,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           color: !_showLeaderboards ? Colors.white : Colors.grey,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Achievements ($achievementCount)',
-                          style: TextStyle(
-                            color: !_showLeaderboards ? Colors.white : Colors.grey,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Achievements ($achievementCount)',
+                              style: TextStyle(
+                                color: !_showLeaderboards ? Colors.white : Colors.grey,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -1035,12 +1081,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           color: _showLeaderboards ? Colors.white : Colors.grey,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Leaderboards ($leaderboardCount)',
-                          style: TextStyle(
-                            color: _showLeaderboards ? Colors.white : Colors.grey,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Leaderboards ($leaderboardCount)',
+                              style: TextStyle(
+                                color: _showLeaderboards ? Colors.white : Colors.grey,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ),
                       ],

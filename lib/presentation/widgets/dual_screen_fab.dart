@@ -57,11 +57,9 @@ class _DualScreenFABState extends State<DualScreenFAB> with SingleTickerProvider
   }
 
   void _onDisplaysChanged(List<DisplayInfo> displays) {
-    if (mounted) {
-      setState(() {
-        _hasMultiDisplay = displays.length > 1;
-      });
-    }
+    // Don't just check display count - verify with hasSecondaryDisplay()
+    // which includes the Ayn device check on the native side
+    _checkDisplays();
   }
 
   void _toggleExpanded() {

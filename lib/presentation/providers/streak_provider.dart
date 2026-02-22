@@ -73,12 +73,12 @@ class StreakState {
 }
 
 class StreakNotifier extends Notifier<StreakState> {
-  late final RAApiDataSource _api;
+  // Use getter to safely access the API data source without late initialization issues
+  RAApiDataSource get _api => ref.read(apiDataSourceProvider);
   String? _currentUsername;
 
   @override
   StreakState build() {
-    _api = ref.watch(apiDataSourceProvider);
     return StreakState();
   }
 

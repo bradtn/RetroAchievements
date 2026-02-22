@@ -138,3 +138,96 @@ class RarityDistributionCounts {
 
   return (totalPoints: totalPoints, earnedPoints: earnedPoints);
 }
+
+/// Mastery info result
+class MasteryInfo {
+  final DateTime firstAchievement;
+  final DateTime lastAchievement;
+  final int days;
+
+  const MasteryInfo({
+    required this.firstAchievement,
+    required this.lastAchievement,
+    required this.days,
+  });
+
+  /// Format mastery time for display
+  String get formattedDuration {
+    if (days == 0) {
+      return 'Same day';
+    } else if (days == 1) {
+      return '1 day';
+    } else if (days < 30) {
+      return '$days days';
+    } else if (days < 365) {
+      final months = (days / 30).floor();
+      final remainingDays = days % 30;
+      if (remainingDays == 0) {
+        return months == 1 ? '1 month' : '$months months';
+      }
+      return months == 1
+          ? '1 month, $remainingDays days'
+          : '$months months, $remainingDays days';
+    } else {
+      final years = (days / 365).floor();
+      final remainingDays = days % 365;
+      final months = (remainingDays / 30).floor();
+      if (months == 0) {
+        return years == 1 ? '1 year' : '$years years';
+      }
+      return years == 1
+          ? '1 year, $months months'
+          : '$years years, $months months';
+    }
+  }
+}
+
+/// Calculate mastery time from achievements
+/// Returns null if not all achievements are earned (not mastered)
+MasteryInfo? calculateMasteryTime(
+  Map<String, dynamic> achievements,
+  int numAwarded,
+  int numAchievements,
+) {
+  // Only calculate if ALL achievements are completed
+  if (numAchievements == 0 || numAwarded != numAchievements) {
+    return null;
+  }
+
+  DateTime? firstDate;
+  DateTime? lastDate;
+
+  for (final entry in achievements.entries) {
+    final ach = entry.value as Map<String, dynamic>;
+    // Prefer hardcore date, fall back to regular date
+    final dateStr = ach['DateEarnedHardcore'] ?? ach['DateEarned'];
+    if (dateStr == null || dateStr.toString().isEmpty) {
+      continue;
+    }
+
+    // Parse the date string (format: "YYYY-MM-DD HH:MM:SS" or similar)
+    final parsed = DateTime.tryParse(dateStr.toString());
+    if (parsed == null) {
+      continue;
+    }
+
+    if (firstDate == null || parsed.isBefore(firstDate)) {
+      firstDate = parsed;
+    }
+    if (lastDate == null || parsed.isAfter(lastDate)) {
+      lastDate = parsed;
+    }
+  }
+
+  if (firstDate == null || lastDate == null) {
+    return null;
+  }
+
+  final days = lastDate.difference(firstDate).inDays;
+
+  return MasteryInfo(
+    firstAchievement: firstDate,
+    lastAchievement: lastDate,
+    days: days,
+  );
+}

@@ -27,7 +27,8 @@ TextStyle getCardTextStyle({
       letterSpacing: letterSpacing,
     );
   }
-  return TextStyle(
+  // Use Roboto explicitly for modern style to avoid inheriting global pixel font
+  return GoogleFonts.roboto(
     fontSize: fontSize,
     fontWeight: fontWeight,
     color: color,
@@ -423,21 +424,23 @@ Widget buildPatternOverlay(BackgroundPattern pattern, {String? gameImageUrl}) {
 class PlayerTag extends StatelessWidget {
   final String username;
   final AvatarFrame frame;
+  final CardFontStyle fontStyle;
 
   const PlayerTag({
     super.key,
     required this.username,
     this.frame = AvatarFrame.circle,
+    this.fontStyle = CardFontStyle.modern,
   });
 
   @override
   Widget build(BuildContext context) {
-    const size = 24.0;
+    const size = 20.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -445,11 +448,7 @@ class PlayerTag extends StatelessWidget {
           Container(
             width: size,
             height: size,
-            decoration: getAvatarDecoration(
-              frame: frame,
-              size: size,
-              borderWidth: 0,
-            ),
+            decoration: getAvatarDecoration(frame: frame, size: size, borderWidth: 0),
             child: clipAvatar(
               frame: frame,
               size: size,
@@ -458,22 +457,12 @@ class PlayerTag extends StatelessWidget {
                 width: size,
                 height: size,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
-                  color: Colors.grey[700],
-                  child: const Icon(Icons.person, size: 14, color: Colors.white54),
-                ),
+                errorWidget: (_, __, ___) => Container(color: Colors.grey[700], child: const Icon(Icons.person, size: 12, color: Colors.white54)),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            username,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          const SizedBox(width: 6),
+          Text(username, style: getCardTextStyle(fontStyle: fontStyle, fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white)),
         ],
       ),
     );
@@ -481,29 +470,33 @@ class PlayerTag extends StatelessWidget {
 }
 
 class Branding extends StatelessWidget {
-  const Branding({super.key});
+  final CardFontStyle fontStyle;
+  final double logoSize;
+
+  const Branding({super.key, this.fontStyle = CardFontStyle.modern, this.logoSize = 50});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           child: Image.asset(
             'assets/RetroTrack.png',
-            height: 100,
-            width: 100,
+            height: logoSize,
+            width: logoSize,
             fit: BoxFit.contain,
           ),
         ),
-        const SizedBox(width: 12),
         Text(
           'retroachievements.org',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 14,
+          textAlign: TextAlign.center,
+          style: getCardTextStyle(
+            fontStyle: fontStyle,
+            fontSize: 8,
             fontWeight: FontWeight.w500,
+            color: Colors.white.withValues(alpha: 0.6),
           ),
         ),
       ],

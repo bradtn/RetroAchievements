@@ -63,11 +63,11 @@ const _keyApiKey = 'ra_api_key';
 
 /// Auth state notifier
 class AuthNotifier extends Notifier<AuthState> {
-  late final RAApiDataSource _apiDataSource;
+  // Use getter to safely access the API data source without late initialization issues
+  RAApiDataSource get _apiDataSource => ref.read(apiDataSourceProvider);
 
   @override
   AuthState build() {
-    _apiDataSource = ref.watch(apiDataSourceProvider);
     Future.microtask(() => _loadSavedCredentials());
     return const AuthState();
   }

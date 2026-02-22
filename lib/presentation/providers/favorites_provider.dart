@@ -115,13 +115,28 @@ class FavoritesState {
 class FavoritesNotifier extends Notifier<FavoritesState> {
   static const _storageKey = 'favorite_games';
   static const _widgetChannel = MethodChannel('com.retrotracker.retrotracker/widget');
-  late final RAApiDataSource? _api;
-  late final String? _username;
+
+  // Use ref directly in methods instead of late fields to avoid LateInitializationError
+  RAApiDataSource? get _api {
+    try {
+      return ref.read(apiDataSourceProvider);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? get _username {
+    try {
+      return ref.read(authProvider).username;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   FavoritesState build() {
-    _api = ref.watch(apiDataSourceProvider);
-    _username = ref.watch(authProvider).username;
+    // Watch for auth changes to trigger rebuild when user logs in/out
+    ref.watch(authProvider);
     _load();
     return FavoritesState();
   }

@@ -220,16 +220,17 @@ ThemeMode getThemeMode(AppThemeMode mode) {
 }
 
 /// Pixel font setting (retro-style "Press Start 2P" font)
+/// Default is ON (true) for retro branding - toggle turns it off
 class PixelFontNotifier extends Notifier<bool> {
   @override
   bool build() {
     _loadSetting();
-    return false;
+    return true; // Default ON for retro branding
   }
 
   Future<void> _loadSetting() async {
     final prefs = await SharedPreferences.getInstance();
-    state = prefs.getBool('pixel_font_enabled') ?? false;
+    state = prefs.getBool('pixel_font_enabled') ?? true; // Default ON
   }
 
   Future<void> setEnabled(bool enabled) async {

@@ -226,7 +226,19 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
                 constraints: BoxConstraints(maxHeight: maxCardHeight, maxWidth: constraints.maxWidth - 32),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: RepaintBoundary(key: _cardKey, child: _buildCard()),
+                  // Reset both textScaler AND textTheme so share card uses its own font settings
+                  // (not the global pixel font setting) - share card has its own font selector
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      textTheme: ThemeData(brightness: Theme.of(context).brightness).textTheme,
+                    ),
+                    child: MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        textScaler: TextScaler.noScaling,
+                      ),
+                      child: RepaintBoundary(key: _cardKey, child: _buildCard()),
+                    ),
+                  ),
                 ),
               ),
             );
@@ -587,8 +599,11 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
 
   Widget _buildCard() {
     final isGif = _exportFormat == ExportFormat.gif;
+    // Square card for better social media sharing (1:1 aspect ratio)
+    const cardSize = 380.0;
     return Container(
-      width: 350,
+      width: cardSize,
+      height: cardSize,
       decoration: getCardBorderDecoration(borderStyle: _settings.borderStyle, gradientColors: [_settings.gradientStart, _settings.gradientEnd]),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -597,11 +612,13 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
           if (isGif && _sparkleAmount != SparkleAmount.none) ..._buildSparkles(),
           if (isGif && _settings.borderStyle == CardBorderStyle.glow && _glowOrbsEnabled)
             Positioned.fill(child: CustomPaint(painter: _GlowBorderPainter(_animPhase, _settings.gradientStart))),
-          Padding(
-            padding: EdgeInsets.all(_settings.layout == CardLayout.compact ? 16 : 24),
-            child: isGif && _breathingEnabled
-                ? Transform.scale(scale: 1.0 + 0.015 * math.sin(_animPhase * 2 * math.pi), child: _buildCardContent())
-                : _buildCardContent(),
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.all(_settings.layout == CardLayout.compact ? 14 : 18),
+              child: isGif && _breathingEnabled
+                  ? Transform.scale(scale: 1.0 + 0.015 * math.sin(_animPhase * 2 * math.pi), child: _buildCardContent())
+                  : _buildCardContent(),
+            ),
           ),
         ]),
       ),
@@ -740,11 +757,23 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
     }).toList();
   }
 
+  /// Builds game card - uses epic MasteredGameCard if 100% complete
+  Widget _buildGameCard(String username) {
+    final earned = widget.data['NumAwardedToUser'] ?? widget.data['NumAchieved'] ?? 0;
+    final total = widget.data['NumAchievements'] ?? widget.data['NumPossibleAchievements'] ?? 0;
+    final isMastered = earned == total && total > 0;
+
+    if (isMastered) {
+      return MasteredGameCard(data: widget.data, username: username, settings: _settings);
+    }
+    return GameCard(data: widget.data, username: username, settings: _settings);
+  }
+
   Widget _buildCardContent() {
     final username = ref.read(authProvider).username ?? 'Player';
     return switch (widget.type) {
       ShareCardType.profile => ProfileCard(data: widget.data, settings: _settings),
-      ShareCardType.game => GameCard(data: widget.data, username: username, settings: _settings),
+      ShareCardType.game => _buildGameCard(username),
       ShareCardType.achievement => AchievementCard(data: widget.data, settings: _settings),
       ShareCardType.comparison => ComparisonCard(data: widget.data, settings: _settings),
       ShareCardType.milestone => MilestoneCard(data: widget.data, settings: _settings),

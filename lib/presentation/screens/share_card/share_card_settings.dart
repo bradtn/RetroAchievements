@@ -25,7 +25,7 @@ class ShareCardSettings {
     this.gradientStart = const Color(0xFF1a1a2e),
     this.gradientEnd = const Color(0xFF16213e),
     this.pattern = BackgroundPattern.diagonal,
-    this.fontStyle = CardFontStyle.modern,
+    this.fontStyle = CardFontStyle.pixel,
     this.borderStyle = CardBorderStyle.none,
     this.avatarFrame = AvatarFrame.circle,
     this.layout = CardLayout.detailed,

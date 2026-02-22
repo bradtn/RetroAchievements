@@ -20,23 +20,55 @@ class StatCard extends StatelessWidget {
     this.compact = false,
   });
 
+  /// Format number with commas for readability (no rounding)
+  String _formatWithCommas(String val) {
+    final num = int.tryParse(val.replaceAll(',', ''));
+    if (num == null) return val;
+
+    // Add commas for thousands separators
+    final str = num.toString();
+    final result = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) {
+        result.write(',');
+      }
+      result.write(str[i]);
+    }
+    return result.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayValue = _formatWithCommas(value);
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(compact ? 10 : 16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(icon, color: color, size: compact ? 22 : 32),
             SizedBox(height: compact ? 4 : 8),
-            Text(value, style: (compact
-                ? Theme.of(context).textTheme.titleMedium
-                : Theme.of(context).textTheme.headlineSmall)?.copyWith(
-              fontWeight: FontWeight.bold,
-            )),
-            Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: compact ? 9 : null,
-            )),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                displayValue,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: (compact
+                    ? Theme.of(context).textTheme.titleMedium
+                    : Theme.of(context).textTheme.headlineSmall)?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: compact ? 9 : null,
+              ),
+            ),
           ],
         ),
       ),
