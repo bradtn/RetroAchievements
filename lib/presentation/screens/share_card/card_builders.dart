@@ -1969,69 +1969,51 @@ class LeaderboardCard extends StatelessWidget {
       _ => '#$rank',
     };
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: isCompact ? 16 : 24, vertical: isCompact ? 14 : 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            rankColor.withValues(alpha: 0.3),
-            rankColor.withValues(alpha: 0.15),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: rankColor.withValues(alpha: 0.6), width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: rankColor.withValues(alpha: 0.3),
-            blurRadius: 20,
-            spreadRadius: 2,
+    return Column(
+      children: [
+        // Large trophy icon with glow
+        Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: rankColor.withValues(alpha: 0.5),
+                blurRadius: 30,
+                spreadRadius: 5,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Large trophy icon
-          Icon(
+          child: Icon(
             Icons.emoji_events,
             color: rankColor,
-            size: isCompact ? 48 : 64,
+            size: isCompact ? 56 : 72,
           ),
+        ),
+        SizedBox(height: isCompact ? 8 : 12),
+        // Position label
+        Text(
+          positionLabel,
+          style: getCardTextStyle(
+            fontStyle: settings.fontStyle,
+            fontSize: isCompact ? 20 : 26,
+            fontWeight: FontWeight.bold,
+            color: rankColor,
+            letterSpacing: 2,
+          ),
+        ),
+        // Score below
+        if (formattedScore.isNotEmpty) ...[
           SizedBox(height: isCompact ? 8 : 12),
-          // Position label
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 4 : 6),
-            decoration: BoxDecoration(
-              color: rankColor.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              positionLabel,
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 18 : 24,
-                fontWeight: FontWeight.bold,
-                color: rankColor,
-                letterSpacing: 2,
-              ),
+          Text(
+            formattedScore,
+            style: getCardTextStyle(
+              fontStyle: settings.fontStyle,
+              fontSize: isCompact ? 16 : 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.tealAccent,
             ),
           ),
-          // Score below trophy
-          if (formattedScore.isNotEmpty) ...[
-            SizedBox(height: isCompact ? 10 : 14),
-            Text(
-              formattedScore,
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 16 : 20,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 }
