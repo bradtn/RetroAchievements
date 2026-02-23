@@ -2234,59 +2234,44 @@ class LeaderboardCard extends StatelessWidget {
           ],
         ),
 
-        // Middle section: User + Rank (expanded to fill available space)
+        // Middle section: User + Score + Rank (expanded to fill available space)
         Expanded(
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // User avatar
-                _buildAvatar(username, userPic, 32, settings.avatarFrame),
-                const SizedBox(height: 4),
-                // Username
-                Text(
-                  username,
-                  style: getCardTextStyle(
-                    fontStyle: settings.fontStyle,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Rank display
-                if (rank <= 3) ...[
-                  _buildTrophyRank(rank, rankColor, formattedScore, true),
-                ] else ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: rankColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
-                    ),
-                    child: Text(
-                      '#$rank',
-                      style: getCardTextStyle(
-                        fontStyle: settings.fontStyle,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: rankColor,
-                      ),
-                    ),
-                  ),
-                  if (formattedScore.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                // User avatar and name row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildAvatar(username, userPic, 28, settings.avatarFrame),
+                    const SizedBox(width: 8),
                     Text(
-                      formattedScore,
+                      username,
                       style: getCardTextStyle(
                         fontStyle: settings.fontStyle,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.tealAccent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                // Score/Time as HERO element
+                if (formattedScore.isNotEmpty) ...[
+                  Text(
+                    formattedScore,
+                    style: getCardTextStyle(
+                      fontStyle: settings.fontStyle,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                 ],
+                // Rank badge below score
+                _buildRankBadge(rank, rankColor),
               ],
             ),
           ),
@@ -2328,61 +2313,72 @@ class LeaderboardCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTrophyRank(int rank, Color rankColor, String formattedScore, bool isCompact) {
+  Widget _buildRankBadge(int rank, Color rankColor) {
     // Position label
     final positionLabel = switch (rank) {
-      1 => '1ST PLACE',
-      2 => '2ND PLACE',
-      3 => '3RD PLACE',
+      1 => '1ST',
+      2 => '2ND',
+      3 => '3RD',
       _ => '#$rank',
     };
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Trophy icon with glow
-        Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: rankColor.withValues(alpha: 0.4),
-                blurRadius: 20,
-                spreadRadius: 3,
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.emoji_events,
-            color: rankColor,
-            size: 40,
-          ),
-        ),
-        const SizedBox(height: 6),
-        // Position label
-        Text(
-          positionLabel,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: rankColor,
-            letterSpacing: 1.5,
-          ),
-        ),
-        // Score below
-        if (formattedScore.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            formattedScore,
-            style: getCardTextStyle(
-              fontStyle: settings.fontStyle,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.tealAccent,
+    // Top 3 get trophy icon with position
+    if (rank <= 3) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: rankColor.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: rankColor.withValues(alpha: 0.3),
+              blurRadius: 10,
+              spreadRadius: 1,
             ),
-          ),
-        ],
-      ],
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.emoji_events,
+              color: rankColor,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              positionLabel,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: rankColor,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Other ranks get a simple badge
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: rankColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
+      ),
+      child: Text(
+        positionLabel,
+        style: getCardTextStyle(
+          fontStyle: settings.fontStyle,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: rankColor,
+        ),
+      ),
     );
   }
 }
