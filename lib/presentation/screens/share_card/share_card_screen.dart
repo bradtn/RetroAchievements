@@ -189,6 +189,310 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
   }
 
   Widget _buildContent() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isWidescreen = screenWidth > 600 && screenWidth > screenHeight;
+
+    if (isWidescreen) {
+      return _buildWidescreenContent();
+    }
+    return _buildNormalContent();
+  }
+
+  Widget _buildWidescreenContent() {
+    return Row(
+      children: [
+        // Left side: Card preview (takes most of the space)
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              // Share button row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(children: [
+                  Container(
+                    decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      _buildFormatButton(ExportFormat.png, 'PNG'),
+                      _buildFormatButton(ExportFormat.gif, 'GIF'),
+                    ]),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _isGenerating ? null : _shareCard,
+                      icon: _isGenerating
+                          ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white, value: _exportFormat == ExportFormat.gif && !_isEncoding ? _generatingProgress : null))
+                          : const Icon(Icons.share),
+                      label: Text(_isGenerating
+                          ? (_exportFormat == ExportFormat.gif
+                              ? (_isEncoding ? 'Encoding...' : 'Capturing ${(_generatingProgress * 100).toInt()}%')
+                              : 'Creating...')
+                          : 'Share ${_exportFormat == ExportFormat.gif ? 'GIF' : 'Image'}'),
+                    ),
+                  ),
+                ]),
+              ),
+              // Card display - use more of the available space
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          textTheme: ThemeData(brightness: Theme.of(context).brightness).textTheme,
+                        ),
+                        child: MediaQuery(
+                          data: MediaQuery.of(context).copyWith(
+                            textScaler: TextScaler.noScaling,
+                          ),
+                          child: RepaintBoundary(key: _cardKey, child: _buildCard()),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Right side: Customization panel (vertical layout)
+        SizedBox(
+          width: 280,
+          child: _buildWidescreenCustomizationPanel(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWidescreenCustomizationPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(left: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+      ),
+      child: SafeArea(
+        left: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildWidescreenSection('Colors', _buildColorsTabContent()),
+              const SizedBox(height: 16),
+              _buildWidescreenSection('Style', _buildStyleTabContent()),
+              const SizedBox(height: 16),
+              _buildWidescreenSection('Layout', _buildLayoutTabContent()),
+              const SizedBox(height: 16),
+              _buildWidescreenSection('Animation', _buildAnimateTabContent()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWidescreenSection(String title, Widget content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.7))),
+        const SizedBox(height: 8),
+        content,
+      ],
+    );
+  }
+
+  Widget _buildColorsTabContent() {
+    final gameImageUrl = _getGameImageUrl();
+    final isGameBgSelected = _settings.pattern == BackgroundPattern.gameBlur;
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          // Game image background option (if available)
+          if (gameImageUrl != null)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPresetIndex = -1;
+                  _settings = _settings.copyWith(pattern: BackgroundPattern.gameBlur);
+                });
+              },
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: isGameBgSelected ? Border.all(color: Colors.white, width: 2) : null,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(isGameBgSelected ? 6 : 8),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: gameImageUrl.startsWith('http') ? gameImageUrl : 'https://retroachievements.org$gameImageUrl',
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(color: Colors.grey[800]),
+                      ),
+                      Container(color: Colors.black.withValues(alpha: 0.3)),
+                      const Center(child: Icon(Icons.image, color: Colors.white, size: 16)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          // Color presets
+          ...ShareCardSettings.presets.asMap().entries.map((entry) {
+            final i = entry.key;
+            final preset = entry.value;
+            final sel = _selectedPresetIndex == i && !isGameBgSelected;
+            if (preset.isCustom) {
+              return GestureDetector(
+                onTap: () => _selectPreset(i),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [_customGradientStart, _customGradientEnd]),
+                    borderRadius: BorderRadius.circular(8),
+                    border: sel ? Border.all(color: Colors.white, width: 2) : Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: const Center(child: Icon(Icons.colorize, color: Colors.white, size: 16)),
+                ),
+              );
+            }
+            return GestureDetector(
+              onTap: () {
+                _selectPreset(i);
+                if (_settings.pattern == BackgroundPattern.gameBlur) {
+                  setState(() => _settings = _settings.copyWith(pattern: BackgroundPattern.diagonal));
+                }
+              },
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [preset.gradientStart, preset.gradientEnd]),
+                  borderRadius: BorderRadius.circular(8),
+                  border: sel ? Border.all(color: Colors.white, width: 2) : null,
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+      if (_selectedPresetIndex == ShareCardSettings.presets.length - 1) ...[
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: _buildColorPickerButton('Start', _customGradientStart, (c) => setState(() { _customGradientStart = c; _settings = _settings.copyWith(gradientStart: c); }))),
+          const SizedBox(width: 8),
+          Expanded(child: _buildColorPickerButton('End', _customGradientEnd, (c) => setState(() { _customGradientEnd = c; _settings = _settings.copyWith(gradientEnd: c); }))),
+        ]),
+      ],
+    ]);
+  }
+
+  Widget _buildStyleTabContent() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (_settings.pattern != BackgroundPattern.gameBlur) ...[
+        _buildOptionRow('Pattern', [
+          _buildOptionButton('None', _settings.pattern == BackgroundPattern.none, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.none))),
+          _buildOptionButton('Lines', _settings.pattern == BackgroundPattern.diagonal, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.diagonal))),
+          _buildOptionButton('Dots', _settings.pattern == BackgroundPattern.dots, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.dots))),
+          _buildOptionButton('Grid', _settings.pattern == BackgroundPattern.grid, () => _updateSettings(_settings.copyWith(pattern: BackgroundPattern.grid))),
+        ]),
+        const SizedBox(height: 8),
+      ],
+      _buildOptionRow('Font', [
+        _buildOptionButton('Modern', _settings.fontStyle == CardFontStyle.modern, () => _updateSettings(_settings.copyWith(fontStyle: CardFontStyle.modern))),
+        _buildOptionButton('Pixel', _settings.fontStyle == CardFontStyle.pixel, () => _updateSettings(_settings.copyWith(fontStyle: CardFontStyle.pixel))),
+      ]),
+      const SizedBox(height: 8),
+      _buildOptionRow('Border', [
+        _buildOptionButton('None', _settings.borderStyle == CardBorderStyle.none, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.none))),
+        _buildOptionButton('Thin', _settings.borderStyle == CardBorderStyle.thin, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.thin))),
+        _buildOptionButton('Thick', _settings.borderStyle == CardBorderStyle.thick, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.thick))),
+        _buildOptionButton('Glow', _settings.borderStyle == CardBorderStyle.glow, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.glow))),
+        _buildOptionButton('Frame', _settings.borderStyle == CardBorderStyle.frame, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.frame))),
+      ]),
+    ]);
+  }
+
+  Widget _buildLayoutTabContent() {
+    final showLayoutOption = widget.type != ShareCardType.profile;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (showLayoutOption) ...[
+        _buildOptionRow('Layout', [
+          _buildOptionButton('Detailed', _settings.layout == CardLayout.detailed, () => _updateSettings(_settings.copyWith(layout: CardLayout.detailed))),
+          _buildOptionButton('Compact', _settings.layout == CardLayout.compact, () => _updateSettings(_settings.copyWith(layout: CardLayout.compact))),
+        ]),
+        const SizedBox(height: 8),
+      ],
+      _buildOptionRow('Avatar', [
+        _buildOptionButton('Circle', _settings.avatarFrame == AvatarFrame.circle, () => _updateSettings(_settings.copyWith(avatarFrame: AvatarFrame.circle))),
+        _buildOptionButton('Rounded', _settings.avatarFrame == AvatarFrame.roundedSquare, () => _updateSettings(_settings.copyWith(avatarFrame: AvatarFrame.roundedSquare))),
+        _buildOptionButton('Square', _settings.avatarFrame == AvatarFrame.square, () => _updateSettings(_settings.copyWith(avatarFrame: AvatarFrame.square))),
+      ]),
+    ]);
+  }
+
+  Widget _buildAnimateTabContent() {
+    final isGif = _exportFormat == ExportFormat.gif;
+    return Opacity(
+      opacity: isGif ? 1.0 : 0.4,
+      child: IgnorePointer(
+        ignoring: !isGif,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCompactOptionRow('Amount', [
+              _buildSmallButton('None', _sparkleAmount == SparkleAmount.none, () { setState(() => _sparkleAmount = SparkleAmount.none); _regenerateSparkles(); }),
+              _buildSmallButton('Few', _sparkleAmount == SparkleAmount.few, () { setState(() => _sparkleAmount = SparkleAmount.few); _regenerateSparkles(); }),
+              _buildSmallButton('Many', _sparkleAmount == SparkleAmount.many, () { setState(() => _sparkleAmount = SparkleAmount.many); _regenerateSparkles(); }),
+            ]),
+            const SizedBox(height: 6),
+            _buildCompactOptionRow('Speed', [
+              _buildSmallButton('Slow', _animSpeed == AnimationSpeed.slow, () { setState(() => _animSpeed = AnimationSpeed.slow); _updateAnimSpeed(); }),
+              _buildSmallButton('Med', _animSpeed == AnimationSpeed.normal, () { setState(() => _animSpeed = AnimationSpeed.normal); _updateAnimSpeed(); }),
+              _buildSmallButton('Fast', _animSpeed == AnimationSpeed.fast, () { setState(() => _animSpeed = AnimationSpeed.fast); _updateAnimSpeed(); }),
+            ]),
+            const SizedBox(height: 6),
+            _buildCompactOptionRow('Color', [
+              _buildSmallButton('White', _sparkleColor == SparkleColor.white, () => setState(() => _sparkleColor = SparkleColor.white)),
+              _buildSmallButton('Gold', _sparkleColor == SparkleColor.gold, () => setState(() => _sparkleColor = SparkleColor.gold)),
+              _buildSmallButton('RGB', _sparkleColor == SparkleColor.rainbow, () => setState(() => _sparkleColor = SparkleColor.rainbow)),
+            ]),
+            const SizedBox(height: 8),
+            Text('Shape', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                _buildShapeButton('●', SparkleStyle.circles),
+                _buildShapeButton('✦', SparkleStyle.stars),
+                _buildShapeButton('♥', SparkleStyle.hearts),
+                _buildShapeButton('◆', SparkleStyle.diamonds),
+                _buildShapeButton('▲□', SparkleStyle.playstation),
+                _buildShapeButton('AB', SparkleStyle.xbox),
+                _buildShapeButton('↑↓', SparkleStyle.dpad),
+                _buildShapeButton('🍄', SparkleStyle.retro),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNormalContent() {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
