@@ -200,10 +200,11 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
           result = Stack(
             children: [
               result,
-              // DualScreenFAB on right side (scroll-to-top FABs are now on left)
+              // DualScreenFAB on right side, above bottom nav bar
+              // (scroll-to-top FABs are on left side)
               const Positioned(
                 right: 16,
-                bottom: 16,
+                bottom: 90, // Above bottom navigation bar (~80px)
                 child: DualScreenFAB(),
               ),
             ],
