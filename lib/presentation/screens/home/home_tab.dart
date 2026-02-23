@@ -30,6 +30,7 @@ class HomeTab extends ConsumerStatefulWidget {
 class _HomeTabState extends ConsumerState<HomeTab> {
   Map<String, dynamic>? _summary;
   List<dynamic>? _completedGames;
+  Map<String, dynamic>? _userAwards;
   bool _isLoadingStats = true;
 
   @override
@@ -54,11 +55,13 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       final results = await Future.wait([
         api.getUserSummary(username, recentGames: 50, recentAchievements: 100),
         api.getCompletedGames(username),
+        api.getUserAwards(username),
       ]);
       if (mounted) {
         setState(() {
           _summary = results[0] as Map<String, dynamic>?;
           _completedGames = results[1] as List<dynamic>?;
+          _userAwards = results[2] as Map<String, dynamic>?;
           _isLoadingStats = false;
         });
       }
@@ -206,9 +209,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         IconButton(
           icon: Icon(Icons.share, size: compact ? 20 : 24),
           onPressed: () {
-            // Count mastered games for share card
-            int masteredCount = 0;
-            if (_completedGames != null) {
+            // Use official MasteryAwardsCount, fallback to counting completed games
+            int masteredCount = _userAwards?['MasteryAwardsCount'] ?? 0;
+            if (masteredCount == 0 && _completedGames != null) {
               masteredCount = _completedGames!.where((g) => g['HardcoreMode'] == 1).length;
             }
             // Combine all profile data for share card
@@ -237,9 +240,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     final truePoints = widget.profile!['TotalTruePoints'] ?? 0;
     final softcore = _summary?['TotalSoftcorePoints'] ?? widget.profile!['TotalSoftcorePoints'] ?? 0;
 
-    // Count mastered games
-    int masteredCount = 0;
-    if (_completedGames != null) {
+    // Use official MasteryAwardsCount from API, fallback to counting completed games
+    int masteredCount = _userAwards?['MasteryAwardsCount'] ?? 0;
+    if (masteredCount == 0 && _completedGames != null) {
       masteredCount = _completedGames!.where((g) => g['HardcoreMode'] == 1).length;
     }
 
