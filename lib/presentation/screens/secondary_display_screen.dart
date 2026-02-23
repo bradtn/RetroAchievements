@@ -405,12 +405,12 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
       {'icon': '📡', 'label': 'Live', 'color': Colors.red, 'action': 'live_feed'},
       {'icon': '🎖️', 'label': 'Awards', 'color': Colors.purple, 'action': 'awards'},
       {'icon': '⭐', 'label': 'Favorites', 'color': Colors.amber, 'action': 'favorites'},
-      {'icon': '🏆', 'label': 'AOTW', 'color': Colors.orange, 'action': 'aotw'},
-      {'icon': '📅', 'label': 'AOTM', 'color': Colors.deepPurple, 'action': 'aotm'},
+      {'icon': '🏆', 'label': 'Events', 'color': Colors.orange, 'action': 'events'},
       {'icon': '🎮', 'label': 'Consoles', 'color': Colors.blue, 'action': 'consoles'},
       {'icon': '📊', 'label': 'Boards', 'color': Colors.green, 'action': 'leaderboard'},
       {'icon': '👥', 'label': 'Friends', 'color': Colors.teal, 'action': 'friends'},
-      {'icon': '🔥', 'label': 'Streaks', 'color': Colors.orange, 'action': 'streaks'},
+      {'icon': '🏅', 'label': 'Trophies', 'color': Colors.amber, 'action': 'trophies'},
+      {'icon': '🔥', 'label': 'Streaks', 'color': Colors.deepOrange, 'action': 'streaks'},
     ];
 
     return Scaffold(

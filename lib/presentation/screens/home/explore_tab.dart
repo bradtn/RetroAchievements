@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/animations.dart';
-import '../../../core/responsive_utils.dart';
 import '../game_search_screen.dart';
 import '../live_feed_screen.dart';
 import '../milestones/milestones_screen.dart';
 import '../favorites_screen.dart';
-import '../aotw_screen.dart';
-import '../aotm_screen.dart';
+import '../events_screen.dart';
 import '../console_browser_screen.dart';
 import '../leaderboard_screen.dart';
 import '../friends_screen.dart';
@@ -24,8 +22,7 @@ class ExploreTab extends StatefulWidget {
 }
 
 class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
-  bool _hasNewAotw = false;
-  bool _hasNewAotm = false;
+  bool _hasNewEvents = false;
   late AnimationController _animationController;
   bool _hasAnimated = false;
 
@@ -36,7 +33,7 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _checkForNewAotw();
+    _checkForNewEvents();
   }
 
   @override
@@ -54,21 +51,21 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<void> _checkForNewAotw() async {
+  Future<void> _checkForNewEvents() async {
     final prefs = await SharedPreferences.getInstance();
-    final lastKnownId = prefs.getString('last_known_aotw_id') ?? '';
-    final lastViewedId = prefs.getString('last_viewed_aotw_id') ?? '';
 
-    if (mounted && lastKnownId.isNotEmpty && lastKnownId != lastViewedId) {
-      setState(() => _hasNewAotw = true);
-    }
+    // Check for new AOTW
+    final lastKnownAotwId = prefs.getString('last_known_aotw_id') ?? '';
+    final lastViewedAotwId = prefs.getString('last_viewed_aotw_id') ?? '';
+    final hasNewAotw = lastKnownAotwId.isNotEmpty && lastKnownAotwId != lastViewedAotwId;
 
-    // Also check for new AotM
+    // Check for new AotM
     final lastKnownAotmId = prefs.getString('last_known_aotm_id') ?? '';
     final lastViewedAotmId = prefs.getString('last_viewed_aotm_id') ?? '';
+    final hasNewAotm = lastKnownAotmId.isNotEmpty && lastKnownAotmId != lastViewedAotmId;
 
-    if (mounted && lastKnownAotmId.isNotEmpty && lastKnownAotmId != lastViewedAotmId) {
-      setState(() => _hasNewAotm = true);
+    if (mounted && (hasNewAotw || hasNewAotm)) {
+      setState(() => _hasNewEvents = true);
     }
   }
 
@@ -102,22 +99,12 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
       ),
       _ExploreItem(
         icon: Icons.emoji_events,
-        title: 'AOTW',
+        title: 'Events',
         color: Colors.orange,
-        showNewBadge: _hasNewAotw,
+        showNewBadge: _hasNewEvents,
         onTap: () {
-          setState(() => _hasNewAotw = false);
-          Navigator.push(context, SlidePageRoute(page: const AchievementOfTheWeekScreen()));
-        },
-      ),
-      _ExploreItem(
-        icon: Icons.calendar_month,
-        title: 'AOTM',
-        color: Colors.deepPurple,
-        showNewBadge: _hasNewAotm,
-        onTap: () {
-          setState(() => _hasNewAotm = false);
-          Navigator.push(context, SlidePageRoute(page: const AchievementOfTheMonthScreen()));
+          setState(() => _hasNewEvents = false);
+          Navigator.push(context, SlidePageRoute(page: const EventsScreen()));
         },
       ),
       _ExploreItem(

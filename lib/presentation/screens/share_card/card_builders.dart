@@ -2017,6 +2017,7 @@ class LeaderboardCard extends StatelessWidget {
       children: [
         // Top section: Game info
         Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Game icon and title
             Row(
@@ -2053,7 +2054,7 @@ class LeaderboardCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
             // Leaderboard title badge - layout-aware smart wrapping
             LayoutBuilder(
@@ -2081,7 +2082,7 @@ class LeaderboardCard extends StatelessWidget {
                   text: leaderboardTitle,
                   style: titleStyle,
                   maxWidth: availableWidth,
-                  maxLines: 3,
+                  maxLines: 2,
                   preferDashBreak: titleIsActuallyDescription,
                   stripDashAfterBreak: titleIsActuallyDescription,
                 );
@@ -2093,17 +2094,17 @@ class LeaderboardCard extends StatelessWidget {
                         text: leaderboardDescription,
                         style: descStyle,
                         maxWidth: availableWidth,
-                        maxLines: 3, // Allow 3 lines for longer descriptions
+                        maxLines: 2, // Limit to 2 lines to prevent overflow
                         preferDashBreak: true, // Always break at dash first
                         stripDashAfterBreak: true, // Remove dash for cleaner look
                       )
                     : null;
 
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                   ),
                   child: Column(
@@ -2130,16 +2131,16 @@ class LeaderboardCard extends StatelessWidget {
                       Text(
                         wrappedTitle,
                         style: titleStyle,
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
                       if (wrappedDescription != null) ...[
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
                           wrappedDescription,
                           style: descStyle,
-                          maxLines: 3,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                         ),
@@ -2152,59 +2153,62 @@ class LeaderboardCard extends StatelessWidget {
           ],
         ),
 
-        // Middle section: User + Rank
-        Column(
-          children: [
-            // User avatar
-            _buildAvatar(username, userPic, 36, settings.avatarFrame),
-            const SizedBox(height: 6),
-
-            // Username
-            Text(
-              username,
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Rank display - scaled down
-            if (rank <= 3) ...[
-              _buildTrophyRank(rank, rankColor, formattedScore, true),
-            ] else ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: rankColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
-                ),
-                child: Text(
-                  '#$rank',
-                  style: getCardTextStyle(
-                    fontStyle: settings.fontStyle,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: rankColor,
-                  ),
-                ),
-              ),
-              if (formattedScore.isNotEmpty) ...[
-                const SizedBox(height: 6),
+        // Middle section: User + Rank (expanded to fill available space)
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // User avatar
+                _buildAvatar(username, userPic, 32, settings.avatarFrame),
+                const SizedBox(height: 4),
+                // Username
                 Text(
-                  formattedScore,
+                  username,
                   style: getCardTextStyle(
                     fontStyle: settings.fontStyle,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.tealAccent,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 8),
+                // Rank display
+                if (rank <= 3) ...[
+                  _buildTrophyRank(rank, rankColor, formattedScore, true),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: rankColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: rankColor.withValues(alpha: 0.5), width: 2),
+                    ),
+                    child: Text(
+                      '#$rank',
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: rankColor,
+                      ),
+                    ),
+                  ),
+                  if (formattedScore.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      formattedScore,
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.tealAccent,
+                      ),
+                    ),
+                  ],
+                ],
               ],
-            ],
-          ],
+            ),
+          ),
         ),
 
         // Bottom section: Branding
@@ -2255,7 +2259,7 @@ class LeaderboardCard extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Trophy icon with glow - scaled down for square card
+        // Trophy icon with glow
         Container(
           decoration: BoxDecoration(
             boxShadow: [
@@ -2342,92 +2346,98 @@ class GlobalRankCard extends StatelessWidget {
     }
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Avatar
-        _buildAvatar(username, userPic, isCompact ? 50 : 64, settings.avatarFrame),
-        SizedBox(height: isCompact ? 10 : 14),
-
-        // Username
-        Text(
-          username,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 20 : 26,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: isCompact ? 14 : 20),
-
-        // Tier badge
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: isCompact ? 4 : 6),
-          decoration: BoxDecoration(
-            color: rankColor.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: rankColor.withValues(alpha: 0.5)),
-          ),
-          child: Text(
-            tierLabel,
-            style: getCardTextStyle(
-              fontStyle: settings.fontStyle,
-              fontSize: isCompact ? 11 : 13,
-              fontWeight: FontWeight.bold,
-              color: rankColor,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        SizedBox(height: isCompact ? 10 : 14),
-
-        // Global rank display
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+        // Top section: Avatar + Username
+        Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            _buildAvatar(username, userPic, isCompact ? 44 : 56, settings.avatarFrame),
+            SizedBox(height: isCompact ? 8 : 10),
             Text(
-              '#',
+              username,
               style: getCardTextStyle(
                 fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 18 : 24,
-                fontWeight: FontWeight.bold,
-                color: rankColor,
-              ),
-            ),
-            Text(
-              _formatRankWithCommas(rank),
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: isCompact ? 36 : 48,
+                fontSize: isCompact ? 18 : 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        SizedBox(height: isCompact ? 4 : 8),
-        Text(
-          'GLOBAL RANK',
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 11 : 13,
-            color: Colors.white70,
-            letterSpacing: 2,
-          ),
-        ),
-        SizedBox(height: isCompact ? 16 : 22),
 
-        // Stats row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Middle section: Rank info
+        Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _buildStatItem(Icons.stars, _formatNumber(points), 'Points', Colors.amber, isCompact),
-            SizedBox(width: isCompact ? 24 : 36),
-            _buildStatItem(Icons.military_tech, _formatNumber(truePoints), 'True Points', Colors.purple, isCompact),
+            // Tier badge
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 14, vertical: isCompact ? 3 : 5),
+              decoration: BoxDecoration(
+                color: rankColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: rankColor.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                tierLabel,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 10 : 12,
+                  fontWeight: FontWeight.bold,
+                  color: rankColor,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+            SizedBox(height: isCompact ? 8 : 10),
+            // Global rank display
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '#',
+                  style: getCardTextStyle(
+                    fontStyle: settings.fontStyle,
+                    fontSize: isCompact ? 16 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: rankColor,
+                  ),
+                ),
+                Text(
+                  _formatRankWithCommas(rank),
+                  style: getCardTextStyle(
+                    fontStyle: settings.fontStyle,
+                    fontSize: isCompact ? 32 : 42,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isCompact ? 2 : 4),
+            Text(
+              'GLOBAL RANK',
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: isCompact ? 10 : 12,
+                color: Colors.white70,
+                letterSpacing: 2,
+              ),
+            ),
+            SizedBox(height: isCompact ? 12 : 16),
+            // Stats row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildStatItem(Icons.stars, _formatNumber(points), 'Points', Colors.amber, isCompact),
+                SizedBox(width: isCompact ? 20 : 30),
+                _buildStatItem(Icons.military_tech, _formatNumber(truePoints), 'True Points', Colors.purple, isCompact),
+              ],
+            ),
           ],
         ),
-        SizedBox(height: isCompact ? 14 : 20),
 
+        // Bottom section: Branding
         Branding(fontStyle: settings.fontStyle),
       ],
     );
@@ -2661,6 +2671,7 @@ class TrophyCaseCard extends StatelessWidget {
       children: [
         // Grid of game icons
         GridView.builder(
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: gridSize,

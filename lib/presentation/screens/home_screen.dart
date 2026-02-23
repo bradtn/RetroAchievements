@@ -21,6 +21,8 @@ import 'milestones/milestones_screen.dart';
 import 'favorites_screen.dart';
 import 'aotw_screen.dart';
 import 'aotm_screen.dart';
+import 'events_screen.dart';
+import 'trophy_case_screen.dart';
 import 'console_browser_screen.dart';
 import 'leaderboard_screen.dart';
 import 'friends_screen.dart';
@@ -160,6 +162,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         break;
       case 'explore_aotm':
         Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementOfTheMonthScreen()));
+        break;
+      case 'explore_events':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const EventsScreen()));
+        break;
+      case 'explore_trophies':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const TrophyCaseScreen()));
         break;
       case 'explore_consoles':
         Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsoleBrowserScreen()));

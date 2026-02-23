@@ -356,6 +356,27 @@ class RAApiDataSource {
     }
   }
 
+  /// Get achievement unlock stats by achievement ID
+  /// Returns unlock count, total players, and recent unlocks
+  Future<Map<String, dynamic>?> getAchievementUnlocks(int achievementId, {int count = 50}) async {
+    try {
+      final response = await _dio.get(
+        'API_GetAchievementUnlocks.php',
+        queryParameters: {
+          ..._authParams(),
+          'a': achievementId,
+          'c': count,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// GitHub URL for Achievement of the Month data
   /// This is hosted separately since RA doesn't have an official AotM API
   static const String _aotmGitHubUrl =
