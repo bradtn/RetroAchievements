@@ -457,20 +457,7 @@ class _TrophyTile extends StatelessWidget {
     final awardedAt = game['AwardedAt'] ?? '';
 
     return GestureDetector(
-      onTap: () {
-        if (gameId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => GameDetailScreen(
-                gameId: int.tryParse(gameId.toString()) ?? 0,
-                gameTitle: title,
-              ),
-            ),
-          );
-        }
-      },
-      onLongPress: isViewingSelf ? () => _showShareOptions(context) : null,
+      onTap: () => _showOptions(context, isViewingSelf),
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -620,56 +607,32 @@ class _TrophyTile extends StatelessWidget {
     );
   }
 
-  void _showShareOptions(BuildContext context) {
+  void _showOptions(BuildContext context, bool isViewingSelf) {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share Mastery'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                // Show loading indicator
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const Center(child: CircularProgressIndicator()),
-                );
-
-                try {
-                  // Fetch actual game data for the share card
-                  final gameId = int.tryParse(game['AwardData'].toString()) ?? 0;
-                  final api = ProviderScope.containerOf(context).read(apiDataSourceProvider);
-                  final gameData = await api.getGameInfoWithProgress(gameId);
-
-                  if (context.mounted) {
-                    Navigator.pop(context); // Close loading
-
-                    if (gameData != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ShareCardScreen(
-                            type: ShareCardType.game,
-                            data: gameData,
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    Navigator.pop(context); // Close loading
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Failed to load game data')),
-                    );
-                  }
-                }
-              },
+            // Header with game title
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.workspace_premium, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      game['Title'] ?? 'Game',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.videogame_asset),
               title: const Text('View Game'),
@@ -689,6 +652,50 @@ class _TrophyTile extends StatelessWidget {
                 }
               },
             ),
+            if (isViewingSelf)
+              ListTile(
+                leading: const Icon(Icons.share, color: Colors.amber),
+                title: const Text('Share Mastery'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator()),
+                  );
+
+                  try {
+                    // Fetch actual game data for the share card
+                    final gameId = int.tryParse(game['AwardData'].toString()) ?? 0;
+                    final api = ProviderScope.containerOf(context).read(apiDataSourceProvider);
+                    final gameData = await api.getGameInfoWithProgress(gameId);
+
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close loading
+
+                      if (gameData != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ShareCardScreen(
+                              type: ShareCardType.game,
+                              data: gameData,
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close loading
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Failed to load game data')),
+                      );
+                    }
+                  }
+                },
+              ),
           ],
         ),
       ),
