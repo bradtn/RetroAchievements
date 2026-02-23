@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 /// Service for managing Google AdMob ads
 class AdService {
@@ -9,15 +10,63 @@ class AdService {
   AdService._internal();
 
   bool _isInitialized = false;
+  bool _canShowPersonalizedAds = false;
+
+  /// Whether personalized ads can be shown (user granted tracking permission)
+  bool get canShowPersonalizedAds => _canShowPersonalizedAds;
 
   /// Initialize the Mobile Ads SDK
+  /// Must be called after requesting ATT permission on iOS
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // Request App Tracking Transparency permission on iOS
+    if (Platform.isIOS) {
+      await _requestTrackingAuthorization();
+    } else {
+      // Android doesn't require ATT
+      _canShowPersonalizedAds = true;
+    }
 
     await MobileAds.instance.initialize();
     _isInitialized = true;
 
-    // AdMob initialized successfully
+    if (kDebugMode) {
+      print('AdMob initialized. Personalized ads: $_canShowPersonalizedAds');
+    }
+  }
+
+  /// Request App Tracking Transparency authorization on iOS
+  Future<void> _requestTrackingAuthorization() async {
+    try {
+      // Check current status first
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+
+      if (status == TrackingStatus.notDetermined) {
+        // Small delay to ensure app is fully loaded (Apple recommendation)
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Request authorization
+        final result = await AppTrackingTransparency.requestTrackingAuthorization();
+        _canShowPersonalizedAds = result == TrackingStatus.authorized;
+
+        if (kDebugMode) {
+          print('ATT request result: $result');
+        }
+      } else {
+        _canShowPersonalizedAds = status == TrackingStatus.authorized;
+
+        if (kDebugMode) {
+          print('ATT status already set: $status');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('ATT request error: $e');
+      }
+      // Default to non-personalized ads on error
+      _canShowPersonalizedAds = false;
+    }
   }
 
   /// Get the banner ad unit ID
@@ -40,6 +89,18 @@ class AdService {
     throw UnsupportedError('Unsupported platform');
   }
 
+  /// Get the appropriate ad request based on tracking authorization
+  AdRequest get _adRequest {
+    if (_canShowPersonalizedAds) {
+      return const AdRequest();
+    } else {
+      // Non-personalized ads for users who denied tracking
+      return const AdRequest(
+        nonPersonalizedAds: true,
+      );
+    }
+  }
+
   /// Create a banner ad
   BannerAd createBannerAd({
     required void Function(Ad) onAdLoaded,
@@ -48,7 +109,7 @@ class AdService {
     return BannerAd(
       adUnitId: bannerAdUnitId,
       size: AdSize.banner,
-      request: const AdRequest(),
+      request: _adRequest,
       listener: BannerAdListener(
         onAdLoaded: onAdLoaded,
         onAdFailedToLoad: onAdFailedToLoad,
