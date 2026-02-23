@@ -128,10 +128,16 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   ),
                 )
               else
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('No recent games'),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const Text('No recent games'),
+                        const SizedBox(height: 8),
+                        Text('Pull down to refresh', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                      ],
+                    ),
                   ),
                 ),
             ],

@@ -31,7 +31,7 @@ class AchievementsTab extends StatelessWidget {
                         EmptyStateWidget(
                           icon: Icons.emoji_events_outlined,
                           title: 'No achievements yet',
-                          subtitle: 'Start playing to earn achievements!',
+                          subtitle: 'Start playing to earn achievements!\n\nPull down to refresh',
                           iconColor: Colors.amber,
                         ),
                       ],

@@ -363,6 +363,11 @@ class EmptyFriendsState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: context.subtitleColor),
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Pull down to refresh',
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
           ],
         ),
       ),

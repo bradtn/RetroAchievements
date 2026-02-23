@@ -387,6 +387,11 @@ class EmptyDayView extends StatelessWidget {
             'No achievements on this day',
             style: TextStyle(color: context.subtitleColor),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Pull down to refresh',
+            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+          ),
         ],
       ),
     );

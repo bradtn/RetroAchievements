@@ -189,7 +189,16 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
     final unlocksCount = _aotwData!['UnlocksCount'] ?? unlocks.length;
 
     if (achievement == null || game == null) {
-      return const Center(child: Text('No active Achievement of the Week'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('No active Achievement of the Week'),
+            const SizedBox(height: 8),
+            Text('Pull down to refresh', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+          ],
+        ),
+      );
     }
 
     final achTitle = achievement['Title'] ?? 'Achievement';

@@ -430,14 +430,16 @@ class LeaderboardDetailDialogState extends ConsumerState<LeaderboardDetailDialog
                           ),
                         )
                       : _entries.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.all(32),
+                          ? Padding(
+                              padding: const EdgeInsets.all(32),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.hourglass_empty, color: Colors.grey, size: 48),
-                                  SizedBox(height: 16),
-                                  Text('No entries yet'),
+                                  const Icon(Icons.hourglass_empty, color: Colors.grey, size: 48),
+                                  const SizedBox(height: 16),
+                                  const Text('No entries yet'),
+                                  const SizedBox(height: 8),
+                                  Text('Be the first to submit a score!', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                                 ],
                               ),
                             )

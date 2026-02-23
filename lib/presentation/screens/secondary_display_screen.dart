@@ -869,6 +869,11 @@ class _SecondaryDisplayScreenState extends State<SecondaryDisplayScreen> {
                   : 'No achievements match filter',
               style: TextStyle(color: Colors.grey[500]),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Try a different filter',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
           ],
         ),
       );

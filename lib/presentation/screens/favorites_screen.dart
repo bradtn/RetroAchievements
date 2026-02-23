@@ -188,7 +188,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Track your progress on games you\'re playing.\nAdd games to see them here!',
+                        'Track your progress on games you\'re playing.\nAdd games to see them here!\n\nPull down to refresh',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: context.subtitleColor,

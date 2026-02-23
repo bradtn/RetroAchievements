@@ -90,7 +90,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       if (_topUsers != null && _topUsers!.isNotEmpty)
                         _AnimatedLeaderboardList(users: _topUsers!)
                       else
-                        const Center(child: Text('No leaderboard data')),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('No leaderboard data'),
+                              const SizedBox(height: 8),
+                              Text('Pull down to refresh', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),

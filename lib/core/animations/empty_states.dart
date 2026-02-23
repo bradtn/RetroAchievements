@@ -20,7 +20,7 @@ class EmptyStateWidget extends StatefulWidget {
   factory EmptyStateWidget.noGames({Widget? action}) => EmptyStateWidget(
         icon: Icons.sports_esports_outlined,
         title: 'No games yet',
-        subtitle: 'Start playing to see your games here!',
+        subtitle: 'Start playing to see your games here!\n\nPull down to refresh',
         action: action,
       );
 
@@ -28,7 +28,7 @@ class EmptyStateWidget extends StatefulWidget {
   factory EmptyStateWidget.noAchievements({Widget? action}) => EmptyStateWidget(
         icon: Icons.emoji_events_outlined,
         title: 'No achievements yet',
-        subtitle: 'Earn achievements by playing games',
+        subtitle: 'Earn achievements by playing games\n\nPull down to refresh',
         iconColor: Colors.amber,
         action: action,
       );
@@ -37,7 +37,7 @@ class EmptyStateWidget extends StatefulWidget {
   factory EmptyStateWidget.noFavorites({Widget? action}) => EmptyStateWidget(
         icon: Icons.star_outline,
         title: 'No favorites yet',
-        subtitle: 'Star games you want to track',
+        subtitle: 'Star games you want to track\n\nPull down to refresh',
         iconColor: Colors.amber,
         action: action,
       );
@@ -46,7 +46,7 @@ class EmptyStateWidget extends StatefulWidget {
   factory EmptyStateWidget.noFriends({Widget? action}) => EmptyStateWidget(
         icon: Icons.people_outline,
         title: 'No friends yet',
-        subtitle: 'Add friends to compare progress',
+        subtitle: 'Add friends to compare progress\n\nPull down to refresh',
         action: action,
       );
 

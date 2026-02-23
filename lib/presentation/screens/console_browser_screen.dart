@@ -107,7 +107,7 @@ class _ConsoleBrowserScreenState extends ConsumerState<ConsoleBrowserScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredConsoles.isEmpty
-                    ? const Center(child: Text('No consoles found'))
+                    ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('No consoles found'), const SizedBox(height: 8), Text('Pull down to refresh', style: TextStyle(color: Colors.grey[500], fontSize: 12))]))
                     : RefreshIndicator(
                         onRefresh: _loadConsoles,
                         child: Center(
@@ -327,7 +327,7 @@ class _ConsoleGamesScreenState extends ConsumerState<_ConsoleGamesScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredGames.isEmpty
-                    ? const Center(child: Text('No games found'))
+                    ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('No games found'), const SizedBox(height: 8), Text('Pull down to refresh', style: TextStyle(color: Colors.grey[500], fontSize: 12))]))
                     : RefreshIndicator(
                         onRefresh: _loadGames,
                         child: Center(

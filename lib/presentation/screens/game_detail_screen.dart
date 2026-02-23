@@ -1407,6 +1407,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 'No leaderboards available',
                 style: TextStyle(color: context.subtitleColor),
               ),
+              const SizedBox(height: 8),
+              Text(
+                'Pull down to refresh',
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
             ],
           ),
         ), isWidescreen),
@@ -1486,9 +1491,18 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(
-                'No leaderboards available for this game',
-                style: TextStyle(color: context.subtitleColor, fontStyle: FontStyle.italic),
+              child: Column(
+                children: [
+                  Text(
+                    'No leaderboards available for this game',
+                    style: TextStyle(color: context.subtitleColor, fontStyle: FontStyle.italic),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Pull down to refresh',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                ],
               ),
             ),
           )
