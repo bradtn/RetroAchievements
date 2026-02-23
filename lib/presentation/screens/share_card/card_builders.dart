@@ -1353,98 +1353,115 @@ class RAAwardCard extends StatelessWidget {
     final isCompact = settings.layout == CardLayout.compact;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Game/Award icon
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: awardColor, width: 4),
-            boxShadow: [
-              BoxShadow(
-                color: awardColor.withValues(alpha: 0.4),
-                blurRadius: 20,
+        // Game/Award icon - flexible to shrink
+        Flexible(
+          flex: 3,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: awardColor, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: awardColor.withValues(alpha: 0.4),
+                    blurRadius: 15,
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: CachedNetworkImage(
-              imageUrl: 'https://retroachievements.org$imageIcon',
-              width: isCompact ? 90 : 120,
-              height: isCompact ? 90 : 120,
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => Container(
-                width: isCompact ? 90 : 120,
-                height: isCompact ? 90 : 120,
-                color: Colors.grey[800],
-                child: Icon(Icons.emoji_events, size: isCompact ? 42 : 56, color: awardColor),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(13),
+                child: CachedNetworkImage(
+                  imageUrl: 'https://retroachievements.org$imageIcon',
+                  width: isCompact ? 75 : 90,
+                  height: isCompact ? 75 : 90,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    width: isCompact ? 75 : 90,
+                    height: isCompact ? 75 : 90,
+                    color: Colors.grey[800],
+                    child: Icon(Icons.emoji_events, size: isCompact ? 36 : 44, color: awardColor),
+                  ),
+                ),
               ),
             ),
           ),
         ),
-        SizedBox(height: isCompact ? 12 : 16),
+        SizedBox(height: isCompact ? 8 : 10),
 
         // Award type badge
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: awardColor.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: awardColor.withValues(alpha: 0.6)),
           ),
           child: Text(
             awardType.toUpperCase(),
             style: getCardTextStyle(
               fontStyle: settings.fontStyle,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               color: awardColor,
             ),
           ),
         ),
-        SizedBox(height: isCompact ? 8 : 12),
+        SizedBox(height: isCompact ? 6 : 8),
 
-        // Title
-        Text(
-          title,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 18 : 22,
-            fontWeight: FontWeight.bold,
+        // Title - flexible with max lines
+        Flexible(
+          flex: 2,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Text(
+                title,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
-        if (!isCompact) ...[
-          const SizedBox(height: 6),
+        if (!isCompact && consoleName.isNotEmpty) ...[
+          const SizedBox(height: 4),
           // Console
           Text(
             consoleName,
             style: getCardTextStyle(
               fontStyle: settings.fontStyle,
-              fontSize: 14,
+              fontSize: 11,
               color: Colors.white.withValues(alpha: 0.7),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          if (awardedAt.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Awarded: ${_formatAwardDate(awardedAt)}',
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
         ],
-        SizedBox(height: isCompact ? 14 : 20),
+        if (!isCompact && awardedAt.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            'Awarded: ${_formatAwardDate(awardedAt)}',
+            style: getCardTextStyle(
+              fontStyle: settings.fontStyle,
+              fontSize: 10,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+        SizedBox(height: isCompact ? 10 : 12),
 
         // User info
         _buildUserInfo(username, userPic),
-        SizedBox(height: isCompact ? 14 : 20),
+        SizedBox(height: isCompact ? 10 : 12),
 
         Branding(fontStyle: settings.fontStyle),
       ],

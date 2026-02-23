@@ -150,7 +150,6 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
       appBar: AppBar(title: const Text('Explore')),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Calculate optimal grid layout to fit all tiles without scrolling
           final padding = 12.0;
           final spacing = 12.0;
           final availableWidth = constraints.maxWidth - (padding * 2);
@@ -168,18 +167,20 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
             crossAxisCount = 5;
           }
 
-          // Calculate rows needed
-          final rowCount = (items.length / crossAxisCount).ceil();
-
-          // Calculate tile dimensions to fit everything
+          // Calculate tile width based on columns
           final totalHorizontalSpacing = (crossAxisCount - 1) * spacing;
           final tileWidth = (availableWidth - totalHorizontalSpacing) / crossAxisCount;
 
-          final totalVerticalSpacing = (rowCount - 1) * spacing;
-          final tileHeight = (availableHeight - totalVerticalSpacing) / rowCount;
+          // Keep tiles square-ish (slightly taller than wide works well)
+          // Use a fixed aspect ratio instead of dynamic calculation
+          const targetAspectRatio = 0.9; // Slightly taller than wide
 
-          // Use aspect ratio that fits the available space
-          final childAspectRatio = tileWidth / tileHeight;
+          // Calculate if we need scrolling
+          final rowCount = (items.length / crossAxisCount).ceil();
+          final tileHeight = tileWidth / targetAspectRatio;
+          final totalVerticalSpacing = (rowCount - 1) * spacing;
+          final requiredHeight = (tileHeight * rowCount) + totalVerticalSpacing;
+          final needsScrolling = requiredHeight > availableHeight;
 
           return Padding(
             padding: EdgeInsets.all(padding),
@@ -187,12 +188,14 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
               animation: _animationController,
               builder: (context, child) {
                 return GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: needsScrolling
+                      ? const AlwaysScrollableScrollPhysics()
+                      : const NeverScrollableScrollPhysics(),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
                     mainAxisSpacing: spacing,
                     crossAxisSpacing: spacing,
-                    childAspectRatio: childAspectRatio,
+                    childAspectRatio: targetAspectRatio,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
@@ -257,60 +260,52 @@ class _ExploreGridItem extends StatelessWidget {
       child: Card(
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(6),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Flexible(
-                    flex: 3,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: item.color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: _buildIcon(),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: item.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: _buildIcon(),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Flexible(
-                    flex: 1,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        item.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
+                    const SizedBox(height: 8),
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (item.isPremium)
               Positioned(
-                top: 4,
-                right: 4,
+                top: 6,
+                right: 6,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.amber,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'PRO',
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: 7,
+                      fontSize: 8,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -318,19 +313,19 @@ class _ExploreGridItem extends StatelessWidget {
               ),
             if (item.showNewBadge)
               Positioned(
-                top: 4,
-                right: 4,
+                top: 6,
+                right: 6,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.red,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'NEW',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 7,
+                      fontSize: 8,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

@@ -429,144 +429,158 @@ class _MilestonesScreenState extends ConsumerState<MilestonesScreen> {
         awardIcon = Icons.emoji_events;
     }
 
+    final screenHeight = MediaQuery.of(context).size.height;
+
     showDialog(
       context: context,
       builder: (ctx) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 340),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Game icon - larger and centered
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: awardColor, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: awardColor.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        'https://retroachievements.org$imageIcon',
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 100,
-                          height: 100,
-                          color: Colors.grey[800],
-                          child: Icon(awardIcon, size: 48, color: awardColor),
+            constraints: BoxConstraints(
+              maxWidth: 340,
+              maxHeight: screenHeight * 0.8,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Game icon - sized appropriately
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: awardColor, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: awardColor.withValues(alpha: 0.4),
+                            blurRadius: 15,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(13),
+                        child: Image.network(
+                          'https://retroachievements.org$imageIcon',
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 80,
+                            height: 80,
+                            color: Colors.grey[800],
+                            child: Icon(awardIcon, size: 40, color: awardColor),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                  // Award type badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: awardColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: awardColor.withValues(alpha: 0.5)),
+                    // Award type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: awardColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: awardColor.withValues(alpha: 0.5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(awardIcon, size: 14, color: awardColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            awardTypeName,
+                            style: TextStyle(
+                              color: awardColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: 10),
+
+                    // Title
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Console
+                    Text(
+                      consoleName,
+                      style: TextStyle(
+                        color: context.subtitleColor,
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    if (awardedAt.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Awarded: ${_formatDate(awardedAt)}',
+                        style: TextStyle(color: context.subtitleColor, fontSize: 11),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+
+                    // Buttons row
+                    Row(
                       children: [
-                        Icon(awardIcon, size: 16, color: awardColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          awardTypeName,
-                          style: TextStyle(
-                            color: awardColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Close'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ShareCardScreen(
+                                    type: ShareCardType.raAward,
+                                    data: {
+                                      'title': title,
+                                      'consoleName': consoleName,
+                                      'awardType': awardTypeName,
+                                      'imageIcon': imageIcon,
+                                      'awardedAt': awardedAt,
+                                      'username': _viewingUsername ?? '',
+                                      'userPic': _profile?['UserPic'] ?? '',
+                                      'colorValue': awardColor.toARGB32(),
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: const Icon(Icons.share, size: 16),
+                            label: const Text('Share'),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Title
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 6),
-
-                  // Console
-                  Text(
-                    consoleName,
-                    style: TextStyle(
-                      color: context.subtitleColor,
-                      fontSize: 14,
-                    ),
-                  ),
-
-                  if (awardedAt.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Awarded: ${_formatDate(awardedAt)}',
-                      style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                    ),
                   ],
-                  const SizedBox(height: 20),
-
-                  // Buttons row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Close'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ShareCardScreen(
-                                  type: ShareCardType.raAward,
-                                  data: {
-                                    'title': title,
-                                    'consoleName': consoleName,
-                                    'awardType': awardTypeName,
-                                    'imageIcon': imageIcon,
-                                    'awardedAt': awardedAt,
-                                    'username': _viewingUsername ?? '',
-                                    'userPic': _profile?['UserPic'] ?? '',
-                                    'colorValue': awardColor.toARGB32(),
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.share, size: 18),
-                          label: const Text('Share'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           ),
