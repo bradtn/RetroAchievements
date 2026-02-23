@@ -1091,97 +1091,119 @@ class MilestoneCard extends StatelessWidget {
     final isCompact = settings.layout == CardLayout.compact;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Milestone badge
-        Container(
-          width: isCompact ? 80 : 100,
-          height: isCompact ? 80 : 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: milestoneColor.withValues(alpha: isEarned ? 0.2 : 0.15),
-            border: Border.all(
-              color: milestoneColor.withValues(alpha: isEarned ? 1.0 : 0.5),
-              width: 3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: milestoneColor.withValues(alpha: isEarned ? 0.4 : 0.2),
-                blurRadius: isEarned ? 15 : 8,
+        // Milestone badge - flexible to shrink if needed
+        Flexible(
+          flex: 3,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Container(
+              width: isCompact ? 70 : 85,
+              height: isCompact ? 70 : 85,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: milestoneColor.withValues(alpha: isEarned ? 0.2 : 0.15),
+                border: Border.all(
+                  color: milestoneColor.withValues(alpha: isEarned ? 1.0 : 0.5),
+                  width: 3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: milestoneColor.withValues(alpha: isEarned ? 0.4 : 0.2),
+                    blurRadius: isEarned ? 15 : 8,
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Icon(
-            IconData(iconCode, fontFamily: 'MaterialIcons'),
-            size: isCompact ? 36 : 48,
-            color: milestoneColor.withValues(alpha: isEarned ? 1.0 : 0.7),
+              child: Icon(
+                IconData(iconCode, fontFamily: 'MaterialIcons'),
+                size: isCompact ? 32 : 40,
+                color: milestoneColor.withValues(alpha: isEarned ? 1.0 : 0.7),
+              ),
+            ),
           ),
         ),
-        SizedBox(height: isCompact ? 12 : 16),
+        SizedBox(height: isCompact ? 8 : 10),
 
         // Category chip
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
             color: milestoneColor.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
             category,
             style: getCardTextStyle(
               fontStyle: settings.fontStyle,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               color: milestoneColor,
             ),
           ),
         ),
-        SizedBox(height: isCompact ? 8 : 12),
+        SizedBox(height: isCompact ? 6 : 8),
 
-        // Title
-        Text(
-          title,
-          style: getCardTextStyle(
-            fontStyle: settings.fontStyle,
-            fontSize: isCompact ? 18 : 24,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        if (!isCompact) ...[
-          const SizedBox(height: 8),
-          // Description
-          Text(
-            description,
-            style: getCardTextStyle(
-              fontStyle: settings.fontStyle,
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.8),
+        // Title - flexible with max lines
+        Flexible(
+          flex: 2,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Text(
+                title,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 16 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            textAlign: TextAlign.center,
+          ),
+        ),
+        if (!isCompact && description.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          // Description - constrained
+          Flexible(
+            flex: 1,
+            child: Text(
+              description,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: 11,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
-        SizedBox(height: isCompact ? 14 : 20),
+        SizedBox(height: isCompact ? 10 : 12),
 
         // Earned badge or progress
         if (isEarned)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.green.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                const SizedBox(width: 6),
+                const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                const SizedBox(width: 4),
                 Text(
                   'EARNED',
                   style: getCardTextStyle(
                     fontStyle: settings.fontStyle,
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: Colors.green,
                   ),
@@ -1191,22 +1213,23 @@ class MilestoneCard extends StatelessWidget {
           )
         else
           Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 '$currentValue / $requirement',
                 style: getCardTextStyle(
                   fontStyle: settings.fontStyle,
-                  fontSize: isCompact ? 14 : 18,
+                  fontSize: isCompact ? 12 : 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Container(
-                width: 200,
-                height: 10,
+                width: 160,
+                height: 8,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
@@ -1214,27 +1237,27 @@ class MilestoneCard extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: milestoneColor,
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 '${(progress * 100).toInt()}% complete',
                 style: getCardTextStyle(
                   fontStyle: settings.fontStyle,
-                  fontSize: 12,
+                  fontSize: 10,
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
           ),
-        SizedBox(height: isCompact ? 14 : 20),
+        SizedBox(height: isCompact ? 10 : 12),
 
         // User info
         _buildUserInfo(username, userPic),
-        SizedBox(height: isCompact ? 14 : 20),
+        SizedBox(height: isCompact ? 10 : 12),
 
         Branding(fontStyle: settings.fontStyle),
       ],
