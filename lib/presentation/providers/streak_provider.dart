@@ -94,38 +94,33 @@ class StreakNotifier extends Notifier<StreakState> {
     }
 
     try {
-
-      // Get achievements from the start of the calendar year for streak calculation
       final now = DateTime.now();
-      final startOfYear = DateTime(now.year, 1, 1);
 
-      final achievements = await _api.getAchievementsEarnedBetween(
-        username,
-        startOfYear,
-        now,
+      // Load current month and previous month for streak calculation
+      // (streak might span month boundary)
+      final currentMonthStart = DateTime(now.year, now.month, 1);
+      final prevMonthStart = DateTime(now.year, now.month - 1, 1);
+
+      // Fetch both months with recursive splitting to handle power users
+      final currentMonthAchievements = await _fetchAchievementsWithSplitting(
+        username, currentMonthStart, now,
+      );
+      final prevMonthEnd = currentMonthStart.subtract(const Duration(days: 1));
+      final prevMonthAchievements = await _fetchAchievementsWithSplitting(
+        username, prevMonthStart, prevMonthEnd,
       );
 
-      if (achievements == null) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Failed to load achievement history',
-        );
-        return;
-      }
+      // Combine achievements
+      final achievements = [...prevMonthAchievements, ...currentMonthAchievements];
 
       // Build activity map and achievements by date
       final activityMap = <DateTime, int>{};
       final achievementsByDate = <DateTime, List<dynamic>>{};
       DateTime? lastActivityDate;
-      final loadedMonths = <String>{};
-
-      // Mark all months in the year range as loaded (even if no achievements)
-      DateTime checkDate = startOfYear;
-      while (!checkDate.isAfter(now)) {
-        loadedMonths.add('${checkDate.year}-${checkDate.month}');
-        // Move to next month
-        checkDate = DateTime(checkDate.year, checkDate.month + 1, 1);
-      }
+      final loadedMonths = <String>{
+        '${currentMonthStart.year}-${currentMonthStart.month}',
+        '${prevMonthStart.year}-${prevMonthStart.month}',
+      };
 
       for (final ach in achievements) {
         final dateStr = ach['Date'] ?? ach['DateEarned'] ?? '';
@@ -167,6 +162,35 @@ class StreakNotifier extends Notifier<StreakState> {
     }
   }
 
+  /// Fetches achievements for a date range, recursively splitting if we hit the 500 cap
+  Future<List<dynamic>> _fetchAchievementsWithSplitting(
+    String username,
+    DateTime from,
+    DateTime to,
+  ) async {
+    final achievements = await _api.getAchievementsEarnedBetween(username, from, to);
+
+    if (achievements == null) return [];
+
+    // If we got exactly 500, we likely hit the API cap - split and recurse
+    if (achievements.length == 500) {
+      final midpoint = from.add(Duration(days: to.difference(from).inDays ~/ 2));
+
+      // Don't split if range is already 1 day (can't split further)
+      if (midpoint.isAfter(from) && midpoint.isBefore(to)) {
+        final firstHalf = await _fetchAchievementsWithSplitting(username, from, midpoint);
+        final secondHalf = await _fetchAchievementsWithSplitting(
+          username,
+          midpoint.add(const Duration(days: 1)),
+          to,
+        );
+        return [...firstHalf, ...secondHalf];
+      }
+    }
+
+    return achievements;
+  }
+
   Future<void> loadMonth(String username, int year, int month) async {
     final monthKey = '$year-$month';
 
@@ -181,16 +205,12 @@ class StreakNotifier extends Notifier<StreakState> {
       final firstDay = DateTime(year, month, 1);
       final lastDay = DateTime(year, month + 1, 0);
 
-      final achievements = await _api.getAchievementsEarnedBetween(
+      // Use recursive splitting to handle power users
+      final achievements = await _fetchAchievementsWithSplitting(
         username,
         firstDay,
         lastDay,
       );
-
-      if (achievements == null) {
-        state = state.copyWith(isLoadingMonth: false);
-        return;
-      }
 
       // Merge with existing activity map and achievements
       final activityMap = Map<DateTime, int>.from(state.activityMap);
@@ -214,11 +234,25 @@ class StreakNotifier extends Notifier<StreakState> {
 
       final loadedMonths = Set<String>.from(state.loadedMonths)..add(monthKey);
 
+      // Recalculate streaks with new data
+      final currentStreak = _calculateCurrentStreak(activityMap);
+      final bestStreak = _calculateBestStreak(activityMap);
+
+      DateTime? lastActivityDate = state.lastActivityDate;
+      for (final date in activityMap.keys) {
+        if (lastActivityDate == null || date.isAfter(lastActivityDate)) {
+          lastActivityDate = date;
+        }
+      }
+
       state = state.copyWith(
         activityMap: activityMap,
         achievementsByDate: achievementsByDate,
         loadedMonths: loadedMonths,
         isLoadingMonth: false,
+        currentStreak: currentStreak,
+        bestStreak: bestStreak,
+        lastActivityDate: lastActivityDate,
       );
     } catch (e) {
       state = state.copyWith(isLoadingMonth: false);
