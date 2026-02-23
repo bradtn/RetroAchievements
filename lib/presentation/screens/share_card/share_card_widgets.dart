@@ -141,6 +141,11 @@ BoxDecoration getCardBorderDecoration({
           ),
         ],
       ),
+    // Frame style is handled separately in _buildCard with double-container structure
+    CardBorderStyle.frame => BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [baseShadow],
+      ),
   };
 }
 
@@ -473,7 +478,7 @@ class Branding extends StatelessWidget {
   final CardFontStyle fontStyle;
   final double logoSize;
 
-  const Branding({super.key, this.fontStyle = CardFontStyle.modern, this.logoSize = 50});
+  const Branding({super.key, this.fontStyle = CardFontStyle.modern, this.logoSize = 55});
 
   @override
   Widget build(BuildContext context) {

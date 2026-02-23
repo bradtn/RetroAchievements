@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 enum BackgroundPattern { none, diagonal, dots, grid, gameBlur }
 enum CardFontStyle { modern, pixel }
-enum CardBorderStyle { none, thin, thick, glow }
+enum CardBorderStyle { none, thin, thick, glow, frame }
 enum AvatarFrame { circle, roundedSquare, square }
 enum CardLayout { detailed, compact }
 

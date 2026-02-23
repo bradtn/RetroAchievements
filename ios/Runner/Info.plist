@@ -47,11 +47,9 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
-
 		<!-- Google AdMob App ID -->
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-2658368978045167~1144672922</string>
-
 		<!-- SKAdNetwork IDs for AdMob -->
 		<key>SKAdNetworkItems</key>
 		<array>
@@ -60,11 +58,9 @@
 				<string>cstr6suwn9.skadnetwork</string>
 			</dict>
 		</array>
-
 		<!-- App Tracking Transparency - Required for personalized ads -->
 		<key>NSUserTrackingUsageDescription</key>
 		<string>This allows us to provide you with a better ad experience.</string>
-
 		<!-- Local Notifications -->
 		<key>UIBackgroundModes</key>
 		<array>

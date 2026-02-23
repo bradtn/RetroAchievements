@@ -211,11 +211,11 @@ class GameCard extends StatelessWidget {
               children: [
                 const Icon(Icons.emoji_events, color: Colors.green, size: 14),
                 const SizedBox(width: 4),
-                Text('$earned/$total (${(progress * 100).toStringAsFixed(0)}%)', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11)),
+                Text('$earned/$total', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11)),
                 const SizedBox(width: 12),
                 Icon(Icons.stars, color: Colors.amber[300], size: 14),
                 const SizedBox(width: 4),
-                Text('$earnedPoints pts', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, color: Colors.amber[300]!)),
+                Text('$earnedPoints/$points', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, color: Colors.amber[300]!)),
               ],
             ),
           ],
@@ -252,34 +252,46 @@ class MasteredGameCard extends StatelessWidget {
     final imageIcon = data['ImageIcon'] ?? '';
     final earned = data['NumAwardedToUser'] ?? data['NumAchieved'] ?? 0;
     final total = data['NumAchievements'] ?? data['NumPossibleAchievements'] ?? 0;
-    final earnedPoints = data['ScoreAchieved'] ?? data['Points'] ?? 0;
+    final totalPoints = data['Points'] ?? data['PossibleScore'] ?? 0;
+    final earnedPoints = data['ScoreAchieved'] ?? totalPoints;
     final achievements = data['Achievements'] as Map<String, dynamic>? ?? {};
 
     // Calculate mastery time
     final masteryInfo = calculateMasteryTime(achievements, earned, total);
     final masteryDuration = masteryInfo?.formattedDuration ?? 'Unknown';
 
-    // Gold trim container - optimized for 380x380 square with breathing room
+    // Ultra premium gold trim - inner area is transparent to show card background
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(4), // Gold border
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.amber.shade300, Colors.orange.shade600, Colors.amber.shade400, Colors.yellow.shade600, Colors.amber.shade300],
-          stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+          colors: [
+            Colors.amber.shade200,
+            Colors.orange.shade600,
+            Colors.yellow.shade400,
+            Colors.amber.shade500,
+            Colors.orange.shade700,
+            Colors.amber.shade300,
+          ],
+          stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
         ),
-        boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8)],
+        boxShadow: [
+          BoxShadow(color: Colors.amber.withValues(alpha: 0.5), blurRadius: 12, spreadRadius: 1),
+        ],
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f0f23)],
+          borderRadius: BorderRadius.circular(9),
+          // Semi-transparent dark overlay to keep text readable while showing background
+          color: Colors.black.withValues(alpha: 0.6),
+          // Inner gold accent border
+          border: Border.all(
+            color: Colors.amber.withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
         child: Column(
@@ -288,17 +300,22 @@ class MasteredGameCard extends StatelessWidget {
             // Top: Player tag (who mastered it)
             PlayerTag(username: username, frame: settings.avatarFrame, fontStyle: settings.fontStyle),
 
-            // Game icon with trophy badge
+            // Game icon with trophy badge and glow - compact
             Stack(
               alignment: Alignment.center,
               children: [
-                // Subtle glow
+                // Outer gold glow ring
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [Colors.amber.withValues(alpha: 0.3), Colors.transparent]),
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.amber.withValues(alpha: 0.4),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
                 // Game icon with gold border
@@ -306,17 +323,23 @@ class MasteredGameCard extends StatelessWidget {
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(colors: [Colors.amber.shade300, Colors.orange.shade600, Colors.amber.shade400]),
-                    boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 10)],
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.amber.shade200, Colors.orange.shade600, Colors.amber.shade400],
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: Colors.amber.withValues(alpha: 0.5), blurRadius: 10),
+                    ],
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(11),
                     child: CachedNetworkImage(
                       imageUrl: 'https://retroachievements.org$imageIcon',
-                      width: 60,
-                      height: 60,
+                      width: 56,
+                      height: 56,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(width: 60, height: 60, color: Colors.grey[800], child: const Icon(Icons.games, size: 30, color: Colors.amber)),
+                      errorWidget: (_, __, ___) => Container(width: 56, height: 56, color: Colors.grey[800], child: const Icon(Icons.games, size: 28, color: Colors.amber)),
                     ),
                   ),
                 ),
@@ -327,9 +350,10 @@ class MasteredGameCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [Colors.amber.shade400, Colors.orange.shade700]),
+                      gradient: LinearGradient(colors: [Colors.amber.shade300, Colors.orange.shade700]),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.6), blurRadius: 6)],
                     ),
                     child: const Icon(Icons.workspace_premium, color: Colors.white, size: 12),
                   ),
@@ -337,34 +361,41 @@ class MasteredGameCard extends StatelessWidget {
               ],
             ),
 
-            // MASTERED banner + Title + Console
+            // MASTERED banner + Title + Console - Compact
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // MASTERED banner
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [Colors.amber.shade600, Colors.orange.shade700, Colors.amber.shade600]),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.amber.shade300, width: 1),
+                    gradient: LinearGradient(
+                      colors: [Colors.amber.shade400, Colors.orange.shade600, Colors.amber.shade500],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade200, width: 1),
+                    boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8)],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.military_tech, color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.emoji_events, color: Colors.white, size: 14),
+                      const SizedBox(width: 5),
                       Text('MASTERED', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.verified, color: Colors.white, size: 12),
+                      const SizedBox(width: 5),
+                      const Icon(Icons.emoji_events, color: Colors.white, size: 14),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
+                // Title with gold shimmer
                 ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(colors: [Colors.white, Colors.amber.shade100, Colors.white]).createShader(bounds),
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: [Colors.white, Colors.amber.shade200, Colors.white],
+                  ).createShader(bounds),
                   child: Text(
                     title,
-                    style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -373,69 +404,70 @@ class MasteredGameCard extends StatelessWidget {
                 if (consoleName.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(consoleName, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 10, color: Colors.amber.shade200)),
+                    child: Text(consoleName, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 9, color: Colors.amber.shade300)),
                   ),
               ],
             ),
 
-            // Stats row: achievements + points + time
+            // Stats row: achievements + points + time - Compact
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // Achievements
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.emoji_events, color: Colors.green.shade400, size: 12),
-                          const SizedBox(width: 4),
-                          Text('$earned/$total', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green.shade400)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.stars, color: Colors.amber, size: 12),
+                          Icon(Icons.emoji_events, color: Colors.amber.shade400, size: 12),
                           const SizedBox(width: 4),
-                          Text('$earnedPoints pts', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber)),
+                          Text('$earned/$total', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade300)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Points
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.stars, color: Colors.amber.shade400, size: 12),
+                          const SizedBox(width: 4),
+                          Text('$earnedPoints/$totalPoints', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade300)),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // Completion time inline
+                const SizedBox(height: 6),
+                // Completion time
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.timer_outlined, color: Colors.amber.shade300, size: 14),
                       const SizedBox(width: 6),
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(colors: [Colors.amber.shade300, Colors.orange.shade400, Colors.amber.shade300]).createShader(bounds),
-                        child: Text(masteryDuration, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
+                      Text(masteryDuration, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber.shade300)),
                     ],
                   ),
                 ),
@@ -443,7 +475,7 @@ class MasteredGameCard extends StatelessWidget {
             ),
 
             // Bottom: Branding centered
-            Branding(fontStyle: settings.fontStyle, logoSize: 45),
+            Branding(fontStyle: settings.fontStyle, logoSize: 50),
           ],
         ),
       ),
@@ -739,7 +771,7 @@ class AchievementCard extends StatelessWidget {
         ),
 
         // Bottom: Branding centered
-        Branding(fontStyle: settings.fontStyle, logoSize: 45),
+        Branding(fontStyle: settings.fontStyle),
       ],
     );
   }

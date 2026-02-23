@@ -447,6 +447,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
           _buildOptionButton('Thin', _settings.borderStyle == CardBorderStyle.thin, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.thin))),
           _buildOptionButton('Thick', _settings.borderStyle == CardBorderStyle.thick, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.thick))),
           _buildOptionButton('Glow', _settings.borderStyle == CardBorderStyle.glow, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.glow))),
+          _buildOptionButton('Frame', _settings.borderStyle == CardBorderStyle.frame, () => _updateSettings(_settings.copyWith(borderStyle: CardBorderStyle.frame))),
         ]),
       ]),
     );
@@ -606,26 +607,71 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
     final isGif = _exportFormat == ExportFormat.gif;
     // Square card for better social media sharing (1:1 aspect ratio)
     const cardSize = 380.0;
+    final isFrame = _settings.borderStyle == CardBorderStyle.frame;
+
+    // Inner content with pattern overlay and card content
+    Widget innerContent = Stack(children: [
+      buildPatternOverlay(_settings.pattern, gameImageUrl: _getGameImageUrl()),
+      if (isGif && _sparkleAmount != SparkleAmount.none) ..._buildSparkles(),
+      if (isGif && _settings.borderStyle == CardBorderStyle.glow && _glowOrbsEnabled)
+        Positioned.fill(child: CustomPaint(painter: _GlowBorderPainter(_animPhase, _settings.gradientStart))),
+      Positioned.fill(
+        child: Padding(
+          padding: EdgeInsets.all(_settings.layout == CardLayout.compact ? 14 : 18),
+          child: isGif && _breathingEnabled
+              ? Transform.scale(scale: 1.0 + 0.015 * math.sin(_animPhase * 2 * math.pi), child: _buildCardContent())
+              : _buildCardContent(),
+        ),
+      ),
+    ]);
+
+    // Frame style: gradient border with dark inner content
+    if (isFrame) {
+      return Container(
+        width: cardSize,
+        height: cardSize,
+        padding: const EdgeInsets.all(4), // Border thickness
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_settings.gradientStart, _settings.gradientEnd, _settings.gradientStart],
+            stops: const [0.0, 0.5, 1.0],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _settings.gradientStart.withValues(alpha: 0.5),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f0f23)],
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: innerContent,
+          ),
+        ),
+      );
+    }
+
+    // Standard styles (none, thin, thick, glow)
     return Container(
       width: cardSize,
       height: cardSize,
       decoration: getCardBorderDecoration(borderStyle: _settings.borderStyle, gradientColors: [_settings.gradientStart, _settings.gradientEnd]),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: Stack(children: [
-          buildPatternOverlay(_settings.pattern, gameImageUrl: _getGameImageUrl()),
-          if (isGif && _sparkleAmount != SparkleAmount.none) ..._buildSparkles(),
-          if (isGif && _settings.borderStyle == CardBorderStyle.glow && _glowOrbsEnabled)
-            Positioned.fill(child: CustomPaint(painter: _GlowBorderPainter(_animPhase, _settings.gradientStart))),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.all(_settings.layout == CardLayout.compact ? 14 : 18),
-              child: isGif && _breathingEnabled
-                  ? Transform.scale(scale: 1.0 + 0.015 * math.sin(_animPhase * 2 * math.pi), child: _buildCardContent())
-                  : _buildCardContent(),
-            ),
-          ),
-        ]),
+        child: innerContent,
       ),
     );
   }

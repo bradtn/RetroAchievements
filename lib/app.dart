@@ -135,8 +135,8 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
 
     // Non-premium users get default blue accent (accent color is premium-only)
     final effectiveColor = isPremium ? accentColor.color : Colors.blue;
-    // Pixel font is premium-only
-    final effectivePixelFont = isPremium && usePixelFont;
+    // Pixel font is available to all users
+    final effectivePixelFont = usePixelFont;
 
     // Request notification permission and trigger background tasks after user is authenticated
     if (authState.isAuthenticated) {
@@ -184,6 +184,17 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
 
         // Wrap with widget that removes focus highlight decorations
         result = _FocusDisabler(child: result);
+
+        // Apply pixel font to all text by wrapping with DefaultTextStyle
+        if (effectivePixelFont) {
+          result = DefaultTextStyle(
+            style: GoogleFonts.pressStart2p(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            child: result,
+          );
+        }
 
         if (authState.isAuthenticated) {
           result = Stack(

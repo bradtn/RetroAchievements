@@ -139,222 +139,320 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWidescreen = screenWidth > 600; // Widescreen threshold
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
+        child: isWidescreen
+            ? _buildWidescreenLayout(authState, isDark)
+            : _buildNormalLayout(authState, isDark),
+      ),
+    );
+  }
+
+  Widget _buildWidescreenLayout(AuthState authState, bool isDark) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
             child: Form(
               key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 40),
-
-                  // Logo
-                  Image.asset(
-                    'assets/RetroTrack.png',
-                    width: 280,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Track your RetroAchievements progress',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // Username field
-                  TextFormField(
-                    controller: _usernameController,
-                    decoration: InputDecoration(
-                      labelText: 'RetroAchievements Username',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                    ),
-                    textInputAction: TextInputAction.next,
-                    autocorrect: false,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your username';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // API Key field
-                  TextFormField(
-                    controller: _apiKeyController,
-                    obscureText: _obscureApiKey,
-                    decoration: InputDecoration(
-                      labelText: 'Web API Key',
-                      prefixIcon: const Icon(Icons.key_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscureApiKey ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                        onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
-                      ),
-                    ),
-                    textInputAction: TextInputAction.done,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    onFieldSubmitted: (_) => _login(),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your API key';
-                      }
-                      if (value.trim().length < 20) {
-                        return 'API key seems too short';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Get API Key button
-                  OutlinedButton.icon(
-                    onPressed: _openApiKeyPage,
-                    icon: const Icon(Icons.open_in_new, size: 18),
-                    label: const Text('Get your API Key from RetroAchievements'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Help text
-                  Text(
-                    'Log in → Settings → Keys → Web API Key',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Important reminder
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Use YOUR own username and API key. Do not use credentials from other users.',
-                            style: TextStyle(
-                              color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Login button
-                  FilledButton(
-                    onPressed: authState.isLoading ? null : _login,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Login',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Privacy notice
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.green.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.green.withValues(alpha: 0.3),
-                      ),
-                    ),
+                  // Left side - Logo and branding
+                  Expanded(
+                    flex: 2,
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Icon(Icons.shield_outlined, color: Colors.green.shade600, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Your API key stays on your device',
-                              style: TextStyle(
-                                color: Colors.green.shade700,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
+                        Image.asset(
+                          'assets/RetroTrack.png',
+                          width: 220,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
-                          'Encrypted locally. Never sent to any server except RetroAchievements.org directly.',
-                          style: TextStyle(
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-                            fontSize: 12,
-                          ),
+                          'Track your RetroAchievements progress',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey,
+                              ),
                         ),
-                        const SizedBox(height: 8),
-                        GestureDetector(
-                          onTap: _showPrivacyInfo,
-                          child: Text(
-                            'Learn more about your privacy →',
-                            style: TextStyle(
-                              color: Colors.green.shade600,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 16),
+                        // Privacy notice - compact
+                        _buildPrivacyNotice(isDark, compact: true),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(width: 32),
+                  // Right side - Form
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildUsernameField(),
+                        const SizedBox(height: 12),
+                        _buildApiKeyField(),
+                        const SizedBox(height: 10),
+                        _buildGetApiKeyButton(),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Log in → Settings → Keys → Web API Key',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                                fontSize: 10,
+                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildImportantReminder(isDark, compact: true),
+                        const SizedBox(height: 16),
+                        _buildLoginButton(authState),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNormalLayout(AuthState authState, bool isDark) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 40),
+              // Logo
+              Image.asset(
+                'assets/RetroTrack.png',
+                width: 280,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Track your RetroAchievements progress',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey,
+                    ),
+              ),
+              const SizedBox(height: 48),
+              _buildUsernameField(),
+              const SizedBox(height: 16),
+              _buildApiKeyField(),
+              const SizedBox(height: 12),
+              _buildGetApiKeyButton(),
+              const SizedBox(height: 8),
+              Text(
+                'Log in → Settings → Keys → Web API Key',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              _buildImportantReminder(isDark),
+              const SizedBox(height: 24),
+              _buildLoginButton(authState),
+              const SizedBox(height: 32),
+              _buildPrivacyNotice(isDark),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUsernameField() {
+    return TextFormField(
+      controller: _usernameController,
+      decoration: InputDecoration(
+        labelText: 'RetroAchievements Username',
+        prefixIcon: const Icon(Icons.person_outline),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+      ),
+      textInputAction: TextInputAction.next,
+      autocorrect: false,
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Please enter your username';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildApiKeyField() {
+    return TextFormField(
+      controller: _apiKeyController,
+      obscureText: _obscureApiKey,
+      decoration: InputDecoration(
+        labelText: 'Web API Key',
+        prefixIcon: const Icon(Icons.key_outlined),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        suffixIcon: IconButton(
+          icon: Icon(_obscureApiKey ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+          onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
+        ),
+      ),
+      textInputAction: TextInputAction.done,
+      autocorrect: false,
+      enableSuggestions: false,
+      onFieldSubmitted: (_) => _login(),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Please enter your API key';
+        }
+        if (value.trim().length < 20) {
+          return 'API key seems too short';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildGetApiKeyButton() {
+    return OutlinedButton.icon(
+      onPressed: _openApiKeyPage,
+      icon: const Icon(Icons.open_in_new, size: 18),
+      label: const Text('Get your API Key from RetroAchievements'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImportantReminder(bool isDark, {bool compact = false}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 6 : 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.orange.shade700, size: compact ? 16 : 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Use YOUR own username and API key. Do not use credentials from other users.',
+              style: TextStyle(
+                color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
+                fontSize: compact ? 10 : 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoginButton(AuthState authState) {
+    return FilledButton(
+      onPressed: authState.isLoading ? null : _login,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: authState.isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Text(
+              'Login',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+    );
+  }
+
+  Widget _buildPrivacyNotice(bool isDark, {bool compact = false}) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 12 : 16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.green.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.green.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+            children: [
+              Icon(Icons.shield_outlined, color: Colors.green.shade600, size: compact ? 18 : 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Your API key stays on your device',
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: compact ? 11 : 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            compact
+                ? 'Encrypted locally. Never sent to any server except RetroAchievements.org.'
+                : 'Encrypted locally. Never sent to any server except RetroAchievements.org directly.',
+            textAlign: compact ? TextAlign.center : TextAlign.start,
+            style: TextStyle(
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+              fontSize: compact ? 10 : 12,
+            ),
+          ),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: _showPrivacyInfo,
+            child: Text(
+              'Learn more about your privacy →',
+              style: TextStyle(
+                color: Colors.green.shade600,
+                fontSize: compact ? 10 : 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
