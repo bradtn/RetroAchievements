@@ -778,6 +778,8 @@ class _QuickPremiumDialogState extends ConsumerState<_QuickPremiumDialog> {
   Widget build(BuildContext context) {
     final notifier = ref.read(premiumProvider.notifier);
     final priceString = notifier.priceString;
+    final size = MediaQuery.of(context).size;
+    final isWidescreen = size.width > size.height && size.width > 600;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -785,63 +787,18 @@ class _QuickPremiumDialogState extends ConsumerState<_QuickPremiumDialog> {
         alignment: Alignment.topCenter,
         clipBehavior: Clip.none,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.star, size: 48, color: Colors.amber),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${widget.featureName} is Premium',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Upgrade to unlock this and all other premium features!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _isLoading ? null : _handlePurchase,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            'Purchase for $priceString',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _isLoading ? null : () => Navigator.pop(context),
-                  child: const Text('Not Now'),
-                ),
-              ],
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: size.height * 0.85,
+              maxWidth: isWidescreen ? 480 : 400,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(isWidescreen ? 16 : 24),
+                child: isWidescreen
+                    ? _buildWidescreenContent(priceString)
+                    : _buildNormalContent(priceString),
+              ),
             ),
           ),
           Positioned(
@@ -862,6 +819,168 @@ class _QuickPremiumDialogState extends ConsumerState<_QuickPremiumDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _handleRestore() async {
+    setState(() => _isLoading = true);
+
+    await ref.read(premiumProvider.notifier).restorePurchases();
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    final isPremium = ref.read(premiumProvider).isPremium;
+
+    if (isPremium) {
+      _confettiController.play();
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          const SnackBar(
+            content: Text('Purchase restored!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No previous purchase found')),
+      );
+    }
+  }
+
+  Widget _buildWidescreenContent(String priceString) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Left: Icon
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.star, size: 32, color: Colors.amber),
+        ),
+        const SizedBox(width: 16),
+        // Right: Text and buttons
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${widget.featureName} is Premium',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Upgrade to unlock all premium features!',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _isLoading ? null : _handlePurchase,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text('Purchase $priceString', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _isLoading ? null : _handleRestore,
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: const Text('Restore', style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: const Text('Later', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNormalContent(String priceString) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.star, size: 48, color: Colors.amber),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${widget.featureName} is Premium',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Upgrade to unlock this and all other premium features!',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _isLoading ? null : _handlePurchase,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    'Purchase for $priceString',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            TextButton(
+              onPressed: _isLoading ? null : _handleRestore,
+              child: const Text('Restore'),
+            ),
+            TextButton(
+              onPressed: _isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Not Now'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

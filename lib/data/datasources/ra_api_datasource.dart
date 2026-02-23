@@ -564,6 +564,27 @@ class RAApiDataSource {
     }
   }
 
+  /// Get user's most recent achievements (most recent first, no 500 limit issues)
+  /// Uses minutes parameter - 10080 = 7 days, 43200 = 30 days
+  Future<List<dynamic>?> getUserRecentAchievements(String username, {int minutes = 10080}) async {
+    try {
+      final response = await _dio.get(
+        'API_GetUserRecentAchievements.php',
+        queryParameters: {
+          ..._authParams(),
+          'u': username,
+          'm': minutes,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as List<dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Get achievements earned between two dates
   Future<List<dynamic>?> getAchievementsEarnedBetween(String username, DateTime from, DateTime to) async {
     try {

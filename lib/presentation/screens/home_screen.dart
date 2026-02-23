@@ -194,27 +194,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final username = ref.read(authProvider).username;
 
     if (username != null) {
-      final now = DateTime.now();
-      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-
       final results = await Future.wait([
         api.getUserProfile(username),
         api.getRecentlyPlayedGames(username),
-        api.getAchievementsEarnedBetween(username, thirtyDaysAgo, now),
+        api.getUserRecentAchievements(username, minutes: 10080), // Last 7 days, most recent first
         api.getUserRankAndScore(username),
       ]);
 
       var achievements = results[2] as List<dynamic>?;
-      if (achievements != null && achievements.isNotEmpty) {
-        achievements = List<dynamic>.from(achievements);
-        achievements.sort((a, b) {
-          final dateA = a['Date'] ?? '';
-          final dateB = b['Date'] ?? '';
-          return dateB.compareTo(dateA);
-        });
-        if (achievements.length > 20) {
-          achievements = achievements.sublist(0, 20);
-        }
+      // Already sorted by most recent first from API, just limit to 50
+      if (achievements != null && achievements.length > 50) {
+        achievements = achievements.sublist(0, 50);
       }
 
       // Merge rank data into profile

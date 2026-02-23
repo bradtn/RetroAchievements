@@ -76,11 +76,13 @@ class _AwardsScreenState extends ConsumerState<AwardsScreen> with SingleTickerPr
   Widget _buildMasteryTab() {
     final visibleAwards = _awardsData!['VisibleUserAwards'] as List<dynamic>? ?? [];
     final masteryAwards = visibleAwards.where((a) =>
-      a['AwardType'] == 'Mastery' || a['AwardType'] == 'Game Beaten'
+      a['AwardType'] == 'Mastery/Completion' || a['AwardType'] == 'Mastery' || a['AwardType'] == 'Game Beaten'
     ).toList();
 
     // Separate mastery (100%) from beaten
-    final mastered = masteryAwards.where((a) => a['AwardType'] == 'Mastery').toList();
+    final mastered = masteryAwards.where((a) =>
+      a['AwardType'] == 'Mastery/Completion' || a['AwardType'] == 'Mastery'
+    ).toList();
     final beaten = masteryAwards.where((a) => a['AwardType'] == 'Game Beaten').toList();
 
     if (mastered.isEmpty && beaten.isEmpty) {
@@ -129,7 +131,7 @@ class _AwardsScreenState extends ConsumerState<AwardsScreen> with SingleTickerPr
   Widget _buildCompletedTab() {
     final completedGames = _awardsData!['VisibleUserAwards'] as List<dynamic>? ?? [];
     final completed = completedGames.where((a) =>
-      a['AwardType'] == 'Mastery' || a['AwardType'] == 'Game Beaten'
+      a['AwardType'] == 'Mastery/Completion' || a['AwardType'] == 'Mastery' || a['AwardType'] == 'Game Beaten'
     ).toList();
 
     // Group by console
@@ -447,7 +449,7 @@ class _CompactAwardTile extends StatelessWidget {
     final title = award['Title'] ?? 'Unknown';
     final gameId = award['AwardData'];
     final imageIcon = award['ImageIcon'] ?? '';
-    final isMastery = award['AwardType'] == 'Mastery';
+    final isMastery = award['AwardType'] == 'Mastery/Completion' || award['AwardType'] == 'Mastery';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 4),
