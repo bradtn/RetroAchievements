@@ -427,6 +427,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               child: const Icon(Icons.arrow_upward),
             )
           : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 
