@@ -21,7 +21,7 @@ export 'share_card_widgets.dart';
 export 'card_builders.dart';
 export 'share_card_settings.dart';
 
-enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak, awardsSummary, goalsSummary, leaderboard, globalRank }
+enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak, awardsSummary, goalsSummary, leaderboard, globalRank, trophyCase }
 enum ExportFormat { png, gif }
 
 Uint8List? _encodeGifInIsolate(Map<String, dynamic> data) {
@@ -1224,6 +1224,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.goalsSummary => GoalsSummaryCard(data: widget.data, settings: _settings),
       ShareCardType.leaderboard => LeaderboardCard(data: widget.data, settings: _settings),
       ShareCardType.globalRank => GlobalRankCard(data: widget.data, settings: _settings),
+      ShareCardType.trophyCase => TrophyCaseCard(data: widget.data, settings: _settings),
     };
   }
 
@@ -1300,7 +1301,20 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.goalsSummary => '${widget.data['username']} completed ${widget.data['completed']}/${widget.data['total']} RetroTrack goals! #RetroAchievements',
       ShareCardType.leaderboard => '${widget.data['username']} ranked #${widget.data['rank']} on "${_getLeaderboardName()}" in ${widget.data['gameTitle']}! #RetroAchievements',
       ShareCardType.globalRank => '${widget.data['username']} is ranked #${widget.data['rank']} globally on RetroAchievements with ${widget.data['points']} points! #RetroAchievements',
+      ShareCardType.trophyCase => _getTrophyCaseShareText(),
     };
+  }
+
+  String _getTrophyCaseShareText() {
+    final total = widget.data['total'] ?? 0;
+    final username = widget.data['username'] ?? 'Player';
+    final isFiltered = widget.data['isFiltered'] ?? false;
+    final consoleName = widget.data['consoleName'];
+
+    if (isFiltered && consoleName != null) {
+      return '$username has mastered $total $consoleName games! #RetroAchievements';
+    }
+    return '$username has mastered $total games! #RetroAchievements';
   }
 
   String _getLeaderboardName() {

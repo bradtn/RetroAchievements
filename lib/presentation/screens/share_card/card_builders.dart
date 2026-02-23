@@ -499,7 +499,7 @@ class MasteredGameCard extends StatelessWidget {
             ),
 
             // Bottom: Branding centered
-            Branding(fontStyle: settings.fontStyle, logoSize: 50),
+            Branding(fontStyle: settings.fontStyle),
           ],
         ),
       ),
@@ -2518,4 +2518,219 @@ class GlobalRankCard extends StatelessWidget {
     }
     return n.toString();
   }
+}
+
+/// Trophy Case share card - displays mastery count with mosaic background
+class TrophyCaseCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const TrophyCaseCard({
+    super.key,
+    required this.data,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final total = data['total'] ?? 0;
+    final username = data['username'] ?? 'Player';
+    final isFiltered = data['isFiltered'] ?? false;
+    final consoleName = data['consoleName'];
+    final totalConsoles = data['totalConsoles'] ?? 0;
+    final gameIcons = (data['gameIcons'] as List<dynamic>?)?.cast<String>() ?? [];
+    final isCompact = settings.layout == CardLayout.compact;
+
+    return Stack(
+      children: [
+        // Mosaic background of game icons
+        if (gameIcons.isNotEmpty)
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: _buildMosaicBackground(gameIcons),
+            ),
+          ),
+
+        // Content overlay - centered
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Avatar
+              _buildAvatar(username, isCompact ? 44 : 50),
+              SizedBox(height: isCompact ? 4 : 6),
+
+              // Username
+              Text(
+                username,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: isCompact ? 12 : 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: isCompact ? 8 : 10),
+
+              // Trophy icon with count - main feature
+              Container(
+                padding: EdgeInsets.all(isCompact ? 12 : 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.7),
+                      Colors.black.withValues(alpha: 0.5),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.6),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withValues(alpha: 0.3),
+                      blurRadius: 15,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.workspace_premium,
+                      color: Colors.amber,
+                      size: isCompact ? 36 : 44,
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Text(
+                      '$total',
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: isCompact ? 32 : 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                      ),
+                    ),
+                    Text(
+                      isFiltered && consoleName != null
+                          ? '$consoleName Games'
+                          : 'Games Mastered',
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: isCompact ? 9 : 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    // Console count inside the badge
+                    if (!isFiltered && totalConsoles > 1) ...[
+                      SizedBox(height: isCompact ? 4 : 6),
+                      Text(
+                        'Across $totalConsoles consoles',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: isCompact ? 8 : 10,
+                          color: Colors.white54,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              SizedBox(height: isCompact ? 8 : 10),
+              Branding(fontStyle: settings.fontStyle),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMosaicBackground(List<String> gameIcons) {
+    // Create a 5x5 grid of game icons
+    const gridSize = 5;
+    final iconCount = gameIcons.length;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Grid of game icons
+        GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: gridSize,
+            childAspectRatio: 1.0,
+          ),
+          itemCount: gridSize * gridSize,
+          itemBuilder: (context, index) {
+            // Cycle through available icons
+            final iconIndex = index % iconCount;
+            final imageIcon = gameIcons[iconIndex];
+            return CachedNetworkImage(
+              imageUrl: 'https://retroachievements.org$imageIcon',
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
+            );
+          },
+        ),
+        // Dark overlay with gradient for readability
+        Container(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 0.9,
+              colors: [
+                Colors.black.withValues(alpha: 0.75),
+                Colors.black.withValues(alpha: 0.6),
+              ],
+            ),
+          ),
+        ),
+        // Gold tint overlay
+        Container(
+          color: Colors.amber.withValues(alpha: 0.08),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvatar(String username, double size) {
+    return Container(
+      decoration: getAvatarDecoration(
+        frame: settings.avatarFrame,
+        size: size,
+        borderColor: Colors.amber.withValues(alpha: 0.6),
+        borderWidth: 3,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withValues(alpha: 0.4),
+            blurRadius: 15,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: clipAvatar(
+        frame: settings.avatarFrame,
+        size: size,
+        child: CachedNetworkImage(
+          imageUrl: 'https://retroachievements.org/UserPic/$username.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+
 }

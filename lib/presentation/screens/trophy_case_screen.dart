@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme_utils.dart';
+import '../../core/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
+import 'game_detail/game_detail_helpers.dart';
 import 'share_card/share_card_screen.dart';
 
 class TrophyCaseScreen extends ConsumerStatefulWidget {
@@ -203,7 +205,12 @@ class _TrophyCaseScreenState extends ConsumerState<TrophyCaseScreen> {
                           size: 20,
                           color: _filterConsole == console ? Theme.of(context).colorScheme.primary : null),
                       const SizedBox(width: 12),
-                      Text(console),
+                      Flexible(
+                        child: Text(
+                          console,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 )),
@@ -273,169 +280,217 @@ class _TrophyCaseScreenState extends ConsumerState<TrophyCaseScreen> {
   Widget _buildContent(bool isViewingSelf) {
     final games = _filteredAndSortedGames;
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-    final screenWidth = MediaQuery.of(context).size.width;
+    final isWidescreen = ResponsiveLayout.isWidescreen(context);
 
-    // Calculate grid columns based on screen width
-    int crossAxisCount;
-    if (screenWidth > 900) {
-      crossAxisCount = 5;
-    } else if (screenWidth > 600) {
-      crossAxisCount = 4;
-    } else if (screenWidth > 400) {
-      crossAxisCount = 3;
-    } else {
-      crossAxisCount = 2;
-    }
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isWidescreen ? 600 : double.infinity),
+        child: CustomScrollView(
+          slivers: [
+            // Stats header
+            SliverToBoxAdapter(
+              child: _buildStatsHeader(),
+            ),
 
-    return CustomScrollView(
-      slivers: [
-        // Stats header
-        SliverToBoxAdapter(
-          child: _buildStatsHeader(),
-        ),
-
-        // Filter chip if active
-        if (_filterConsole != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                children: [
-                  Chip(
-                    label: Text(_filterConsole!),
-                    onDeleted: () => setState(() => _filterConsole = null),
-                    deleteIcon: const Icon(Icons.close, size: 16),
+            // Filter chip if active
+            if (_filterConsole != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    children: [
+                      Chip(
+                        label: Text(_filterConsole!),
+                        onDeleted: () => setState(() => _filterConsole = null),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
 
-        // Trophy grid
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomPadding),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _TrophyTile(
-                game: games[index],
-                isViewingSelf: isViewingSelf,
+            // Trophy grid
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 16 + bottomPadding),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isWidescreen ? 4 : 3,
+                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _TrophyTile(
+                    game: games[index],
+                    isViewingSelf: isViewingSelf,
+                  ),
+                  childCount: games.length,
+                ),
               ),
-              childCount: games.length,
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildStatsHeader() {
-    final hardcoreCount = _masteredGames.where((g) => g['AwardDataExtra'] == 1).length;
-    final softcoreCount = _masteredGames.length - hardcoreCount;
+    // Use filtered games for contextual stats
+    final displayGames = _filteredAndSortedGames;
+    final hardcoreCount = displayGames.where((g) => g['AwardDataExtra'] == 1).length;
+    final softcoreCount = displayGames.length - hardcoreCount;
+    final isFiltered = _filterConsole != null;
+    final myUsername = ref.read(authProvider).username;
+    final isViewingSelf = _viewingUsername == myUsername;
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.workspace_premium, color: Colors.amber, size: 32),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${_masteredGames.length}',
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _masteredGames.length == 1 ? 'Game\nMastered' : 'Games\nMastered',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.subtitleColor,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-              if (hardcoreCount > 0 || softcoreCount > 0) ...[
-                const SizedBox(height: 12),
+      child: GestureDetector(
+        onTap: isViewingSelf ? () => _showShareStatsDialog(displayGames.length, hardcoreCount, softcoreCount) : null,
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _StatChip(
-                      icon: Icons.whatshot,
-                      label: 'Hardcore',
-                      value: hardcoreCount,
-                      color: Colors.orange,
+                    const Icon(Icons.workspace_premium, color: Colors.amber, size: 32),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${displayGames.length}',
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                      ),
                     ),
-                    const SizedBox(width: 16),
-                    _StatChip(
-                      icon: Icons.star,
-                      label: 'Softcore',
-                      value: softcoreCount,
-                      color: Colors.blue,
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isFiltered ? _filterConsole! : (displayGames.length == 1 ? 'Game' : 'Games'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.subtitleColor,
+                            height: 1.2,
+                          ),
+                        ),
+                        Text(
+                          'Mastered',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.subtitleColor,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+                if (!isFiltered && _consoleStats.length > 1) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Across ${_consoleStats.length} consoles',
+                    style: TextStyle(color: context.subtitleColor, fontSize: 12),
+                  ),
+                ],
+                if (isViewingSelf) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.touch_app, size: 14, color: Colors.amber.withValues(alpha: 0.7)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tap to share',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.amber.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
-              if (_consoleStats.length > 1) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Across ${_consoleStats.length} consoles',
-                  style: TextStyle(color: context.subtitleColor, fontSize: 12),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int value;
-  final Color color;
+  /// Select icons spread across consoles, then shuffle for randomness
+  List<String> _selectMosaicIcons(List<dynamic> games, int count) {
+    if (games.isEmpty) return [];
 
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+    // Group games by console
+    final byConsole = <String, List<String>>{};
+    for (final game in games) {
+      final console = game['ConsoleName'] as String? ?? 'Unknown';
+      final icon = game['ImageIcon'] as String? ?? '';
+      if (icon.isNotEmpty) {
+        byConsole.putIfAbsent(console, () => []).add(icon);
+      }
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 4),
-          Text(
-            '$value',
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-          ),
-        ],
+    if (byConsole.isEmpty) return [];
+
+    // Shuffle games within each console
+    for (final icons in byConsole.values) {
+      icons.shuffle();
+    }
+
+    // Round-robin pick from each console to spread selection
+    final selected = <String>[];
+    final consoles = byConsole.keys.toList()..shuffle();
+    final indices = <String, int>{for (final c in consoles) c: 0};
+
+    while (selected.length < count) {
+      var addedAny = false;
+      for (final console in consoles) {
+        if (selected.length >= count) break;
+        final icons = byConsole[console]!;
+        final idx = indices[console]!;
+        if (idx < icons.length) {
+          selected.add(icons[idx]);
+          indices[console] = idx + 1;
+          addedAny = true;
+        }
+      }
+      // If we've exhausted all consoles, stop (no repeats)
+      if (!addedAny) break;
+    }
+
+    // Final shuffle so it's not console-grouped in the grid
+    selected.shuffle();
+    return selected;
+  }
+
+  void _showShareStatsDialog(int total, int hardcore, int softcore) {
+    final isFiltered = _filterConsole != null;
+    final displayGames = _filteredAndSortedGames;
+
+    // Get game icons for mosaic - spread across consoles, then randomize
+    final gameIcons = _selectMosaicIcons(displayGames, 25);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareCardScreen(
+          type: ShareCardType.trophyCase,
+          data: {
+            'total': total,
+            'hardcore': hardcore,
+            'softcore': softcore,
+            'consoleName': _filterConsole,
+            'isFiltered': isFiltered,
+            'totalConsoles': _consoleStats.length,
+            'username': _viewingUsername,
+            'gameIcons': gameIcons,
+          },
+        ),
       ),
     );
   }
@@ -452,7 +507,6 @@ class _TrophyTile extends StatelessWidget {
     final title = game['Title'] ?? 'Unknown';
     final consoleName = game['ConsoleName'] ?? '';
     final imageIcon = game['ImageIcon'] ?? '';
-    final gameId = game['AwardData'];
     final isHardcore = game['AwardDataExtra'] == 1;
     final awardedAt = game['AwardedAt'] ?? '';
 
@@ -461,12 +515,12 @@ class _TrophyTile extends StatelessWidget {
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Game icon with mastery badge overlay
-            Expanded(
-              flex: 3,
-              child: Stack(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Game icon with mastery badge overlay
+                  Expanded(
+                    flex: 3,
+                    child: Stack(
                 fit: StackFit.expand,
                 children: [
                   // Game icon
@@ -675,12 +729,20 @@ class _TrophyTile extends StatelessWidget {
                       Navigator.pop(context); // Close loading
 
                       if (gameData != null) {
+                        // Calculate points like game_detail_screen does
+                        final achievements = gameData['Achievements'] as Map<String, dynamic>? ?? {};
+                        final points = calculatePoints(achievements);
+
+                        final shareData = Map<String, dynamic>.from(gameData);
+                        shareData['PossibleScore'] = points.totalPoints;
+                        shareData['ScoreAchieved'] = points.earnedPoints;
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => ShareCardScreen(
                               type: ShareCardType.game,
-                              data: gameData,
+                              data: shareData,
                             ),
                           ),
                         );

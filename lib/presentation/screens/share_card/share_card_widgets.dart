@@ -478,7 +478,7 @@ class Branding extends StatelessWidget {
   final CardFontStyle fontStyle;
   final double logoSize;
 
-  const Branding({super.key, this.fontStyle = CardFontStyle.modern, this.logoSize = 55});
+  const Branding({super.key, this.fontStyle = CardFontStyle.modern, this.logoSize = 70});
 
   @override
   Widget build(BuildContext context) {

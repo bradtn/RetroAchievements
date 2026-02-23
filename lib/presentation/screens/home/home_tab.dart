@@ -7,6 +7,7 @@ import '../../../core/responsive_layout.dart';
 import '../../providers/auth_provider.dart';
 import '../share_card/share_card_screen.dart';
 import '../game_detail_screen.dart';
+import '../trophy_case_screen.dart';
 import 'home_widgets.dart';
 
 class HomeTab extends ConsumerStatefulWidget {
@@ -295,22 +296,30 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         ),
         if (masteredCount > 0) ...[
           SizedBox(height: compact ? 6 : 8),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: compact ? 5 : 8),
-            decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TrophyCaseScreen()),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.workspace_premium, color: Colors.amber, size: compact ? 14 : 18),
-                SizedBox(width: compact ? 4 : 6),
-                Text(
-                  '$masteredCount Mastered Game${masteredCount == 1 ? '' : 's'}',
-                  style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w600, fontSize: compact ? 11 : 14),
-                ),
-              ],
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: compact ? 5 : 8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.workspace_premium, color: Colors.amber, size: compact ? 14 : 18),
+                  SizedBox(width: compact ? 4 : 6),
+                  Text(
+                    '$masteredCount Mastered Game${masteredCount == 1 ? '' : 's'}',
+                    style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w600, fontSize: compact ? 11 : 14),
+                  ),
+                  SizedBox(width: compact ? 4 : 6),
+                  Icon(Icons.chevron_right, color: Colors.amber, size: compact ? 14 : 18),
+                ],
+              ),
             ),
           ),
         ],
