@@ -35,12 +35,13 @@ class ProfileCard extends StatelessWidget {
     final softcorePoints = data['TotalSoftcorePoints'] ?? 0;
     final rank = data['Rank'] ?? '-';
     final userPic = data['UserPic'] ?? '';
+    final masteredCount = data['MasteredCount'] as int? ?? 0;
 
     // Square-optimized layout with stats
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Avatar + Username + Rank
+        // Avatar + Username + Rank + Mastered
         Column(
           children: [
             _buildAvatar(username, userPic, 40),
@@ -52,6 +53,29 @@ class ProfileCard extends StatelessWidget {
               decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10)),
               child: Text('Rank #$rank', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 12, color: Colors.white.withValues(alpha: 0.9))),
             ),
+            // Mastered games badge
+            if (masteredCount > 0) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$masteredCount Mastered Game${masteredCount == 1 ? '' : 's'}',
+                      style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 11, color: Colors.amber, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
 
