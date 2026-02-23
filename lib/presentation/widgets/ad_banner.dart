@@ -15,14 +15,17 @@ class AdBanner extends ConsumerStatefulWidget {
 class _AdBannerState extends ConsumerState<AdBanner> {
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
+  bool _checkedPremium = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadAd();
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
   void _loadAd() {
+    if (_bannerAd != null) return; // Already loading/loaded
+
     _bannerAd = AdService().createBannerAd(
       onAdLoaded: (ad) {
         if (mounted) {
@@ -32,7 +35,10 @@ class _AdBannerState extends ConsumerState<AdBanner> {
       onAdFailedToLoad: (ad, error) {
         ad.dispose();
         if (mounted) {
-          setState(() => _isAdLoaded = false);
+          setState(() {
+            _isAdLoaded = false;
+            _bannerAd = null;
+          });
         }
         debugPrint('Banner ad failed to load: ${error.message}');
       },
@@ -40,19 +46,28 @@ class _AdBannerState extends ConsumerState<AdBanner> {
     _bannerAd?.load();
   }
 
-  @override
-  void dispose() {
+  void _disposeAd() {
     _bannerAd?.dispose();
-    super.dispose();
+    _bannerAd = null;
+    _isAdLoaded = false;
   }
 
   @override
   Widget build(BuildContext context) {
     final isPremium = ref.watch(isPremiumProvider);
 
-    // Don't show ads for premium users
+    // Don't show ads for premium users - dispose if we had one
     if (isPremium) {
+      if (_bannerAd != null) {
+        _disposeAd();
+      }
       return const SizedBox.shrink();
+    }
+
+    // Load ad only when needed (non-premium)
+    if (!_checkedPremium) {
+      _checkedPremium = true;
+      _loadAd();
     }
 
     // Don't show anything until ad is loaded

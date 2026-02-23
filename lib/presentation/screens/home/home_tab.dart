@@ -52,18 +52,36 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     final username = ref.read(authProvider).username;
 
     if (username != null) {
-      final results = await Future.wait([
-        api.getUserSummary(username, recentGames: 50, recentAchievements: 100),
-        api.getCompletedGames(username),
-        api.getUserAwards(username),
-      ]);
-      if (mounted) {
-        setState(() {
-          _summary = results[0] as Map<String, dynamic>?;
-          _completedGames = results[1] as List<dynamic>?;
-          _userAwards = results[2] as Map<String, dynamic>?;
-          _isLoadingStats = false;
-        });
+      try {
+        final results = await Future.wait([
+          api.getUserSummary(username, recentGames: 50, recentAchievements: 100),
+          api.getCompletedGames(username),
+          api.getUserAwards(username),
+        ]);
+        if (mounted) {
+          setState(() {
+            // Only update if we got valid data (don't clear existing data on error)
+            final newSummary = results[0] as Map<String, dynamic>?;
+            final newCompletedGames = results[1] as List<dynamic>?;
+            final newUserAwards = results[2] as Map<String, dynamic>?;
+
+            if (newSummary != null && newSummary.isNotEmpty) {
+              _summary = newSummary;
+            }
+            if (newCompletedGames != null) {
+              _completedGames = newCompletedGames;
+            }
+            if (newUserAwards != null && newUserAwards.isNotEmpty) {
+              _userAwards = newUserAwards;
+            }
+            _isLoadingStats = false;
+          });
+        }
+      } catch (e) {
+        // Keep existing data on error
+        if (mounted) {
+          setState(() => _isLoadingStats = false);
+        }
       }
     }
   }

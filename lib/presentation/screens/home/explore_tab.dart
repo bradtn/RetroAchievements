@@ -167,20 +167,15 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
             crossAxisCount = 5;
           }
 
-          // Calculate tile width based on columns
+          // Calculate tile dimensions to fit all tiles without scrolling
           final totalHorizontalSpacing = (crossAxisCount - 1) * spacing;
           final tileWidth = (availableWidth - totalHorizontalSpacing) / crossAxisCount;
-
-          // Keep tiles square-ish (slightly taller than wide works well)
-          // Use a fixed aspect ratio instead of dynamic calculation
-          const targetAspectRatio = 0.9; // Slightly taller than wide
-
-          // Calculate if we need scrolling
           final rowCount = (items.length / crossAxisCount).ceil();
-          final tileHeight = tileWidth / targetAspectRatio;
           final totalVerticalSpacing = (rowCount - 1) * spacing;
-          final requiredHeight = (tileHeight * rowCount) + totalVerticalSpacing;
-          final needsScrolling = requiredHeight > availableHeight;
+          final tileHeight = (availableHeight - totalVerticalSpacing) / rowCount;
+
+          // Use dynamic ratio - tiles auto-fit any screen shape
+          final aspectRatio = tileWidth / tileHeight;
 
           return Padding(
             padding: EdgeInsets.all(padding),
@@ -188,14 +183,12 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
               animation: _animationController,
               builder: (context, child) {
                 return GridView.builder(
-                  physics: needsScrolling
-                      ? const AlwaysScrollableScrollPhysics()
-                      : const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
                     mainAxisSpacing: spacing,
                     crossAxisSpacing: spacing,
-                    childAspectRatio: targetAspectRatio,
+                    childAspectRatio: aspectRatio,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
@@ -260,34 +253,38 @@ class _ExploreGridItem extends StatelessWidget {
       child: Card(
         child: Stack(
           children: [
-            Center(
+            // Use FittedBox to scale content down on small tiles
+            Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: item.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.all(6),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: item.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: _buildIcon(),
                       ),
-                      child: _buildIcon(),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                      const SizedBox(height: 8),
+                      Text(
+                        item.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
