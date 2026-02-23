@@ -514,3 +514,62 @@ String formatNumber(dynamic num) {
   }
   return n.toString();
 }
+
+/// Smart text wrapper that prevents awkward line breaks in pixel fonts.
+/// Uses non-breaking spaces to keep phrases together.
+///
+/// Protects:
+/// - Phrases after delimiters (–, -, vs., vs, :)
+/// - Short trailing words (prevents orphans)
+/// - Common multi-word game terms
+String smartWrapText(String text) {
+  if (text.isEmpty) return text;
+
+  const nbsp = '\u00A0'; // Non-breaking space
+  var result = text;
+
+  // 1. Protect phrases after common delimiters
+  // Pattern: "– Something Here" or "- Something Here"
+  result = result.replaceAllMapped(
+    RegExp(r'([–\-])\s+(\S+(?:\s+\S+){0,3})$'),
+    (m) => '${m[1]}$nbsp${m[2]!.replaceAll(' ', nbsp)}',
+  );
+
+  // 2. Protect "vs." or "vs" phrases: "vs. Cut Man" -> "vs.\u00A0Cut\u00A0Man"
+  result = result.replaceAllMapped(
+    RegExp(r'\b(vs\.?)\s+(\S+(?:\s+\S+){0,2})', caseSensitive: false),
+    (m) => '${m[1]}$nbsp${m[2]!.replaceAll(' ', nbsp)}',
+  );
+
+  // 3. Protect phrases after colons at end: ": Final Score"
+  result = result.replaceAllMapped(
+    RegExp(r':\s+(\S+(?:\s+\S+){0,2})$'),
+    (m) => ':$nbsp${m[1]!.replaceAll(' ', nbsp)}',
+  );
+
+  // 4. Protect short orphan words at end (2-4 chars)
+  // "Record Score vs. Cut Man" - if "Man" would be alone, keep "Cut Man"
+  result = result.replaceAllMapped(
+    RegExp(r'\s(\S{1,4})$'),
+    (m) => '$nbsp${m[1]}',
+  );
+
+  // 5. Protect common game terms that shouldn't break
+  final protectedPhrases = [
+    'Cut Man', 'Ice Man', 'Fire Man', 'Bomb Man', 'Guts Man', 'Elec Man',
+    'Air Man', 'Metal Man', 'Flash Man', 'Quick Man', 'Crash Man', 'Heat Man',
+    'Wood Man', 'Bubble Man', 'Dr. Wily', 'Dr. Light', 'Mega Man', 'Proto Man',
+    'Bass Man', 'Roll Call', 'Stage Select', 'Boss Rush', 'Time Attack',
+    'High Score', 'Best Time', 'Record Time', 'Final Boss', 'True Ending',
+    'Normal Mode', 'Hard Mode', 'Easy Mode', 'Expert Mode', 'Speedrun',
+    'No Damage', 'No Death', 'All Clear', 'Full Clear', '100%',
+  ];
+
+  for (final phrase in protectedPhrases) {
+    if (result.contains(phrase)) {
+      result = result.replaceAll(phrase, phrase.replaceAll(' ', nbsp));
+    }
+  }
+
+  return result;
+}

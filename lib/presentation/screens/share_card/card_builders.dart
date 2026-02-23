@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'share_card_settings.dart';
 import 'share_card_widgets.dart';
 import '../game_detail/game_detail_helpers.dart';
+import '../../../core/utils/smart_text_wrapper.dart';
 
 class ProfileCard extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -32,47 +33,35 @@ class ProfileCard extends StatelessWidget {
     final points = data['TotalPoints'] ?? 0;
     final truePoints = data['TotalTruePoints'] ?? 0;
     final softcorePoints = data['TotalSoftcorePoints'] ?? 0;
-    final masteredCount = data['MasteredCount'] ?? 0;
     final rank = data['Rank'] ?? '-';
     final userPic = data['UserPic'] ?? '';
 
-    // Square-optimized layout with all stats
+    // Square-optimized layout with stats
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Avatar + Username + Rank
         Column(
           children: [
-            _buildAvatar(username, userPic, 32),
-            const SizedBox(height: 8),
-            Text(username, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 3),
+            _buildAvatar(username, userPic, 40),
+            const SizedBox(height: 10),
+            Text(username, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
-              child: Text('Rank #$rank', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 10, color: Colors.white.withValues(alpha: 0.8))),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10)),
+              child: Text('Rank #$rank', style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 12, color: Colors.white.withValues(alpha: 0.9))),
             ),
           ],
         ),
 
-        // Stats grid - 2x2 layout
-        Column(
+        // Stats row - 3 stats in a row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStatBadge(Icons.stars, _formatWithCommas(points), 'Hardcore', Colors.amber),
-                _buildStatBadge(Icons.military_tech, _formatWithCommas(truePoints), 'True Points', Colors.purple[200]!),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStatBadge(Icons.star_border, _formatWithCommas(softcorePoints), 'Softcore', Colors.blue),
-                _buildStatBadge(Icons.workspace_premium, _formatWithCommas(masteredCount), 'Mastered', Colors.amber),
-              ],
-            ),
+            _buildStatBadge(Icons.stars, _formatWithCommas(points), 'Hardcore', Colors.amber),
+            _buildStatBadge(Icons.military_tech, _formatWithCommas(truePoints), 'True Points', Colors.purple[200]!),
+            _buildStatBadge(Icons.star_border, _formatWithCommas(softcorePoints), 'Softcore', Colors.blue),
           ],
         ),
 
@@ -115,20 +104,20 @@ class ProfileCard extends StatelessWidget {
 
   Widget _buildStatBadge(IconData icon, String value, String label, Color color) {
     return SizedBox(
-      width: 140,
+      width: 110,
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 20),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(value, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 14, fontWeight: FontWeight.bold)),
+            child: Text(value, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 15, fontWeight: FontWeight.bold)),
           ),
-          Text(label, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 9, color: Colors.white.withValues(alpha: 0.7))),
+          Text(label, style: getCardTextStyle(fontStyle: settings.fontStyle, fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
         ],
       ),
     );
@@ -1911,6 +1900,8 @@ class LeaderboardCard extends StatelessWidget {
     final hasDescription = rawDescription.isNotEmpty;
     final leaderboardTitle = hasTitle ? rawTitle : (hasDescription ? rawDescription : 'Leaderboard');
     final leaderboardDescription = hasTitle && hasDescription ? rawDescription : null;
+    // Track if the "title" is actually a description (so we apply dash break logic to it)
+    final titleIsActuallyDescription = !hasTitle && hasDescription;
 
     // Rank medal colors
     Color rankColor = Colors.blue;
@@ -1968,53 +1959,99 @@ class LeaderboardCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Leaderboard title badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+            // Leaderboard title badge - layout-aware smart wrapping
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Calculate available width for text (container width minus padding)
+                final availableWidth = constraints.maxWidth - 24; // 12px padding on each side
+
+                final titleStyle = getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                );
+
+                final descStyle = getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: 10,
+                  color: Colors.white70,
+                );
+
+                // Smart wrap with measurement
+                // For title: use scoring-based wrapping (let it fit naturally)
+                // BUT if the "title" is actually a description (no real title exists),
+                // apply dash break logic for cleaner display
+                final wrappedTitle = SmartTextWrapper.smartWrapMeasured(
+                  text: leaderboardTitle,
+                  style: titleStyle,
+                  maxWidth: availableWidth,
+                  maxLines: 3,
+                  preferDashBreak: titleIsActuallyDescription,
+                  stripDashAfterBreak: titleIsActuallyDescription,
+                );
+
+                // For description: prefer breaking at dash (everything after dash on new line)
+                // Also strip the dash for cleaner display
+                final wrappedDescription = leaderboardDescription != null
+                    ? SmartTextWrapper.smartWrapMeasured(
+                        text: leaderboardDescription,
+                        style: descStyle,
+                        maxWidth: availableWidth,
+                        maxLines: 3, // Allow 3 lines for longer descriptions
+                        preferDashBreak: true, // Always break at dash first
+                        stripDashAfterBreak: true, // Remove dash for cleaner look
+                      )
+                    : null;
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.leaderboard, color: Colors.amber, size: 14),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          leaderboardTitle,
-                          style: getCardTextStyle(
-                            fontStyle: settings.fontStyle,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.leaderboard, color: Colors.amber, size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'LEADERBOARD',
+                            style: getCardTextStyle(
+                              fontStyle: settings.fontStyle,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                              letterSpacing: 1,
+                            ),
                           ),
-                          maxLines: 1,
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        wrappedTitle,
+                        style: titleStyle,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      if (wrappedDescription != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          wrappedDescription,
+                          style: descStyle,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                         ),
-                      ),
+                      ],
                     ],
                   ),
-                  if (leaderboardDescription != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      leaderboardDescription,
-                      style: getCardTextStyle(
-                        fontStyle: settings.fontStyle,
-                        fontSize: 9,
-                        color: Colors.white70,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
+                );
+              },
             ),
           ],
         ),

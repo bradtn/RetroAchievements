@@ -6,10 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
 
 /// Background message handler - must be top-level function
+/// Note: When a message has a 'notification' payload and the app is in background,
+/// Firebase automatically displays the notification. We should NOT show another one.
+/// This handler is only for processing data payloads silently.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(fcm.RemoteMessage message) async {
   await Firebase.initializeApp();
-  await PushNotificationService._handleMessage(message);
+  // Don't show notification here - Firebase already showed it for background messages
+  // with a notification payload. This is only for data-only message processing.
+  // await PushNotificationService._handleMessage(message);
 }
 
 /// Service for handling Firebase Cloud Messaging push notifications
@@ -102,6 +107,9 @@ class PushNotificationService {
   }
 
   /// Handle foreground messages - show local notification
+  /// Note: Firebase does NOT auto-display notifications when app is in foreground,
+  /// so we must show them manually here. This is the only place we should show
+  /// local notifications to avoid duplicates.
   Future<void> _handleForegroundMessage(fcm.RemoteMessage message) async {
     await _handleMessage(message);
   }

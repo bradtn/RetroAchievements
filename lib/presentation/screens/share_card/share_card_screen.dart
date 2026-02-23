@@ -453,14 +453,19 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
   }
 
   Widget _buildLayoutTab() {
+    // Profile cards don't have layout options (only one layout)
+    final showLayoutOption = widget.type != ShareCardType.profile;
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _buildOptionRow('Layout', [
-          _buildOptionButton('Detailed', _settings.layout == CardLayout.detailed, () => _updateSettings(_settings.copyWith(layout: CardLayout.detailed))),
-          _buildOptionButton('Compact', _settings.layout == CardLayout.compact, () => _updateSettings(_settings.copyWith(layout: CardLayout.compact))),
-        ]),
-        const SizedBox(height: 8),
+        if (showLayoutOption) ...[
+          _buildOptionRow('Layout', [
+            _buildOptionButton('Detailed', _settings.layout == CardLayout.detailed, () => _updateSettings(_settings.copyWith(layout: CardLayout.detailed))),
+            _buildOptionButton('Compact', _settings.layout == CardLayout.compact, () => _updateSettings(_settings.copyWith(layout: CardLayout.compact))),
+          ]),
+          const SizedBox(height: 8),
+        ],
         _buildOptionRow('Avatar', [
           _buildOptionButton('Circle', _settings.avatarFrame == AvatarFrame.circle, () => _updateSettings(_settings.copyWith(avatarFrame: AvatarFrame.circle))),
           _buildOptionButton('Rounded', _settings.avatarFrame == AvatarFrame.roundedSquare, () => _updateSettings(_settings.copyWith(avatarFrame: AvatarFrame.roundedSquare))),
