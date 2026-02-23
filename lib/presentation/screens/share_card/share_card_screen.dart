@@ -759,12 +759,46 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
     return GestureDetector(
       onTap: () async {
         Color picked = color;
+        final screenSize = MediaQuery.of(context).size;
+        final maxHeight = screenSize.height * 0.75;
+        // Scale picker width based on screen size
+        final pickerWidth = (screenSize.width * 0.65).clamp(180.0, 280.0);
+
         await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Pick a color'),
-            content: SingleChildScrollView(child: ColorPicker(color: color, onColorChanged: (c) => picked = c, pickersEnabled: const {ColorPickerType.wheel: true}, enableShadesSelection: true, showColorCode: true, colorCodeHasColor: true)),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')), FilledButton(onPressed: () { onChanged(picked); Navigator.pop(ctx); }, child: const Text('Select'))],
+            contentPadding: const EdgeInsets.all(12),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: SingleChildScrollView(
+                child: ColorPicker(
+                  color: color,
+                  onColorChanged: (c) => picked = c,
+                  pickersEnabled: const {
+                    ColorPickerType.primary: true,
+                    ColorPickerType.accent: true,
+                    ColorPickerType.wheel: true,
+                  },
+                  enableShadesSelection: true,
+                  showColorCode: true,
+                  colorCodeHasColor: true,
+                  width: 28,
+                  height: 28,
+                  spacing: 4,
+                  runSpacing: 4,
+                  columnSpacing: 6,
+                  wheelDiameter: 160,
+                  wheelWidth: 16,
+                  colorCodeTextStyle: const TextStyle(fontSize: 12),
+                  colorCodePrefixStyle: const TextStyle(fontSize: 0),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(onPressed: () { onChanged(picked); Navigator.pop(ctx); }, child: const Text('Select')),
+            ],
           ),
         );
       },

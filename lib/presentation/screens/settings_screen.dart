@@ -786,15 +786,21 @@ class _AccentColorTile extends ConsumerWidget {
   }
 
   void _showAccentColorDialog(BuildContext context, WidgetRef ref, AccentColor current) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Scale color circles based on screen size
+    final colorSize = (screenWidth * 0.12).clamp(40.0, 56.0);
+    final spacing = (screenWidth * 0.025).clamp(8.0, 12.0);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Choose Accent Color'),
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         content: SizedBox(
           width: double.maxFinite,
           child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
+            spacing: spacing,
+            runSpacing: spacing,
             alignment: WrapAlignment.center,
             children: AccentColor.values.map((color) {
               final isSelected = color == current;
@@ -806,8 +812,8 @@ class _AccentColorTile extends ConsumerWidget {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 56,
-                  height: 56,
+                  width: colorSize,
+                  height: colorSize,
                   decoration: BoxDecoration(
                     color: color.color,
                     shape: BoxShape.circle,
@@ -819,7 +825,7 @@ class _AccentColorTile extends ConsumerWidget {
                         : null,
                   ),
                   child: isSelected
-                      ? const Icon(Icons.check, color: Colors.white, size: 28)
+                      ? Icon(Icons.check, color: Colors.white, size: colorSize * 0.5)
                       : null,
                 ),
               );
