@@ -268,6 +268,8 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
     final priceString = notifier.priceString;
     final isOnSale = notifier.isOnSale;
     final originalPrice = notifier.originalPrice;
+    final size = MediaQuery.of(context).size;
+    final isWidescreen = size.width > size.height && size.width > 600;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -275,90 +277,23 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
         alignment: Alignment.topCenter,
         clipBehavior: Clip.none,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.star, size: 48, color: Colors.amber),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: size.height * 0.85,
+              maxWidth: isWidescreen ? 500 : 400,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  isWidescreen ? 20 : 24,
+                  isWidescreen ? 20 : 32,
+                  isWidescreen ? 20 : 24,
+                  isWidescreen ? 16 : 24,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'RetroTrack Premium',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'One-time purchase. Yours forever.',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 20),
-                const CheckItem('Remove all ads'),
-                const CheckItem('Theme customization'),
-                const CheckItem('Share cards'),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _isLoading ? null : _handlePurchase,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (isOnSale && originalPrice != null) ...[
-                                Text(
-                                  originalPrice,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              Text(
-                                'Purchase for $priceString',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    TextButton(
-                      onPressed: _isLoading ? null : _handleRestore,
-                      child: const Text('Restore'),
-                    ),
-                    TextButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: const Text('Maybe Later'),
-                    ),
-                  ],
-                ),
-              ],
+                child: isWidescreen
+                    ? _buildWidescreenContent(priceString, isOnSale, originalPrice)
+                    : _buildNormalContent(priceString, isOnSale, originalPrice),
+              ),
             ),
           ),
           Positioned(
@@ -379,6 +314,177 @@ class _PremiumDialogContentState extends ConsumerState<_PremiumDialogContent> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWidescreenContent(String priceString, bool isOnSale, String? originalPrice) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Left: Icon and title
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.star, size: 36, color: Colors.amber),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'RetroTrack\nPremium',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'One-time purchase',
+                style: TextStyle(color: Colors.grey[600], fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        // Right: Features and buttons
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const CheckItem('Remove all ads'),
+              const CheckItem('Theme customization'),
+              const CheckItem('Share cards'),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _isLoading ? null : _handlePurchase,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isOnSale && originalPrice != null) ...[
+                            Text(originalPrice, style: const TextStyle(fontSize: 12, decoration: TextDecoration.lineThrough, color: Colors.white70)),
+                            const SizedBox(width: 6),
+                          ],
+                          Text('Purchase $priceString', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    onPressed: _isLoading ? null : _handleRestore,
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: const Text('Restore', style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: const Text('Later', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNormalContent(String priceString, bool isOnSale, String? originalPrice) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.star, size: 48, color: Colors.amber),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'RetroTrack Premium',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'One-time purchase. Yours forever.',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 20),
+        const CheckItem('Remove all ads'),
+        const CheckItem('Theme customization'),
+        const CheckItem('Share cards'),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _isLoading ? null : _handlePurchase,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (isOnSale && originalPrice != null) ...[
+                        Text(
+                          originalPrice,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            decoration: TextDecoration.lineThrough,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        'Purchase for $priceString',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            TextButton(
+              onPressed: _isLoading ? null : _handleRestore,
+              child: const Text('Restore'),
+            ),
+            TextButton(
+              onPressed: _isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Maybe Later'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

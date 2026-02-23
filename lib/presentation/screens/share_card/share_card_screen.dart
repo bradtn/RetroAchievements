@@ -163,6 +163,58 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
   }
 
   Widget _buildPreview() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isWidescreen = screenWidth > 600 && screenWidth > screenHeight;
+
+    if (isWidescreen) {
+      return _buildWidescreenPreview();
+    }
+    return _buildNormalPreview();
+  }
+
+  Widget _buildWidescreenPreview() {
+    return Row(
+      children: [
+        // Left side: Card preview
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: null, icon: const Icon(Icons.share), label: const Text('Share Card'))),
+              ),
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: _buildCard(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Right side: Customization panel (disabled)
+        SizedBox(
+          width: 280,
+          child: IgnorePointer(
+            ignoring: true,
+            child: Opacity(
+              opacity: 0.5,
+              child: _buildWidescreenCustomizationPanel(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNormalPreview() {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
