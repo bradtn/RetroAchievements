@@ -16,6 +16,7 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   List<dynamic>? _topUsers;
   Map<String, dynamic>? _myRank;
+  Map<String, dynamic>? _myProfile;
   bool _isLoading = true;
 
   @override
@@ -32,12 +33,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final results = await Future.wait([
       api.getTopUsers(),
       if (username != null) api.getUserRankAndScore(username),
+      if (username != null) api.getUserProfile(username),
     ]);
 
     setState(() {
       _topUsers = results[0] as List<dynamic>?;
-      if (results.length > 1) {
+      if (username != null && results.length > 1) {
         _myRank = results[1] as Map<String, dynamic>?;
+      }
+      if (username != null && results.length > 2) {
+        _myProfile = results[2] as Map<String, dynamic>?;
       }
       _isLoading = false;
     });
@@ -98,7 +103,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final rankRaw = _myRank!['Rank'];
     final rank = rankRaw is int ? rankRaw : int.tryParse(rankRaw?.toString() ?? '') ?? 0;
     final score = _myRank!['Score'] ?? 0;
-    final truePoints = _myRank!['TruePoints'] ?? 0;
+    // TruePoints comes from profile, not rank API
+    final truePoints = _myProfile?['TotalTruePoints'] ?? _myRank!['TruePoints'] ?? 0;
     final isUnranked = rank == 0;
     final isLightMode = Theme.of(context).brightness == Brightness.light;
 
