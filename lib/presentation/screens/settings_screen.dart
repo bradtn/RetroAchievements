@@ -99,7 +99,7 @@ class SettingsScreen extends ConsumerWidget {
                         backgroundColor: Colors.amber,
                         foregroundColor: Colors.black,
                       ),
-                      child: const Text('Upgrade for \$4.99'),
+                      child: Text('Upgrade for ${ref.read(premiumProvider.notifier).priceString}'),
                     ),
                   ),
                 ],
