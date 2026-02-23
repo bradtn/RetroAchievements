@@ -751,6 +751,7 @@ class AchievementTile extends ConsumerWidget {
                                 'Title': title,
                                 'Description': description,
                                 'Points': points,
+                                'TrueRatio': achievement['TrueRatio'] ?? 0,
                                 'BadgeName': badgeName,
                                 'GameTitle': gameTitle ?? '',
                                 'GameIcon': gameIcon ?? '',

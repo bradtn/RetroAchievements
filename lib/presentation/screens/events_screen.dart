@@ -8,6 +8,7 @@ import '../../services/notification_service.dart';
 import '../providers/auth_provider.dart';
 import 'game_detail_screen.dart';
 import 'profile_screen.dart';
+import 'share_card/share_card_screen.dart';
 
 /// Combined screen for Achievement of the Week and Achievement of the Month
 /// Simply wraps the existing screen content with tabs
@@ -80,6 +81,8 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
   Map<String, dynamic>? _gameDetails;
   bool _isLoading = true;
   String? _error;
+  bool _userHasEarned = false;
+  String? _userEarnedDate;
 
   @override
   void initState() {
@@ -96,15 +99,38 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
     final api = ref.read(apiDataSourceProvider);
     final data = await api.getAchievementOfTheWeek();
 
-    // Fetch game details to get the image
+    // Fetch game details with user progress to check if user earned the achievement
     Map<String, dynamic>? gameDetails;
+    bool userHasEarned = false;
+    String? userEarnedDate;
+
     if (data != null) {
       final game = data['Game'] as Map<String, dynamic>?;
+      final achievement = data['Achievement'] as Map<String, dynamic>?;
       final gameId = game?['ID'];
+      final achievementId = achievement?['ID']?.toString();
+
       if (gameId != null) {
         final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
         if (id > 0) {
-          gameDetails = await api.getGameInfo(id);
+          // Get game info with user progress - this tells us which achievements user has earned
+          gameDetails = await api.getGameInfoWithProgress(id);
+
+          // Check if user has earned this specific achievement
+          if (gameDetails != null && achievementId != null) {
+            final achievements = gameDetails['Achievements'] as Map<String, dynamic>?;
+            if (achievements != null) {
+              final achData = achievements[achievementId];
+              if (achData is Map<String, dynamic>) {
+                // Check if DateEarned or DateEarnedHardcore is set
+                final dateEarned = achData['DateEarned'] ?? achData['DateEarnedHardcore'];
+                if (dateEarned != null && dateEarned.toString().isNotEmpty) {
+                  userHasEarned = true;
+                  userEarnedDate = _formatDateTime(dateEarned.toString());
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -113,6 +139,8 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
       setState(() {
         _aotwData = data;
         _gameDetails = gameDetails;
+        _userHasEarned = userHasEarned;
+        _userEarnedDate = userEarnedDate;
         _isLoading = false;
         if (data == null) _error = 'Failed to load Achievement of the Week';
       });
@@ -285,6 +313,90 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
                               _buildStatChip(Icons.military_tech, '$achTrueRatio True', Colors.purple[300]!),
                               _buildStatChip(Icons.percent, '$unlockRate% unlocked', Colors.green[400]!),
                             ],
+                          ),
+                          // User earned status
+                          SizedBox(height: isWidescreen ? 10 : 16),
+                          if (_userHasEarned)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'You earned this!',
+                                        style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      if (_userEarnedDate != null)
+                                        Text(
+                                          _userEarnedDate!,
+                                          style: TextStyle(
+                                            color: Colors.green.withValues(alpha: 0.8),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock_outline, color: Colors.grey[400], size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Not yet earned',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          // Share button
+                          SizedBox(height: isWidescreen ? 10 : 16),
+                          FilledButton.icon(
+                            onPressed: () => _shareAchievement(
+                              eventType: 'Week',
+                              achTitle: achTitle,
+                              achDesc: achDesc,
+                              badgeName: badgeName,
+                              gameTitle: gameTitle,
+                              gameIcon: gameIcon,
+                              consoleName: consoleName,
+                              achPoints: achPoints,
+                              achTrueRatio: achTrueRatio,
+                              unlockRate: double.tryParse(unlockRate) ?? 0.0,
+                            ),
+                            icon: const Icon(Icons.share, size: 18),
+                            label: const Text('Share'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            ),
                           ),
                         ],
                       ),
@@ -491,6 +603,59 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
       return date;
     }
   }
+
+  String _formatDateTime(String? date) {
+    if (date == null || date.isEmpty) return '';
+    try {
+      final utc = DateTime.parse(date);
+      final dt = utc.toLocal();
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return date;
+    }
+  }
+
+  void _shareAchievement({
+    required String eventType,
+    required String achTitle,
+    required String achDesc,
+    required String badgeName,
+    required String gameTitle,
+    required String gameIcon,
+    required String consoleName,
+    required dynamic achPoints,
+    required dynamic achTrueRatio,
+    required double unlockRate,
+  }) {
+    final username = ref.read(authProvider).username ?? 'Player';
+    final userPic = '/UserPic/$username.png';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareCardScreen(
+          type: ShareCardType.eventAchievement,
+          data: {
+            'username': username,
+            'userPic': userPic,
+            'achievementTitle': achTitle,
+            'achievementDescription': achDesc,
+            'badgeName': badgeName,
+            'gameTitle': gameTitle,
+            'gameIcon': gameIcon,
+            'consoleName': consoleName,
+            'eventType': eventType,
+            'isEarned': _userHasEarned,
+            'dateEarned': _userEarnedDate ?? '',
+            'points': achPoints,
+            'truePoints': achTrueRatio,
+            'unlockPercent': unlockRate,
+          },
+        ),
+      ),
+    );
+  }
 }
 
 // ============================================================================
@@ -509,6 +674,8 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
   Map<String, dynamic>? _unlockData;
   bool _isLoading = true;
   String? _error;
+  bool _userHasEarned = false;
+  String? _userEarnedDate;
 
   @override
   void initState() {
@@ -525,14 +692,43 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
     final api = ref.read(apiDataSourceProvider);
     final (data, errorMsg) = await api.getCurrentAchievementOfTheMonthWithError();
 
-    // Fetch unlock stats if we have achievement ID
+    // Fetch unlock stats and check if user has earned
     Map<String, dynamic>? unlockData;
+    bool userHasEarned = false;
+    String? userEarnedDate;
+
     if (data != null) {
       final achievementId = data['achievementId'];
+      final gameId = data['gameId'];
+
+      // Fetch unlock stats for display
       if (achievementId != null) {
         final id = achievementId is int ? achievementId : int.tryParse(achievementId.toString()) ?? 0;
         if (id > 0) {
           unlockData = await api.getAchievementUnlocks(id, count: 50);
+        }
+      }
+
+      // Check if user has earned this achievement using game progress API
+      if (gameId != null) {
+        final gId = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
+        if (gId > 0) {
+          final gameProgress = await api.getGameInfoWithProgress(gId);
+          if (gameProgress != null && achievementId != null) {
+            final achievements = gameProgress['Achievements'] as Map<String, dynamic>?;
+            final achIdStr = achievementId.toString();
+            if (achievements != null) {
+              final achData = achievements[achIdStr];
+              if (achData is Map<String, dynamic>) {
+                // Check if DateEarned or DateEarnedHardcore is set
+                final dateEarned = achData['DateEarned'] ?? achData['DateEarnedHardcore'];
+                if (dateEarned != null && dateEarned.toString().isNotEmpty) {
+                  userHasEarned = true;
+                  userEarnedDate = _formatDateTime(dateEarned.toString());
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -541,6 +737,8 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
       setState(() {
         _aotmData = data;
         _unlockData = unlockData;
+        _userHasEarned = userHasEarned;
+        _userEarnedDate = userEarnedDate;
         _isLoading = false;
         if (data == null) _error = errorMsg ?? 'Failed to load Achievement of the Month';
       });
@@ -711,6 +909,90 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
                               _buildStatChip(Icons.military_tech, '$achTrueRatio True', Colors.purple[300]!),
                               _buildStatChip(Icons.percent, '$unlockRate% unlocked', Colors.green[400]!),
                             ],
+                          ),
+                          // User earned status
+                          SizedBox(height: isWidescreen ? 10 : 16),
+                          if (_userHasEarned)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'You earned this!',
+                                        style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      if (_userEarnedDate != null)
+                                        Text(
+                                          _userEarnedDate!,
+                                          style: TextStyle(
+                                            color: Colors.green.withValues(alpha: 0.8),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock_outline, color: Colors.grey[400], size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Not yet earned',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          // Share button
+                          SizedBox(height: isWidescreen ? 10 : 16),
+                          FilledButton.icon(
+                            onPressed: () => _shareAchievement(
+                              eventType: 'Month',
+                              achTitle: achTitle,
+                              achDesc: achDesc,
+                              badgeName: badgeName,
+                              gameTitle: gameTitle,
+                              gameIcon: gameIcon,
+                              consoleName: consoleName,
+                              achPoints: achPoints,
+                              achTrueRatio: achTrueRatio,
+                              unlockRate: double.tryParse(unlockRate) ?? 0.0,
+                            ),
+                            icon: const Icon(Icons.share, size: 18),
+                            label: const Text('Share'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            ),
                           ),
                         ],
                       ),
@@ -928,6 +1210,59 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
     } catch (_) {
       return date;
     }
+  }
+
+  String _formatDateTime(String? date) {
+    if (date == null || date.isEmpty) return '';
+    try {
+      final utc = DateTime.parse(date);
+      final dt = utc.toLocal();
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return date;
+    }
+  }
+
+  void _shareAchievement({
+    required String eventType,
+    required String achTitle,
+    required String achDesc,
+    required String badgeName,
+    required String gameTitle,
+    required String gameIcon,
+    required String consoleName,
+    required dynamic achPoints,
+    required dynamic achTrueRatio,
+    required double unlockRate,
+  }) {
+    final username = ref.read(authProvider).username ?? 'Player';
+    final userPic = '/UserPic/$username.png';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareCardScreen(
+          type: ShareCardType.eventAchievement,
+          data: {
+            'username': username,
+            'userPic': userPic,
+            'achievementTitle': achTitle,
+            'achievementDescription': achDesc,
+            'badgeName': badgeName,
+            'gameTitle': gameTitle,
+            'gameIcon': gameIcon,
+            'consoleName': consoleName,
+            'eventType': eventType,
+            'isEarned': _userHasEarned,
+            'dateEarned': _userEarnedDate ?? '',
+            'points': achPoints,
+            'truePoints': achTrueRatio,
+            'unlockPercent': unlockRate,
+          },
+        ),
+      ),
+    );
   }
 }
 

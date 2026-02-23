@@ -1943,6 +1943,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                               'Title': title,
                               'Description': description,
                               'Points': points,
+                              'TrueRatio': achievement['TrueRatio'] ?? 0,
                               'BadgeName': badgeName,
                               'GameTitle': gameTitle ?? '',
                               'GameIcon': gameIcon ?? '',

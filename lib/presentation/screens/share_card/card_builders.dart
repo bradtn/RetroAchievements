@@ -522,6 +522,7 @@ class AchievementCard extends StatelessWidget {
     final title = data['Title'] ?? 'Achievement';
     final description = data['Description'] ?? '';
     final points = data['Points'] ?? 0;
+    final truePoints = data['TrueRatio'] ?? data['truePoints'] ?? 0;
     final badgeName = data['BadgeName'] ?? '';
     final gameTitle = data['GameTitle'] ?? '';
     final gameIcon = data['GameIcon'] ?? '';
@@ -529,78 +530,15 @@ class AchievementCard extends StatelessWidget {
     final username = data['Username'] ?? '';
     final userPic = data['UserPic'] ?? '';
     final isEarned = data['IsEarned'] == true;
+    final dateEarned = data['DateEarned'] ?? data['dateEarned'] ?? '';
     final unlockPercent = data['UnlockPercent'];
     final isHardcore = data['HardcoreMode'] == 1;
 
-    // Square card optimized layout
+    // Layout matching EventAchievementCard: badge at top, game info small below
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Top: Game info row
-        if (gameTitle.isNotEmpty || gameIcon.isNotEmpty)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (gameIcon.isNotEmpty)
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: CachedNetworkImage(
-                      imageUrl: 'https://retroachievements.org$gameIcon',
-                      width: 24,
-                      height: 24,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                        width: 24,
-                        height: 24,
-                        color: Colors.grey[700],
-                        child: const Icon(Icons.games, size: 14, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ),
-              if (gameIcon.isNotEmpty && gameTitle.isNotEmpty)
-                const SizedBox(width: 8),
-              if (gameTitle.isNotEmpty)
-                Flexible(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        gameTitle,
-                        style: getCardTextStyle(
-                          fontStyle: settings.fontStyle,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (consoleName.isNotEmpty)
-                        Text(
-                          consoleName,
-                          style: getCardTextStyle(
-                            fontStyle: settings.fontStyle,
-                            fontSize: 9,
-                            color: Colors.white.withValues(alpha: 0.5),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          )
-        else
-          const SizedBox.shrink(),
-
-        // Badge with lock overlay - scaled down
+        // Achievement badge at top with earned indicator
         Stack(
           alignment: Alignment.center,
           children: [
@@ -645,141 +583,196 @@ class AchievementCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (!isEarned)
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  shape: BoxShape.circle,
+            if (isEarned)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 12),
                 ),
-                child: const Icon(Icons.lock, color: Colors.white, size: 16),
               ),
           ],
         ),
 
-        // Status + Title + Description
+        // Achievement title and description
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Earned/Hardcore badges row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isEarned
-                        ? Colors.green.withValues(alpha: 0.3)
-                        : Colors.red.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isEarned
-                          ? Colors.green.withValues(alpha: 0.5)
-                          : Colors.red.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isEarned ? Icons.check_circle : Icons.lock_outline,
-                        color: isEarned ? Colors.green : Colors.red[300],
-                        size: 12,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isEarned ? 'UNLOCKED' : 'LOCKED',
-                        style: getCardTextStyle(
-                          fontStyle: settings.fontStyle,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isEarned ? Colors.green : Colors.red[300]!,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isHardcore) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'HC',
-                      style: getCardTextStyle(
-                        fontStyle: settings.fontStyle,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Title
             Text(
               title,
               style: getCardTextStyle(
                 fontStyle: settings.fontStyle,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
-            // Description
-            Text(
-              description,
-              style: getCardTextStyle(
-                fontStyle: settings.fontStyle,
-                fontSize: 11,
-                color: Colors.white.withValues(alpha: 0.8),
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: 10,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
           ],
         ),
 
-        // User tag + Points/rarity
+        // Game info row (small, below achievement)
+        if (gameTitle.isNotEmpty)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (gameIcon.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: CachedNetworkImage(
+                      imageUrl: 'https://retroachievements.org$gameIcon',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        width: 20,
+                        height: 20,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ),
+              if (gameIcon.isNotEmpty) const SizedBox(width: 6),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      gameTitle,
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: 10,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (consoleName.isNotEmpty)
+                      Text(
+                        consoleName,
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 8,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+        // User info + stats
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (username.isNotEmpty) ...[
-              PlayerTag(username: username, frame: settings.avatarFrame, fontStyle: settings.fontStyle),
-              const SizedBox(height: 8),
-            ],
+            // User with earned/locked status
+            if (username.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildAvatar(username, userPic, 28, settings.avatarFrame),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        username,
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (isEarned && dateEarned.toString().isNotEmpty)
+                        Text(
+                          'Earned ${_formatDate(dateEarned.toString())}',
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 9,
+                            color: Colors.green,
+                          ),
+                        )
+                      else if (!isEarned)
+                        Text(
+                          'Not yet earned',
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 9,
+                            color: Colors.grey,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (isHardcore && isEarned) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'HC',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            const SizedBox(height: 8),
+            // Stats row
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 8,
-              runSpacing: 6,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.stars, color: Colors.amber, size: 14),
+                      const Icon(Icons.stars, color: Colors.amber, size: 12),
                       const SizedBox(width: 4),
                       Text(
-                        '$points pts',
+                        '$points',
                         style: getCardTextStyle(
                           fontStyle: settings.fontStyle,
-                          fontSize: 12,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Colors.amber,
                         ),
@@ -787,17 +780,105 @@ class AchievementCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (truePoints != null && truePoints != 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.military_tech, color: Colors.purple, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$truePoints True',
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (unlockPercent != null && unlockPercent > 0)
-                  _buildRarityBadge(unlockPercent),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.people, color: Colors.blue, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${unlockPercent.toStringAsFixed(1)}%',
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ],
         ),
 
-        // Bottom: Branding centered
+        // Branding
         Branding(fontStyle: settings.fontStyle),
       ],
     );
+  }
+
+  Widget _buildAvatar(String username, String userPic, double size, AvatarFrame frame) {
+    final imageUrl = userPic.isNotEmpty
+        ? (userPic.startsWith('http') ? userPic : 'https://retroachievements.org$userPic')
+        : 'https://retroachievements.org/UserPic/$username.png';
+    return Container(
+      decoration: getAvatarDecoration(
+        frame: frame,
+        size: size,
+        borderColor: Colors.white24,
+        borderWidth: 2,
+      ),
+      child: clipAvatar(
+        frame: frame,
+        size: size,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(String date) {
+    if (date.isEmpty) return '';
+    try {
+      final utc = DateTime.parse(date);
+      final dt = utc.toLocal();
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return date;
+    }
   }
 
   Widget _buildUserPlaceholder(String username) {
@@ -2744,4 +2825,382 @@ class TrophyCaseCard extends StatelessWidget {
     );
   }
 
+}
+
+/// Event Achievement share card (AOTW/AOTM)
+class EventAchievementCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const EventAchievementCard({
+    super.key,
+    required this.data,
+    this.settings = const ShareCardSettings(),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final username = data['username'] ?? 'Player';
+    final userPic = data['userPic'] ?? '';
+    final achievementTitle = data['achievementTitle'] ?? 'Achievement';
+    final achievementDescription = data['achievementDescription'] ?? '';
+    final badgeName = data['badgeName'] ?? '';
+    final gameTitle = data['gameTitle'] ?? '';
+    final gameIcon = data['gameIcon'] ?? '';
+    final consoleName = data['consoleName'] ?? '';
+    final eventType = data['eventType'] ?? 'Week'; // 'Week' or 'Month'
+    final isEarned = data['isEarned'] == true;
+    final dateEarned = data['dateEarned'] ?? '';
+    final points = data['points'] ?? 0;
+    final truePoints = data['truePoints'] ?? 0;
+    final unlockPercent = data['unlockPercent'];
+
+    final isWeekly = eventType == 'Week';
+    final eventColor = isWeekly ? Colors.blue : Colors.purple;
+    final eventLabel = isWeekly ? 'ACHIEVEMENT OF THE WEEK' : 'ACHIEVEMENT OF THE MONTH';
+    final eventIcon = isWeekly ? Icons.calendar_today : Icons.calendar_month;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Event badge at top
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [eventColor.withValues(alpha: 0.3), eventColor.withValues(alpha: 0.15)],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: eventColor.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(eventIcon, color: eventColor, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                eventLabel,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: eventColor,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Achievement badge
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isEarned ? Colors.amber : Colors.grey[600]!,
+                  width: 3,
+                ),
+                boxShadow: [
+                  if (isEarned)
+                    BoxShadow(
+                      color: Colors.amber.withValues(alpha: 0.4),
+                      blurRadius: 15,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+              child: ClipOval(
+                child: ColorFiltered(
+                  colorFilter: isEarned
+                      ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                      : const ColorFilter.matrix(<double>[
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0, 0, 0, 0.6, 0,
+                        ]),
+                  child: CachedNetworkImage(
+                    imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => Container(
+                      width: 70,
+                      height: 70,
+                      color: Colors.grey[800],
+                      child: Icon(Icons.emoji_events, size: 32, color: eventColor),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (isEarned)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 12),
+                ),
+              ),
+          ],
+        ),
+
+        // Achievement title and description
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              achievementTitle,
+              style: getCardTextStyle(
+                fontStyle: settings.fontStyle,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (achievementDescription.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                achievementDescription,
+                style: getCardTextStyle(
+                  fontStyle: settings.fontStyle,
+                  fontSize: 10,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+
+        // Game info row
+        if (gameTitle.isNotEmpty)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (gameIcon.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: CachedNetworkImage(
+                      imageUrl: 'https://retroachievements.org$gameIcon',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => Container(
+                        width: 20,
+                        height: 20,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ),
+              if (gameIcon.isNotEmpty) const SizedBox(width: 6),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      gameTitle,
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: 10,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (consoleName.isNotEmpty)
+                      Text(
+                        consoleName,
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 8,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+        // User info + earned status
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // User avatar with earned badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildAvatar(username, userPic, 28, settings.avatarFrame),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      username,
+                      style: getCardTextStyle(
+                        fontStyle: settings.fontStyle,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (isEarned && dateEarned.isNotEmpty)
+                      Text(
+                        'Earned $dateEarned',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 9,
+                          color: Colors.green,
+                        ),
+                      )
+                    else if (!isEarned)
+                      Text(
+                        'Not yet earned',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 9,
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Stats row
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.stars, color: Colors.amber, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$points',
+                        style: getCardTextStyle(
+                          fontStyle: settings.fontStyle,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (truePoints > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.military_tech, color: Colors.purple, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$truePoints True',
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (unlockPercent != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.people, color: Colors.blue, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${unlockPercent.toStringAsFixed(1)}%',
+                          style: getCardTextStyle(
+                            fontStyle: settings.fontStyle,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+
+        // Branding
+        Branding(fontStyle: settings.fontStyle),
+      ],
+    );
+  }
+
+  Widget _buildAvatar(String username, String userPic, double size, AvatarFrame frame) {
+    final imageUrl = userPic.isNotEmpty
+        ? (userPic.startsWith('http') ? userPic : 'https://retroachievements.org$userPic')
+        : 'https://retroachievements.org/UserPic/$username.png';
+    return Container(
+      decoration: getAvatarDecoration(
+        frame: frame,
+        size: size,
+        borderColor: Colors.white24,
+        borderWidth: 2,
+      ),
+      child: clipAvatar(
+        frame: frame,
+        size: size,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[800],
+            child: Icon(Icons.person, size: size / 2, color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
 }

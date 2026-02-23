@@ -98,7 +98,7 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
         onTap: () => Navigator.push(context, SlidePageRoute(page: const FavoritesScreen())),
       ),
       _ExploreItem(
-        icon: Icons.emoji_events,
+        icon: Icons.calendar_month,
         title: 'Events',
         color: Colors.orange,
         showNewBadge: _hasNewEvents,
@@ -126,7 +126,7 @@ class _ExploreTabState extends State<ExploreTab> with TickerProviderStateMixin {
         onTap: () => Navigator.push(context, SlidePageRoute(page: const FriendsScreen())),
       ),
       _ExploreItem(
-        icon: Icons.workspace_premium,
+        icon: Icons.emoji_events,
         title: 'Trophies',
         color: Colors.amber,
         onTap: () => Navigator.push(context, SlidePageRoute(page: const TrophyCaseScreen())),

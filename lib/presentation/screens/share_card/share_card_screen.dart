@@ -21,7 +21,7 @@ export 'share_card_widgets.dart';
 export 'card_builders.dart';
 export 'share_card_settings.dart';
 
-enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak, awardsSummary, goalsSummary, leaderboard, globalRank, trophyCase }
+enum ShareCardType { profile, game, achievement, comparison, milestone, raAward, streak, awardsSummary, goalsSummary, leaderboard, globalRank, trophyCase, eventAchievement }
 enum ExportFormat { png, gif }
 
 Uint8List? _encodeGifInIsolate(Map<String, dynamic> data) {
@@ -1225,6 +1225,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.leaderboard => LeaderboardCard(data: widget.data, settings: _settings),
       ShareCardType.globalRank => GlobalRankCard(data: widget.data, settings: _settings),
       ShareCardType.trophyCase => TrophyCaseCard(data: widget.data, settings: _settings),
+      ShareCardType.eventAchievement => EventAchievementCard(data: widget.data, settings: _settings),
     };
   }
 
@@ -1302,6 +1303,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
       ShareCardType.leaderboard => '${widget.data['username']} ranked #${widget.data['rank']} on "${_getLeaderboardName()}" in ${widget.data['gameTitle']}! #RetroAchievements',
       ShareCardType.globalRank => '${widget.data['username']} is ranked #${widget.data['rank']} globally on RetroAchievements with ${widget.data['points']} points! #RetroAchievements',
       ShareCardType.trophyCase => _getTrophyCaseShareText(),
+      ShareCardType.eventAchievement => _getEventAchievementShareText(),
     };
   }
 
@@ -1323,6 +1325,21 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> with TickerPr
     if (title.isNotEmpty) return title;
     if (description.isNotEmpty) return description;
     return 'Leaderboard';
+  }
+
+  String _getEventAchievementShareText() {
+    final username = widget.data['username'] ?? 'Player';
+    final achievementTitle = widget.data['achievementTitle'] ?? 'Achievement';
+    final gameTitle = widget.data['gameTitle'] ?? '';
+    final eventType = widget.data['eventType'] ?? 'Week'; // 'Week' or 'Month'
+    final dateEarned = widget.data['dateEarned'] ?? '';
+
+    final eventLabel = eventType == 'Month' ? 'Achievement of the Month' : 'Achievement of the Week';
+
+    if (dateEarned.isNotEmpty) {
+      return '$username earned the $eventLabel "$achievementTitle" in $gameTitle on $dateEarned! #RetroAchievements';
+    }
+    return '$username earned the $eventLabel "$achievementTitle" in $gameTitle! #RetroAchievements';
   }
 }
 
