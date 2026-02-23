@@ -12,6 +12,7 @@ import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/game_cache_provider.dart';
 import 'presentation/screens/settings/settings_provider.dart';
 import 'presentation/widgets/dual_screen_fab.dart';
+import 'presentation/providers/bottom_nav_provider.dart';
 import 'services/widget_service.dart';
 import 'services/notification_service.dart';
 import 'services/background_sync_service.dart';
@@ -200,12 +201,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
           result = Stack(
             children: [
               result,
-              // DualScreenFAB on right side, above bottom nav bar
+              // DualScreenFAB on right side, position adjusts based on bottom nav visibility
               // (scroll-to-top FABs are on left side)
-              const Positioned(
-                right: 16,
-                bottom: 90, // Above bottom navigation bar (~80px)
-                child: DualScreenFAB(),
+              ValueListenableBuilder<bool>(
+                valueListenable: BottomNavNotifier.instance,
+                builder: (context, hasBottomNav, child) {
+                  return Positioned(
+                    right: 16,
+                    // When bottom nav is visible (home screen), position above it
+                    // Otherwise use standard FAB position
+                    bottom: hasBottomNav ? 90 : 16,
+                    child: child!,
+                  );
+                },
+                child: const DualScreenFAB(),
               ),
             ],
           );

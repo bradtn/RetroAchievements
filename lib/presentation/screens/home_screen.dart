@@ -7,6 +7,7 @@ import '../../data/cache/game_cache.dart';
 import '../../services/widget_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
+import '../providers/bottom_nav_provider.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/ra_status_banner.dart';
 import 'settings_screen.dart';
@@ -68,6 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       debugPrint('HomeScreen: Running on secondary display, forcing companion mode OFF');
       _dualScreen.setCompanionModeActive(false);
       setState(() => _isCompanionModeActive = false);
+      BottomNavNotifier.instance.setVisible(true); // Bottom nav visible
       return;
     }
 
@@ -76,7 +78,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final recentSwitch = await _dualScreen.wasModeSwitchedRecently();
     if (recentSwitch) {
       debugPrint('HomeScreen: Recent mode switch detected, skipping auto-companion');
-      setState(() => _isCompanionModeActive = _dualScreen.isCompanionModeActive);
+      final active = _dualScreen.isCompanionModeActive;
+      setState(() => _isCompanionModeActive = active);
+      BottomNavNotifier.instance.setVisible(!active); // Visible when not in companion mode
       return;
     }
 
@@ -87,11 +91,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _dualScreen.setCompanionModeActive(true);
       await _dualScreen.showOnSecondary(route: '/secondary');
       setState(() => _isCompanionModeActive = true);
+      BottomNavNotifier.instance.setVisible(false); // Nav hidden in companion mode
+    } else {
+      // No secondary display, bottom nav is visible
+      BottomNavNotifier.instance.setVisible(true);
     }
   }
 
   @override
   void dispose() {
+    // Mark bottom nav as not visible when leaving home screen
+    BottomNavNotifier.instance.setVisible(false);
     _dualScreen.removeCompanionModeListener(_onCompanionModeChanged);
     _dualScreen.removeSecondaryEventListener(_onSecondaryEvent);
     super.dispose();
@@ -100,6 +110,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _onCompanionModeChanged(bool active) {
     if (mounted) {
       setState(() => _isCompanionModeActive = active);
+      // Update bottom nav visibility for DualScreenFAB positioning
+      BottomNavNotifier.instance.setVisible(!active);
       // Send current tab to secondary when companion mode activates
       if (active) {
         _dualScreen.sendNavigationEvent(_currentIndex);
