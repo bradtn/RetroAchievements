@@ -1,22 +1,29 @@
 #!/bin/sh
 
+# Print each command before executing (for debugging)
+set -x
 # Fail on error
 set -e
 
-echo "📦 Installing Flutter..."
+echo "=== CI POST CLONE START ==="
+echo "CI_PRIMARY_REPOSITORY_PATH: $CI_PRIMARY_REPOSITORY_PATH"
+echo "HOME: $HOME"
+echo "PWD: $(pwd)"
 
-# Clone Flutter SDK
-git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
-export PATH="$PATH:$HOME/flutter/bin"
+# Install Flutter
+echo "=== INSTALLING FLUTTER ==="
+FLUTTER_HOME="$HOME/flutter"
+git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_HOME"
+export PATH="$PATH:$FLUTTER_HOME/bin"
 
-echo "🔍 Flutter version:"
+echo "=== FLUTTER VERSION ==="
 flutter --version
 
-echo "📥 Getting dependencies..."
-cd $CI_PRIMARY_REPOSITORY_PATH
+echo "=== FLUTTER PUB GET ==="
+cd "$CI_PRIMARY_REPOSITORY_PATH"
 flutter pub get
 
-echo "🍎 Generating iOS build files..."
+echo "=== FLUTTER BUILD IOS ==="
 flutter build ios --release --no-codesign
 
-echo "✅ Flutter setup complete!"
+echo "=== CI POST CLONE COMPLETE ==="
