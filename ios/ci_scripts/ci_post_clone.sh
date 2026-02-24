@@ -1,29 +1,21 @@
 #!/bin/sh
 
-# Print each command before executing (for debugging)
-set -x
-# Fail on error
-set -e
+echo "STEP 1: Script started"
 
-echo "=== CI POST CLONE START ==="
-echo "CI_PRIMARY_REPOSITORY_PATH: $CI_PRIMARY_REPOSITORY_PATH"
-echo "HOME: $HOME"
-echo "PWD: $(pwd)"
+echo "STEP 2: Installing Flutter"
+git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
 
-# Install Flutter
-echo "=== INSTALLING FLUTTER ==="
-FLUTTER_HOME="$HOME/flutter"
-git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_HOME"
-export PATH="$PATH:$FLUTTER_HOME/bin"
+echo "STEP 3: Setting PATH"
+export PATH="$PATH:$HOME/flutter/bin"
 
-echo "=== FLUTTER VERSION ==="
-flutter --version
+echo "STEP 4: Flutter doctor"
+flutter doctor -v
 
-echo "=== FLUTTER PUB GET ==="
+echo "STEP 5: Pub get"
 cd "$CI_PRIMARY_REPOSITORY_PATH"
 flutter pub get
 
-echo "=== FLUTTER BUILD IOS ==="
+echo "STEP 6: Building iOS"
 flutter build ios --release --no-codesign
 
-echo "=== CI POST CLONE COMPLETE ==="
+echo "STEP 7: Done"
