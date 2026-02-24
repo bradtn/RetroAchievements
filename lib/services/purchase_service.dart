@@ -77,6 +77,9 @@ class PurchaseService {
   Function(bool success)? onPurchaseComplete;
   Function()? onPurchaseRefunded;
 
+  // Completer for awaiting purchase result
+  Completer<PurchaseResult>? _purchaseCompleter;
+
   // Prefs keys
   static const String _keyPurchaseDate = 'premium_purchase_date';
   static const String _keyPurchaseToken = 'premium_purchase_token';
@@ -153,15 +156,28 @@ class PurchaseService {
     for (final purchase in purchaseDetailsList) {
       if (purchase.status == PurchaseStatus.pending) {
         _purchasePending = true;
+      } else if (purchase.status == PurchaseStatus.canceled) {
+        // User cancelled the purchase
+        if (kDebugMode) print('Purchase cancelled by user');
+        _purchaseCompleter?.complete(
+            PurchaseResult.error(PurchaseErrorType.paymentCancelled));
+        _purchaseCompleter = null;
+        onPurchaseComplete?.call(false);
+        _purchasePending = false;
       } else {
         if (purchase.status == PurchaseStatus.error) {
           if (kDebugMode) print('Purchase error: ${purchase.error}');
+          _purchaseCompleter?.complete(
+              PurchaseResult.error(PurchaseErrorType.unknown, purchase.error?.message));
+          _purchaseCompleter = null;
           onPurchaseComplete?.call(false);
         } else if (purchase.status == PurchaseStatus.purchased ||
             purchase.status == PurchaseStatus.restored) {
           if (purchase.productID == kPremiumProductId) {
             foundValidPurchase = true;
             await _verifyAndDeliverProduct(purchase);
+            _purchaseCompleter?.complete(PurchaseResult.success());
+            _purchaseCompleter = null;
           }
         }
 
@@ -310,14 +326,28 @@ class PurchaseService {
 
     final purchaseParam = PurchaseParam(productDetails: product);
 
+    // Create a completer to await the actual purchase result from the stream
+    _purchaseCompleter = Completer<PurchaseResult>();
+
     try {
-      final success = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
-      if (success) {
-        return PurchaseResult.success();
-      } else {
-        return PurchaseResult.error(PurchaseErrorType.paymentCancelled);
+      final started = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      if (!started) {
+        _purchaseCompleter = null;
+        return PurchaseResult.error(PurchaseErrorType.unknown, 'Failed to start purchase');
       }
+
+      // Wait for the purchase stream to complete (success, cancel, or error)
+      // Timeout after 5 minutes in case something goes wrong
+      final result = await _purchaseCompleter!.future.timeout(
+        const Duration(minutes: 5),
+        onTimeout: () {
+          _purchaseCompleter = null;
+          return PurchaseResult.error(PurchaseErrorType.unknown, 'Purchase timed out');
+        },
+      );
+      return result;
     } catch (e) {
+      _purchaseCompleter = null;
       final errorStr = e.toString().toLowerCase();
       if (errorStr.contains('already owned') || errorStr.contains('already purchased')) {
         return PurchaseResult.error(PurchaseErrorType.alreadyOwned);
