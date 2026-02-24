@@ -23,12 +23,9 @@ class AdService {
     if (_isInitialized) return;
 
     // On iOS, we'll request ATT permission separately after app is fully visible
-    // For now, just initialize AdMob - ATT will be requested later
     if (Platform.isIOS) {
-      // Schedule ATT request after the app is fully rendered
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _requestTrackingAuthorizationDelayed();
-      });
+      // Don't schedule here - ATT will be requested from the UI layer
+      // after the app is fully visible and the user has context
     } else {
       // Android doesn't require ATT
       _canShowPersonalizedAds = true;
@@ -42,14 +39,11 @@ class AdService {
     }
   }
 
-  /// Request ATT with proper delay after app is visible
-  Future<void> _requestTrackingAuthorizationDelayed() async {
+  /// Request ATT permission - call this from UI after app is fully visible
+  Future<void> requestTrackingPermission() async {
+    if (!Platform.isIOS) return;
     if (_hasRequestedATT) return;
     _hasRequestedATT = true;
-
-    // Wait for app to be fully visible and interactive
-    // Apple recommends showing ATT after user has context about the app
-    await Future.delayed(const Duration(seconds: 2));
 
     await _requestTrackingAuthorization();
   }

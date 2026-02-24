@@ -16,6 +16,7 @@ import 'presentation/providers/bottom_nav_provider.dart';
 import 'services/widget_service.dart';
 import 'services/notification_service.dart';
 import 'services/background_sync_service.dart';
+import 'services/ad_service.dart';
 
 /// Global navigator key for widget navigation
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -34,6 +35,7 @@ class RetroTrackerApp extends ConsumerStatefulWidget {
 
 class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
   bool _hasRequestedPermission = false;
+  bool _hasRequestedATT = false;
   bool _hasTriggeredCacheDownload = false;
   bool _hasTriggeredWidgetSync = false;
 
@@ -69,6 +71,20 @@ class _RetroTrackerAppState extends ConsumerState<RetroTrackerApp> {
       final notificationService = NotificationService();
       await notificationService.requestPermissions();
     }
+
+    // Request ATT after notification permission (with delay for visibility)
+    _requestATTPermission();
+  }
+
+  Future<void> _requestATTPermission() async {
+    if (_hasRequestedATT) return;
+    _hasRequestedATT = true;
+
+    // Wait for app to be fully visible and interactive
+    // Apple requires the app to be in foreground and visible
+    await Future.delayed(const Duration(seconds: 1));
+
+    await AdService().requestTrackingPermission();
   }
 
   /// Automatically download game database in the background if not already cached

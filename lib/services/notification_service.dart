@@ -51,10 +51,11 @@ class NotificationService {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
     // iOS settings - include foreground presentation options
+    // Note: requestPermission is false here - we request separately in requestPermissions()
     const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
       // Show notifications even when app is in foreground
       defaultPresentAlert: true,
       defaultPresentBadge: true,
