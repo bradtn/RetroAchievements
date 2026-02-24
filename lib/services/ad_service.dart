@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
@@ -11,6 +12,7 @@ class AdService {
 
   bool _isInitialized = false;
   bool _canShowPersonalizedAds = false;
+  bool _hasRequestedATT = false;
 
   /// Whether personalized ads can be shown (user granted tracking permission)
   bool get canShowPersonalizedAds => _canShowPersonalizedAds;
@@ -20,9 +22,13 @@ class AdService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Request App Tracking Transparency permission on iOS
+    // On iOS, we'll request ATT permission separately after app is fully visible
+    // For now, just initialize AdMob - ATT will be requested later
     if (Platform.isIOS) {
-      await _requestTrackingAuthorization();
+      // Schedule ATT request after the app is fully rendered
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _requestTrackingAuthorizationDelayed();
+      });
     } else {
       // Android doesn't require ATT
       _canShowPersonalizedAds = true;
@@ -36,33 +42,55 @@ class AdService {
     }
   }
 
+  /// Request ATT with proper delay after app is visible
+  Future<void> _requestTrackingAuthorizationDelayed() async {
+    if (_hasRequestedATT) return;
+    _hasRequestedATT = true;
+
+    // Wait for app to be fully visible and interactive
+    // Apple recommends showing ATT after user has context about the app
+    await Future.delayed(const Duration(seconds: 2));
+
+    await _requestTrackingAuthorization();
+  }
+
   /// Request App Tracking Transparency authorization on iOS
   Future<void> _requestTrackingAuthorization() async {
     try {
+      if (kDebugMode) {
+        print('ATT: Checking tracking authorization status...');
+      }
+
       // Check current status first
       final status = await AppTrackingTransparency.trackingAuthorizationStatus;
 
+      if (kDebugMode) {
+        print('ATT: Current status = $status');
+      }
+
       if (status == TrackingStatus.notDetermined) {
-        // Small delay to ensure app is fully loaded (Apple recommendation)
-        await Future.delayed(const Duration(milliseconds: 500));
+        if (kDebugMode) {
+          print('ATT: Status not determined, requesting authorization...');
+        }
 
         // Request authorization
         final result = await AppTrackingTransparency.requestTrackingAuthorization();
         _canShowPersonalizedAds = result == TrackingStatus.authorized;
 
         if (kDebugMode) {
-          print('ATT request result: $result');
+          print('ATT: Request result = $result, personalized ads = $_canShowPersonalizedAds');
         }
       } else {
         _canShowPersonalizedAds = status == TrackingStatus.authorized;
 
         if (kDebugMode) {
-          print('ATT status already set: $status');
+          print('ATT: Status already set to $status, personalized ads = $_canShowPersonalizedAds');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (kDebugMode) {
-        print('ATT request error: $e');
+        print('ATT: Error requesting authorization: $e');
+        print('ATT: Stack trace: $stackTrace');
       }
       // Default to non-personalized ads on error
       _canShowPersonalizedAds = false;
