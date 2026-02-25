@@ -422,34 +422,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         child: MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-          child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (i) {
+          child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (i) {
             setState(() => _currentIndex = i);
             // Sync to secondary if companion mode is active
             if (_isCompanionModeActive) {
               _dualScreen.sendNavigationEvent(i);
             }
           },
-          destinations: [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: Colors.grey.shade600),
-              selectedIcon: Icon(Icons.home, color: Theme.of(context).colorScheme.primary),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: Theme.of(context).colorScheme.primary,
+          unselectedItemColor: Colors.grey.shade600,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
               label: 'Home',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.explore_outlined, color: Colors.grey.shade600),
-              selectedIcon: Icon(Icons.explore, color: Theme.of(context).colorScheme.primary),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore_outlined),
+              activeIcon: Icon(Icons.explore),
               label: 'Explore',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.emoji_events_outlined, color: Colors.grey.shade600),
-              selectedIcon: Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.emoji_events_outlined),
+              activeIcon: Icon(Icons.emoji_events),
               label: 'Achievements',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined, color: Colors.grey.shade600),
-              selectedIcon: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
               label: 'Settings',
             ),
           ],

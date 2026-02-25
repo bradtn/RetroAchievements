@@ -62,11 +62,16 @@ class StatCard extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: compact ? 9 : null,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: compact ? 9 : null,
+                ),
               ),
             ),
           ],

@@ -1061,11 +1061,14 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
       initialChildSize: 0.6,
       minChildSize: 0.3,
       maxChildSize: 0.9,
-      builder: (context, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey[900] : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (context, scrollController) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
         child: Column(
           children: [
             // Handle bar
@@ -1244,6 +1247,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );
