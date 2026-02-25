@@ -1,0 +1,50 @@
+{
+  "eventName": "RA Roulette 2026",
+  "eventId": 200,
+  "badgeThreshold": 52,
+  "maxPoints": 156,
+  "startDate": "2026-02-07T00:00:00.000000Z",
+  "endDate": "2027-02-06T23:59:59.000000Z",
+  "weeks": [
+    {
+      "week": 1,
+      "startDate": "2026-02-07T00:00:00.000000Z",
+      "endDate": "2026-02-13T23:59:59.000000Z",
+      "achievements": [
+        {
+          "achievementId": 0,
+          "achievementTitle": "TBD",
+          "achievementDescription": "TBD",
+          "achievementBadgeName": "00000",
+          "gameId": 0,
+          "gameTitle": "TBD",
+          "gameImageIcon": "",
+          "consoleID": 0,
+          "consoleName": "TBD"
+        },
+        {
+          "achievementId": 0,
+          "achievementTitle": "TBD",
+          "achievementDescription": "TBD",
+          "achievementBadgeName": "00000",
+          "gameId": 0,
+          "gameTitle": "TBD",
+          "gameImageIcon": "",
+          "consoleID": 0,
+          "consoleName": "TBD"
+        },
+        {
+          "achievementId": 0,
+          "achievementTitle": "TBD",
+          "achievementDescription": "TBD",
+          "achievementBadgeName": "00000",
+          "gameId": 0,
+          "gameTitle": "TBD",
+          "gameImageIcon": "",
+          "consoleID": 0,
+          "consoleName": "TBD"
+        }
+      ]
+    }
+  ]
+}
