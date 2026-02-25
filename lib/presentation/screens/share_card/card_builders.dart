@@ -3200,3 +3200,180 @@ class EventAchievementCard extends StatelessWidget {
     );
   }
 }
+
+/// Roulette share card - shows RA Roulette 2026 progress
+class RouletteCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final ShareCardSettings settings;
+
+  const RouletteCard({super.key, required this.data, required this.settings});
+
+  @override
+  Widget build(BuildContext context) {
+    final eventName = data['eventName'] ?? 'RA Roulette 2026';
+    final totalPoints = data['totalPoints'] ?? 0;
+    final badgeThreshold = data['badgeThreshold'] ?? 52;
+    final maxPoints = data['maxPoints'] ?? 156;
+    final hasBadge = data['hasBadge'] ?? false;
+    final isPerfect = data['isPerfect'] ?? false;
+    final username = data['username'] ?? 'Player';
+
+    final progress = totalPoints / badgeThreshold;
+
+    // Determine card style based on progress
+    final List<Color> gradientColors;
+    final String statusText;
+    final IconData statusIcon;
+
+    if (isPerfect) {
+      gradientColors = [const Color(0xFFFFD700), const Color(0xFFFF8C00), const Color(0xFFFF6347)];
+      statusText = 'PERFECT SCORE';
+      statusIcon = Icons.auto_awesome;
+    } else if (hasBadge) {
+      gradientColors = [const Color(0xFF4CAF50), const Color(0xFF2E7D32), const Color(0xFF1B5E20)];
+      statusText = 'BADGE EARNED';
+      statusIcon = Icons.verified;
+    } else {
+      gradientColors = [const Color(0xFF9C27B0), const Color(0xFF7B1FA2), const Color(0xFF4A148C)];
+      statusText = 'IN PROGRESS';
+      statusIcon = Icons.casino;
+    }
+
+    return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.casino, color: Colors.white, size: 32),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      eventName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      username,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Status badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(statusIcon, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  statusText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Points display
+          Text(
+            '$totalPoints',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 64,
+              fontWeight: FontWeight.bold,
+              height: 1,
+            ),
+          ),
+          Text(
+            'of $badgeThreshold points for badge',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Progress bar
+          Stack(
+            children: [
+              Container(
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: progress.clamp(0.0, 1.0),
+                child: Container(
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${(progress * 100).toStringAsFixed(0)}% to badge',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 12,
+                ),
+              ),
+              Text(
+                'Max: $maxPoints pts',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Branding
+          Branding(fontStyle: settings.fontStyle, logoSize: 50),
+        ],
+      );
+  }
+}

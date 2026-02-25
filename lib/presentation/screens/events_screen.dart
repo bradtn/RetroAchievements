@@ -29,7 +29,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 2,
+      length: 3,
       vsync: this,
       initialIndex: widget.initialTab,
     );
@@ -51,6 +51,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
           tabs: const [
             Tab(text: 'Weekly'),
             Tab(text: 'Monthly'),
+            Tab(text: 'Roulette'),
           ],
         ),
       ),
@@ -59,6 +60,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
         children: const [
           _AotwTabContent(),
           _AotmTabContent(),
+          _RouletteTabContent(),
         ],
       ),
     );
@@ -1573,6 +1575,625 @@ class _SwapCard extends StatelessWidget {
                 ),
               ),
               Icon(Icons.chevron_right, color: Colors.grey[500], size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Roulette Tab Content - RA Roulette 2026
+// ============================================================================
+
+class _RouletteTabContent extends ConsumerStatefulWidget {
+  const _RouletteTabContent();
+
+  @override
+  ConsumerState<_RouletteTabContent> createState() => _RouletteTabContentState();
+}
+
+class _RouletteTabContentState extends ConsumerState<_RouletteTabContent> {
+  Map<String, dynamic>? _rouletteData;
+  bool _isLoading = true;
+  String? _error;
+
+  // Track which achievements user has earned: achievementId -> earned date
+  Map<int, String?> _earnedAchievements = {};
+  int _totalPoints = 0;
+
+  // Expanded weeks (current week is always expanded)
+  Set<int> _expandedWeeks = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final api = ref.read(apiDataSourceProvider);
+    final data = await api.getRoulette2026();
+
+    if (data != null) {
+      // Check which achievements user has earned
+      await _checkUserProgress(api, data);
+    }
+
+    if (mounted) {
+      setState(() {
+        _rouletteData = data;
+        _isLoading = false;
+        if (data == null) _error = 'Failed to load Roulette data';
+      });
+    }
+  }
+
+  Future<void> _checkUserProgress(dynamic api, Map<String, dynamic> data) async {
+    final weeks = data['weeks'] as List<dynamic>? ?? [];
+    final earnedMap = <int, String?>{};
+    int points = 0;
+
+    // Group achievements by gameId to minimize API calls
+    final gameAchievements = <int, List<int>>{};
+    for (final week in weeks) {
+      if (week is Map<String, dynamic>) {
+        final achievements = week['achievements'] as List<dynamic>? ?? [];
+        for (final ach in achievements) {
+          if (ach is Map<String, dynamic>) {
+            final gameId = ach['gameId'] as int? ?? 0;
+            final achId = ach['achievementId'] as int? ?? 0;
+            if (gameId > 0 && achId > 0) {
+              gameAchievements.putIfAbsent(gameId, () => []).add(achId);
+            }
+          }
+        }
+      }
+    }
+
+    // Fetch game progress for each game
+    for (final entry in gameAchievements.entries) {
+      final gameId = entry.key;
+      final achIds = entry.value;
+
+      try {
+        final gameDetails = await api.getGameInfoWithProgress(gameId);
+        if (gameDetails != null) {
+          final achievements = gameDetails['Achievements'] as Map<String, dynamic>?;
+          if (achievements != null) {
+            for (final achId in achIds) {
+              final achData = achievements[achId.toString()];
+              if (achData is Map<String, dynamic>) {
+                final dateEarned = achData['DateEarned'] ?? achData['DateEarnedHardcore'];
+                if (dateEarned != null && dateEarned.toString().isNotEmpty) {
+                  earnedMap[achId] = dateEarned.toString();
+                  points++;
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      // Small delay to avoid rate limiting
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    if (mounted) {
+      setState(() {
+        _earnedAchievements = earnedMap;
+        _totalPoints = points;
+      });
+    }
+  }
+
+  int _getCurrentWeekNumber() {
+    final weeks = _rouletteData?['weeks'] as List<dynamic>? ?? [];
+    final now = DateTime.now().toUtc();
+
+    for (int i = 0; i < weeks.length; i++) {
+      final week = weeks[i];
+      if (week is Map<String, dynamic>) {
+        final startStr = week['startDate'] as String?;
+        final endStr = week['endDate'] as String?;
+        if (startStr != null && endStr != null) {
+          try {
+            final start = DateTime.parse(startStr);
+            final end = DateTime.parse(endStr);
+            if (now.isAfter(start) && now.isBefore(end)) {
+              return week['week'] as int? ?? (i + 1);
+            }
+          } catch (_) {}
+        }
+      }
+    }
+    return weeks.isEmpty ? 0 : (weeks.last as Map<String, dynamic>?)?['week'] ?? weeks.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null || _rouletteData == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(_error ?? 'Unknown error'),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: _loadData, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    final badgeThreshold = _rouletteData!['badgeThreshold'] as int? ?? 52;
+    final maxPoints = _rouletteData!['maxPoints'] as int? ?? 156;
+    final weeks = _rouletteData!['weeks'] as List<dynamic>? ?? [];
+    final currentWeekNum = _getCurrentWeekNumber();
+    final hasBadge = _totalPoints >= badgeThreshold;
+    final isPerfect = _totalPoints >= maxPoints;
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            _buildHeader(context, currentWeekNum, 52), // 52 weeks in full event
+            const SizedBox(height: 16),
+
+            // Progress Card
+            _buildProgressCard(context, badgeThreshold, maxPoints, hasBadge, isPerfect),
+            const SizedBox(height: 16),
+
+            // Share Button
+            _buildShareButton(context, hasBadge, isPerfect, badgeThreshold, maxPoints),
+            const SizedBox(height: 24),
+
+            // Weeks List
+            Text(
+              'Weekly Achievements',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            ...weeks.reversed.map((week) {
+              if (week is! Map<String, dynamic>) return const SizedBox();
+              final weekNum = week['week'] as int? ?? 0;
+              final isCurrentWeek = weekNum == currentWeekNum;
+              final isExpanded = isCurrentWeek || _expandedWeeks.contains(weekNum);
+              return _buildWeekCard(context, week, isCurrentWeek, isExpanded);
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, int currentWeek, int totalWeeks) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.purple.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.casino, color: Colors.purple, size: 32),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'RA Roulette 2026',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Week $currentWeek of $totalWeeks',
+                style: TextStyle(color: Colors.grey[500]),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressCard(BuildContext context, int threshold, int max, bool hasBadge, bool isPerfect) {
+    final progress = _totalPoints / threshold;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Your Progress',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (isPerfect)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Colors.amber, Colors.orange]),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text('PERFECT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                      ],
+                    ),
+                  )
+                else if (hasBadge)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text('BADGE EARNED', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Progress bar to badge
+            Stack(
+              children: [
+                Container(
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                FractionallySizedBox(
+                  widthFactor: progress.clamp(0.0, 1.0),
+                  child: Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isPerfect
+                            ? [Colors.amber, Colors.orange]
+                            : hasBadge
+                                ? [Colors.green, Colors.teal]
+                                : [Colors.purple, Colors.deepPurple],
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$_totalPoints / $threshold points',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: hasBadge ? Colors.green : null,
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).toStringAsFixed(0)}% to badge',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
+              ],
+            ),
+
+            if (_totalPoints > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Total possible: $_totalPoints / $max',
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareButton(BuildContext context, bool hasBadge, bool isPerfect, int threshold, int max) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ShareCardScreen(
+                type: ShareCardType.roulette,
+                data: {
+                  'eventName': 'RA Roulette 2026',
+                  'totalPoints': _totalPoints,
+                  'badgeThreshold': threshold,
+                  'maxPoints': max,
+                  'hasBadge': hasBadge,
+                  'isPerfect': isPerfect,
+                  'username': ref.read(authProvider).username ?? '',
+                },
+              ),
+            ),
+          );
+        },
+        icon: const Icon(Icons.share),
+        label: Text(isPerfect ? 'Share Perfect Score!' : hasBadge ? 'Share Badge!' : 'Share Progress'),
+        style: FilledButton.styleFrom(
+          backgroundColor: isPerfect ? Colors.amber : hasBadge ? Colors.green : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeekCard(BuildContext context, Map<String, dynamic> week, bool isCurrentWeek, bool isExpanded) {
+    final weekNum = week['week'] as int? ?? 0;
+    final startDate = week['startDate'] as String? ?? '';
+    final achievements = week['achievements'] as List<dynamic>? ?? [];
+
+    // Count earned in this week
+    int earnedThisWeek = 0;
+    for (final ach in achievements) {
+      if (ach is Map<String, dynamic>) {
+        final achId = ach['achievementId'] as int? ?? 0;
+        if (_earnedAchievements.containsKey(achId)) {
+          earnedThisWeek++;
+        }
+      }
+    }
+
+    String dateLabel = '';
+    try {
+      final date = DateTime.parse(startDate);
+      dateLabel = '${date.month}/${date.day}';
+    } catch (_) {}
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: isCurrentWeek ? Colors.purple.withValues(alpha: 0.1) : null,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: isCurrentWeek ? null : () {
+              setState(() {
+                if (_expandedWeeks.contains(weekNum)) {
+                  _expandedWeeks.remove(weekNum);
+                } else {
+                  _expandedWeeks.add(weekNum);
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isCurrentWeek
+                          ? Colors.purple
+                          : earnedThisWeek == 3
+                              ? Colors.green
+                              : Colors.grey.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: earnedThisWeek == 3
+                          ? const Icon(Icons.check, color: Colors.white, size: 20)
+                          : Text(
+                              '$weekNum',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isCurrentWeek ? Colors.white : null,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Week $weekNum',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            if (isCurrentWeek) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'CURRENT',
+                                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        Text(
+                          dateLabel,
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '$earnedThisWeek/3',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: earnedThisWeek == 3 ? Colors.green : null,
+                    ),
+                  ),
+                  if (!isCurrentWeek) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.grey[500],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // Expanded achievements
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: achievements.map((ach) {
+                  if (ach is! Map<String, dynamic>) return const SizedBox();
+                  return _buildAchievementRow(context, ach);
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementRow(BuildContext context, Map<String, dynamic> ach) {
+    final achId = ach['achievementId'] as int? ?? 0;
+    final title = ach['achievementTitle'] as String? ?? 'Unknown';
+    final gameTitle = ach['gameTitle'] as String? ?? '';
+    final badgeName = ach['achievementBadgeName'] as String? ?? '';
+    final gameId = ach['gameId'] as int? ?? 0;
+    final isEarned = _earnedAchievements.containsKey(achId);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: InkWell(
+        onTap: gameId > 0 ? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GameDetailScreen(gameId: gameId),
+            ),
+          );
+        } : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isEarned
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isEarned
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Badge
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: ColorFiltered(
+                  colorFilter: isEarned
+                      ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                      : const ColorFilter.matrix(<double>[
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0, 0, 0, 0.5, 0,
+                        ]),
+                  child: CachedNetworkImage(
+                    imageUrl: 'https://retroachievements.org/Badge/$badgeName.png',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => Container(
+                      width: 32,
+                      height: 32,
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.emoji_events, size: 16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        color: isEarned ? null : Colors.grey[500],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      gameTitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Status
+              if (isEarned)
+                const Icon(Icons.check_circle, color: Colors.green, size: 20)
+              else
+                Icon(Icons.radio_button_unchecked, color: Colors.grey[400], size: 20),
             ],
           ),
         ),
