@@ -1,5 +1,8 @@
 name: Update Event Data
 
+permissions:
+  contents: write
+
 on:
   # Run every Saturday at 1:00 AM UTC (new Roulette week starts)
   schedule:
