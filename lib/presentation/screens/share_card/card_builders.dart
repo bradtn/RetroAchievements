@@ -84,7 +84,7 @@ class ProfileCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _buildStatBadge(Icons.stars, _formatWithCommas(points), 'Hardcore', Colors.amber),
-            _buildStatBadge(Icons.military_tech, _formatWithCommas(truePoints), 'True Points', Colors.purple[200]!),
+            _buildStatBadge(Icons.military_tech, _formatWithCommas(truePoints), 'RetroPoints', Colors.purple[200]!),
             _buildStatBadge(Icons.star_border, _formatWithCommas(softcorePoints), 'Softcore', Colors.blue),
           ],
         ),
@@ -793,7 +793,7 @@ class AchievementCard extends StatelessWidget {
                         const Icon(Icons.military_tech, color: Colors.purple, size: 12),
                         const SizedBox(width: 4),
                         Text(
-                          '$truePoints True',
+                          '$truePoints RP',
                           style: getCardTextStyle(
                             fontStyle: settings.fontStyle,
                             fontSize: 10,
@@ -1025,7 +1025,7 @@ class ComparisonCard extends StatelessWidget {
         if (!isCompact) ...[
           const SizedBox(height: 8),
           _buildComparisonRow(
-            label: 'True Points',
+            label: 'RetroPoints',
             myValue: formatNumber(myTruePoints),
             otherValue: formatNumber(otherTruePoints),
             myWins: (int.tryParse(myTruePoints.toString()) ?? 0) > (int.tryParse(otherTruePoints.toString()) ?? 0),
@@ -2508,7 +2508,7 @@ class GlobalRankCard extends StatelessWidget {
               children: [
                 _buildStatItem(Icons.stars, _formatNumber(points), 'Points', Colors.amber, isCompact),
                 SizedBox(width: isCompact ? 20 : 30),
-                _buildStatItem(Icons.military_tech, _formatNumber(truePoints), 'True Points', Colors.purple, isCompact),
+                _buildStatItem(Icons.military_tech, _formatNumber(truePoints), 'RetroPoints', Colors.purple, isCompact),
               ],
             ),
           ],
@@ -3124,7 +3124,7 @@ class EventAchievementCard extends StatelessWidget {
                         const Icon(Icons.military_tech, color: Colors.purple, size: 12),
                         const SizedBox(width: 4),
                         Text(
-                          '$truePoints True',
+                          '$truePoints RP',
                           style: getCardTextStyle(
                             fontStyle: settings.fontStyle,
                             fontSize: 10,

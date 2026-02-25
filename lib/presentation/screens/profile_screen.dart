@@ -306,7 +306,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: AnimatedStatCard(
             icon: Icons.military_tech,
             targetValue: truePointsInt,
-            label: 'True Points',
+            label: 'RetroPoints',
             color: Colors.purple,
             delay: 100,
             compact: compact,

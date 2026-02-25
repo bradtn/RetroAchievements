@@ -285,7 +285,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
             SizedBox(width: compact ? 6 : 8),
             Expanded(child: StatCard(
               icon: Icons.military_tech,
-              label: 'True Points',
+              label: 'RetroPoints',
               value: '$truePoints',
               color: Colors.purple,
               compact: compact,

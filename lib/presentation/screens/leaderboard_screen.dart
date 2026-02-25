@@ -270,7 +270,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   ),
                   _ThemedStatItem(
                     icon: Icons.military_tech,
-                    label: 'True Points',
+                    label: 'RetroPoints',
                     value: _formatNumber(truePoints),
                     color: Colors.purple,
                     textColor: textColor,

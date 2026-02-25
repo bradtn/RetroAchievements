@@ -109,6 +109,7 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
       final achievement = data['Achievement'] as Map<String, dynamic>?;
       final gameId = game?['ID'];
       final achievementId = achievement?['ID']?.toString();
+      final currentUsername = ref.read(authProvider).username?.toLowerCase() ?? '';
 
       if (gameId != null) {
         final id = gameId is int ? gameId : int.tryParse(gameId.toString()) ?? 0;
@@ -129,6 +130,25 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
                   userEarnedDate = _formatDateTime(dateEarned.toString());
                 }
               }
+            }
+          }
+        }
+      }
+
+      // Fallback: Check AOTW Unlocks list if game progress API didn't show earned
+      // (handles RA API sync issues where unlock appears in AOTW but not game progress)
+      if (!userHasEarned && currentUsername.isNotEmpty) {
+        final unlocks = data['Unlocks'] as List<dynamic>? ?? [];
+        for (final unlock in unlocks) {
+          if (unlock is Map<String, dynamic>) {
+            final unlockUser = (unlock['User'] as String?)?.toLowerCase() ?? '';
+            if (unlockUser == currentUsername) {
+              userHasEarned = true;
+              final dateAwarded = unlock['DateAwarded'];
+              if (dateAwarded != null) {
+                userEarnedDate = _formatDateTime(dateAwarded.toString());
+              }
+              break;
             }
           }
         }
@@ -319,7 +339,7 @@ class _AotwTabContentState extends ConsumerState<_AotwTabContent> {
                             runSpacing: 8,
                             children: [
                               _buildStatChip(Icons.stars, '$achPoints pts', Colors.amber[400]!),
-                              _buildStatChip(Icons.military_tech, '$achTrueRatio True', Colors.purple[300]!),
+                              _buildStatChip(Icons.military_tech, '$achTrueRatio RP', Colors.purple[300]!),
                               _buildStatChip(Icons.percent, '$unlockRate% unlocked', Colors.green[400]!),
                             ],
                           ),
@@ -740,6 +760,28 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
           }
         }
       }
+
+      // Fallback: Check unlock list if game progress API didn't show earned
+      // (handles RA API sync issues where unlock appears in unlocks but not game progress)
+      if (!userHasEarned && unlockData != null) {
+        final currentUsername = ref.read(authProvider).username?.toLowerCase() ?? '';
+        if (currentUsername.isNotEmpty) {
+          final unlocks = unlockData['Unlocks'] as List<dynamic>? ?? [];
+          for (final unlock in unlocks) {
+            if (unlock is Map<String, dynamic>) {
+              final unlockUser = (unlock['User'] as String?)?.toLowerCase() ?? '';
+              if (unlockUser == currentUsername) {
+                userHasEarned = true;
+                final dateAwarded = unlock['DateAwarded'];
+                if (dateAwarded != null) {
+                  userEarnedDate = _formatDateTime(dateAwarded.toString());
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
     }
 
     if (mounted) {
@@ -915,7 +957,7 @@ class _AotmTabContentState extends ConsumerState<_AotmTabContent> {
                             runSpacing: 8,
                             children: [
                               _buildStatChip(Icons.stars, '$achPoints pts', Colors.amber[400]!),
-                              _buildStatChip(Icons.military_tech, '$achTrueRatio True', Colors.purple[300]!),
+                              _buildStatChip(Icons.military_tech, '$achTrueRatio RP', Colors.purple[300]!),
                               _buildStatChip(Icons.percent, '$unlockRate% unlocked', Colors.green[400]!),
                             ],
                           ),

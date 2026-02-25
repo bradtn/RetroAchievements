@@ -217,7 +217,7 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
           otherValue: _otherProfile!['TotalPoints'] ?? 0,
         ),
         ComparisonRow(
-          label: 'True Points',
+          label: 'RetroPoints',
           icon: Icons.military_tech,
           myValue: _myProfile!['TotalTruePoints'] ?? 0,
           otherValue: _otherProfile!['TotalTruePoints'] ?? 0,
@@ -309,7 +309,7 @@ class _UserCompareScreenState extends ConsumerState<UserCompareScreen> {
                 ),
                 StatRow(
                   icon: Icons.military_tech,
-                  label: 'True Points',
+                  label: 'RetroPoints',
                   value: '${_myProfile!['TotalTruePoints'] ?? 0}',
                   color: Colors.purple,
                 ),

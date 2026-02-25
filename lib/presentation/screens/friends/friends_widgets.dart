@@ -117,7 +117,7 @@ class FriendTile extends StatelessWidget {
                     child: StatChip(
                       icon: Icons.military_tech,
                       value: formatNumber(truePoints),
-                      label: 'True Pts',
+                      label: 'RP',
                       color: Colors.purple,
                     ),
                   ),
