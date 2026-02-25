@@ -1,0 +1,87 @@
+name: Update Event Data
+
+on:
+  # Run every Saturday at 1:00 AM UTC (new Roulette week starts)
+  schedule:
+    - cron: '0 1 * * 6'
+  # Also run on the 1st of each month at 1:00 AM UTC (new AotM starts)
+  # Note: The cron will run both on Saturdays and 1st of month
+  # Run manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      scraper:
+        description: 'Which scraper to run'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - aotm
+          - roulette
+
+jobs:
+  update-aotm:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.scraper == 'both' || github.event.inputs.scraper == 'aotm' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd scripts
+          npm init -y 2>/dev/null || true
+          npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+
+      - name: Run AotM scraper
+        env:
+          RA_USERNAME: ${{ secrets.RA_USERNAME }}
+          RA_API_KEY: ${{ secrets.RA_API_KEY }}
+        run: node scripts/scrape-aotm.js
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add aotm.json
+          git diff --staged --quiet || git commit -m "Update AotM data [automated]"
+          git push
+
+  update-roulette:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.scraper == 'both' || github.event.inputs.scraper == 'roulette' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd scripts
+          npm init -y 2>/dev/null || true
+          npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+
+      - name: Run Roulette scraper
+        env:
+          RA_USERNAME: ${{ secrets.RA_USERNAME }}
+          RA_API_KEY: ${{ secrets.RA_API_KEY }}
+        run: node scripts/scrape-roulette.js
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add roulette2026.json
+          git diff --staged --quiet || git commit -m "Update Roulette 2026 data [automated]"
+          git push
