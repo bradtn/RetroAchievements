@@ -8,41 +8,121 @@
   "weeks": [
     {
       "week": 1,
-      "startDate": "2026-02-07T00:00:00.000000Z",
-      "endDate": "2026-02-13T23:59:59.000000Z",
+      "startDate": "2026-02-07T00:00:00.000Z",
+      "endDate": "2026-02-13T23:59:59.999Z",
       "achievements": [
         {
-          "achievementId": 0,
-          "achievementTitle": "TBD",
-          "achievementDescription": "TBD",
-          "achievementBadgeName": "00000",
-          "gameId": 0,
-          "gameTitle": "TBD",
-          "gameImageIcon": "",
-          "consoleID": 0,
-          "consoleName": "TBD"
+          "achievementId": 579123,
+          "achievementTitle": "Heavenly Trial",
+          "achievementDescription": "Visit the cloud-jumping special stage",
+          "achievementBadgeName": "08862",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
         },
         {
-          "achievementId": 0,
-          "achievementTitle": "TBD",
-          "achievementDescription": "TBD",
-          "achievementBadgeName": "00000",
-          "gameId": 0,
-          "gameTitle": "TBD",
-          "gameImageIcon": "",
-          "consoleID": 0,
-          "consoleName": "TBD"
+          "achievementId": 579124,
+          "achievementTitle": "Rajah",
+          "achievementDescription": "Finish Duel mode as Rajah on Easy",
+          "achievementBadgeName": "24073",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
         },
         {
-          "achievementId": 0,
-          "achievementTitle": "TBD",
-          "achievementDescription": "TBD",
-          "achievementBadgeName": "00000",
-          "gameId": 0,
-          "gameTitle": "TBD",
-          "gameImageIcon": "",
-          "consoleID": 0,
-          "consoleName": "TBD"
+          "achievementId": 579125,
+          "achievementTitle": "Kudos",
+          "achievementDescription": "Guess the word on the third try",
+          "achievementBadgeName": "537445",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        }
+      ]
+    },
+    {
+      "week": 2,
+      "startDate": "2026-02-14T00:00:00.000Z",
+      "endDate": "2026-02-20T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579126,
+          "achievementTitle": "Rare View",
+          "achievementDescription": "Get through the Area Zero in pursuit of Dr.Weil",
+          "achievementBadgeName": "185282",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        },
+        {
+          "achievementId": 579127,
+          "achievementTitle": "Fisherman",
+          "achievementDescription": "Win a game of Go Fish on Smart or higher difficulty",
+          "achievementBadgeName": "413338",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        },
+        {
+          "achievementId": 579128,
+          "achievementTitle": "Land of the Dead",
+          "achievementDescription": "Help Ozuno in underworld",
+          "achievementBadgeName": "635194",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        }
+      ]
+    },
+    {
+      "week": 3,
+      "startDate": "2026-02-21T00:00:00.000Z",
+      "endDate": "2026-02-27T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579129,
+          "achievementTitle": "Let's Get Outta Here!",
+          "achievementDescription": "Complete Stage 2",
+          "achievementBadgeName": "533459",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        },
+        {
+          "achievementId": 579130,
+          "achievementTitle": "Special Green Perfection",
+          "achievementDescription": "[S3] Get a Perfect on Special Stage 1 without using level select or debug mode",
+          "achievementBadgeName": "555684",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        },
+        {
+          "achievementId": 579131,
+          "achievementTitle": "Don't Worry Teddy!",
+          "achievementDescription": "Congratulations! You have saved Teddy and completed the game!",
+          "achievementBadgeName": "604696",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
         }
       ]
     }

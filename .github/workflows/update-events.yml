@@ -69,17 +69,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          cd scripts
-          npm init -y 2>/dev/null || true
-          npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
-
-      - name: Run Roulette scraper
+      - name: Run Roulette API scraper
         env:
           RA_USERNAME: ${{ secrets.RA_USERNAME }}
           RA_API_KEY: ${{ secrets.RA_API_KEY }}
-        run: node scripts/scrape-roulette.js
+        run: node scripts/scrape-roulette-api.js
 
       - name: Commit and push changes
         run: |
