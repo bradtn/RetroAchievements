@@ -275,27 +275,43 @@ class AchievementTile extends ConsumerWidget {
                               ],
                             ),
                           ),
-                        // Tips badge (shown when comments are cached and > 0)
-                        if (cachedCommentCount != null && cachedCommentCount > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1),
+                        // Tips badge - always show lightbulb, add count when loaded
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (cachedCommentCount != null && cachedCommentCount > 0)
+                                ? Colors.amber.withValues(alpha: 0.15)
+                                : Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: (cachedCommentCount != null && cachedCommentCount > 0)
+                                  ? Colors.amber.withValues(alpha: 0.3)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: 1,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.lightbulb, size: 10, color: Colors.amber),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                (cachedCommentCount != null && cachedCommentCount > 0)
+                                    ? Icons.lightbulb
+                                    : Icons.lightbulb_outline,
+                                size: 10,
+                                color: (cachedCommentCount != null && cachedCommentCount > 0)
+                                    ? Colors.amber
+                                    : Colors.grey,
+                              ),
+                              if (cachedCommentCount != null && cachedCommentCount > 0) ...[
                                 const SizedBox(width: 3),
                                 Text(
-                                  '$cachedCommentCount tips',
+                                  '$cachedCommentCount',
                                   style: const TextStyle(color: Colors.amber, fontSize: 9, fontWeight: FontWeight.bold),
                                 ),
                               ],
-                            ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
                   ],
@@ -394,29 +410,30 @@ class AchievementTile extends ConsumerWidget {
     final achievementId = achievement['ID'] ?? 0;
 
     final api = ref.read(apiDataSourceProvider);
+    final commentNotifier = ref.read(commentCountCacheProvider.notifier);
 
     // Fetch user profile and comment count in parallel
     String? fetchedUserPic = userPic;
     int commentCount = 0;
 
-    final futures = await Future.wait([
-      if (fetchedUserPic == null || fetchedUserPic.isEmpty)
-        api.getUserProfile(username ?? '')
-      else
-        Future.value(null),
-      if (achievementId > 0)
-        api.getAchievementComments(achievementId)
-      else
-        Future.value(<Map<String, dynamic>>[]),
+    final results = await Future.wait([
+      // Fetch user profile if needed
+      (fetchedUserPic == null || fetchedUserPic.isEmpty)
+          ? api.getUserProfile(username ?? '')
+          : Future.value(null),
+      // Fetch comment count (uses cache if available)
+      achievementId > 0
+          ? commentNotifier.fetchSingle(achievementId)
+          : Future.value(null),
     ]);
 
     if (fetchedUserPic == null || fetchedUserPic.isEmpty) {
-      final profile = futures[0] as Map<String, dynamic>?;
+      final profile = results[0] as Map<String, dynamic>?;
       fetchedUserPic = profile?['UserPic'] ?? '';
     }
 
-    final comments = futures.length > 1 ? futures.last as List<Map<String, dynamic>> : <Map<String, dynamic>>[];
-    commentCount = comments.length;
+    final fetchedCount = results[1] as int?;
+    commentCount = fetchedCount ?? 0;
 
     if (!context.mounted) return;
 
@@ -940,6 +957,10 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
         _comments = comments;
         _isLoading = false;
       });
+      // Update cache with successful fetch
+      if (comments != null) {
+        ref.read(commentCountCacheProvider.notifier).setCount(widget.achievementId, comments.length);
+      }
     }
   }
 

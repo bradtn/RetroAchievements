@@ -378,8 +378,8 @@ class RAApiDataSource {
   }
 
   /// Get comments for an achievement
-  /// Returns list of comments with user tips and tricks
-  Future<List<Map<String, dynamic>>> getAchievementComments(int achievementId) async {
+  /// Returns list of comments with user tips and tricks, or null on error
+  Future<List<Map<String, dynamic>>?> getAchievementComments(int achievementId) async {
     try {
       final response = await _dio.get(
         'API_GetComments.php',
@@ -398,9 +398,9 @@ class RAApiDataSource {
             .where((c) => c['User'] != 'Server')
             .toList();
       }
-      return [];
+      return null; // Request failed - don't cache
     } catch (e) {
-      return [];
+      return null; // Error - don't cache
     }
   }
 

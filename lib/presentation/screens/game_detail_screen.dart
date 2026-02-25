@@ -251,11 +251,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       _loadUserGameRank();
       _loadUserGameLeaderboards();
       _updateSecondaryDisplay(data);
+      // Load comment counts - persisted to disk so subsequent visits are instant
       _loadCommentCounts(data);
     }
   }
 
-  /// Fetch comment counts for achievements in the background
+  /// Queue comment count fetching for achievements (fetches one at a time)
   void _loadCommentCounts(Map<String, dynamic> data) {
     final achievements = data['Achievements'];
     if (achievements is! Map) return;
@@ -274,9 +275,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     if (achievementIds.isEmpty) return;
 
-    // Fetch counts in background - this will update the cache
-    // and the tiles will rebuild as counts come in
-    ref.read(commentCountCacheProvider.notifier).fetchCountsForAchievements(achievementIds);
+    // Queue all achievements - 200ms delay between requests avoids rate limits
+    ref.read(commentCountCacheProvider.notifier).queueAchievements(achievementIds);
   }
 
   /// Send game data to secondary display (for dual-screen devices)
