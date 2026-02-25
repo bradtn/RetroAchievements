@@ -3,13 +3,13 @@
   "eventId": 200,
   "badgeThreshold": 52,
   "maxPoints": 156,
-  "startDate": "2026-02-07T00:00:00.000000Z",
-  "endDate": "2027-02-06T23:59:59.000000Z",
+  "startDate": "2026-01-31T00:00:00.000000Z",
+  "endDate": "2027-01-30T23:59:59.000000Z",
   "weeks": [
     {
       "week": 1,
-      "startDate": "2026-02-07T00:00:00.000Z",
-      "endDate": "2026-02-13T23:59:59.999Z",
+      "startDate": "2026-01-31T00:00:00.000Z",
+      "endDate": "2026-02-06T23:59:59.999Z",
       "achievements": [
         {
           "achievementId": 579123,
@@ -48,8 +48,8 @@
     },
     {
       "week": 2,
-      "startDate": "2026-02-14T00:00:00.000Z",
-      "endDate": "2026-02-20T23:59:59.999Z",
+      "startDate": "2026-02-07T00:00:00.000Z",
+      "endDate": "2026-02-13T23:59:59.999Z",
       "achievements": [
         {
           "achievementId": 579126,
@@ -88,8 +88,8 @@
     },
     {
       "week": 3,
-      "startDate": "2026-02-21T00:00:00.000Z",
-      "endDate": "2026-02-27T23:59:59.999Z",
+      "startDate": "2026-02-14T00:00:00.000Z",
+      "endDate": "2026-02-20T23:59:59.999Z",
       "achievements": [
         {
           "achievementId": 579129,
@@ -118,6 +118,46 @@
           "achievementTitle": "Don't Worry Teddy!",
           "achievementDescription": "Congratulations! You have saved Teddy and completed the game!",
           "achievementBadgeName": "604696",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        }
+      ]
+    },
+    {
+      "week": 4,
+      "startDate": "2026-02-21T00:00:00.000Z",
+      "endDate": "2026-02-27T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579132,
+          "achievementTitle": "A True Leader",
+          "achievementDescription": "Recruit 150 Pokémon to your team.",
+          "achievementBadgeName": "309177",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        },
+        {
+          "achievementId": 579133,
+          "achievementTitle": "Stay Ahead of the Game",
+          "achievementDescription": "Pass your 40th opponent.",
+          "achievementBadgeName": "497022",
+          "gameId": 37967,
+          "gameTitle": "RA Roulette 2026",
+          "gameImageIcon": "/Images/123936.png",
+          "consoleID": 101,
+          "consoleName": "Events"
+        },
+        {
+          "achievementId": 579134,
+          "achievementTitle": "Aztec Power",
+          "achievementDescription": "Complete the Aztec Grotto dungeon",
+          "achievementBadgeName": "522831",
           "gameId": 37967,
           "gameTitle": "RA Roulette 2026",
           "gameImageIcon": "/Images/123936.png",

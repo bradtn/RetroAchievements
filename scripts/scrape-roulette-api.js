@@ -16,7 +16,7 @@ const ROULETTE_GAME_ID = 37967;
 const RA_USERNAME = process.env.RA_USERNAME;
 const RA_API_KEY = process.env.RA_API_KEY;
 
-const EVENT_START = new Date('2026-02-07T00:00:00.000Z');
+const EVENT_START = new Date('2026-01-31T00:00:00.000Z');
 const WEEK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 function sleep(ms) {
