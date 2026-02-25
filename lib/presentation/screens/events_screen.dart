@@ -1640,50 +1640,43 @@ class _RouletteTabContentState extends ConsumerState<_RouletteTabContent> {
     final earnedMap = <int, String?>{};
     int points = 0;
 
-    // Group achievements by gameId to minimize API calls
-    final gameAchievements = <int, List<int>>{};
+    // Collect all achievement IDs - they're all stored in the event game (37967)
+    final allAchIds = <int>[];
     for (final week in weeks) {
       if (week is Map<String, dynamic>) {
         final achievements = week['achievements'] as List<dynamic>? ?? [];
         for (final ach in achievements) {
           if (ach is Map<String, dynamic>) {
-            final gameId = ach['gameId'] as int? ?? 0;
             final achId = ach['achievementId'] as int? ?? 0;
-            if (gameId > 0 && achId > 0) {
-              gameAchievements.putIfAbsent(gameId, () => []).add(achId);
+            if (achId > 0) {
+              allAchIds.add(achId);
             }
           }
         }
       }
     }
 
-    // Fetch game progress for each game
-    for (final entry in gameAchievements.entries) {
-      final gameId = entry.key;
-      final achIds = entry.value;
+    // Roulette achievements are stored in event game 37967, not the source games
+    const eventGameId = 37967;
 
-      try {
-        final gameDetails = await api.getGameInfoWithProgress(gameId);
-        if (gameDetails != null) {
-          final achievements = gameDetails['Achievements'] as Map<String, dynamic>?;
-          if (achievements != null) {
-            for (final achId in achIds) {
-              final achData = achievements[achId.toString()];
-              if (achData is Map<String, dynamic>) {
-                final dateEarned = achData['DateEarned'] ?? achData['DateEarnedHardcore'];
-                if (dateEarned != null && dateEarned.toString().isNotEmpty) {
-                  earnedMap[achId] = dateEarned.toString();
-                  points++;
-                }
+    try {
+      final gameDetails = await api.getGameInfoWithProgress(eventGameId);
+      if (gameDetails != null) {
+        final achievements = gameDetails['Achievements'] as Map<String, dynamic>?;
+        if (achievements != null) {
+          for (final achId in allAchIds) {
+            final achData = achievements[achId.toString()];
+            if (achData is Map<String, dynamic>) {
+              final dateEarned = achData['DateEarned'] ?? achData['DateEarnedHardcore'];
+              if (dateEarned != null && dateEarned.toString().isNotEmpty) {
+                earnedMap[achId] = dateEarned.toString();
+                points++;
               }
             }
           }
         }
-      } catch (_) {}
-
-      // Small delay to avoid rate limiting
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+      }
+    } catch (_) {}
 
     if (mounted) {
       setState(() {
