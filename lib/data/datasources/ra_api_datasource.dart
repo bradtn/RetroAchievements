@@ -377,6 +377,33 @@ class RAApiDataSource {
     }
   }
 
+  /// Get comments for an achievement
+  /// Returns list of comments with user tips and tricks
+  Future<List<Map<String, dynamic>>> getAchievementComments(int achievementId) async {
+    try {
+      final response = await _dio.get(
+        'API_GetComments.php',
+        queryParameters: {
+          ..._authParams(),
+          't': 2, // Type 2 = achievement comments
+          'i': achievementId,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final results = data['Results'] as List<dynamic>? ?? [];
+        // Filter out Server messages (edit logs) and return user comments only
+        return results
+            .whereType<Map<String, dynamic>>()
+            .where((c) => c['User'] != 'Server')
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// GitHub URL for Achievement of the Month data
   /// This is hosted separately since RA doesn't have an official AotM API
   static const String _aotmGitHubUrl =

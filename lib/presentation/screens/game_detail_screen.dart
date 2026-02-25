@@ -11,6 +11,7 @@ import '../../data/cache/leaderboard_cache.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ra_status_provider.dart';
 import '../providers/premium_provider.dart';
+import '../providers/comment_count_provider.dart';
 import 'share_card/share_card_screen.dart';
 import 'game_detail/achievement_tile.dart';
 import 'game_detail/leaderboard_widgets.dart';
@@ -250,7 +251,32 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       _loadUserGameRank();
       _loadUserGameLeaderboards();
       _updateSecondaryDisplay(data);
+      _loadCommentCounts(data);
     }
+  }
+
+  /// Fetch comment counts for achievements in the background
+  void _loadCommentCounts(Map<String, dynamic> data) {
+    final achievements = data['Achievements'];
+    if (achievements is! Map) return;
+
+    // Extract achievement IDs
+    final achievementIds = <int>[];
+    for (final entry in achievements.entries) {
+      final ach = entry.value;
+      if (ach is Map) {
+        final id = ach['ID'];
+        if (id is int && id > 0) {
+          achievementIds.add(id);
+        }
+      }
+    }
+
+    if (achievementIds.isEmpty) return;
+
+    // Fetch counts in background - this will update the cache
+    // and the tiles will rebuild as counts come in
+    ref.read(commentCountCacheProvider.notifier).fetchCountsForAchievements(achievementIds);
   }
 
   /// Send game data to secondary display (for dual-screen devices)

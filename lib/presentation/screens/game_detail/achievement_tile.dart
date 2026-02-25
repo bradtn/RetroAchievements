@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme_utils.dart';
 import '../../../core/animations.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/premium_provider.dart';
+import '../../providers/comment_count_provider.dart';
 import '../share_card/share_card_screen.dart';
 
 class AchievementTile extends ConsumerWidget {
@@ -67,6 +69,11 @@ class AchievementTile extends ConsumerWidget {
     final numAwarded = achievement['NumAwarded'] ?? 0;
     final isPremium = ref.watch(isPremiumProvider);
     final isMissable = _isMissable(achievement);
+    final achievementId = achievement['ID'] ?? 0;
+
+    // Watch comment count from cache
+    final commentCounts = ref.watch(commentCountCacheProvider);
+    final cachedCommentCount = achievementId > 0 ? commentCounts[achievementId] : null;
 
     final rarityInfo = _getRarityInfo(numAwarded, numDistinctPlayers);
 
@@ -268,6 +275,27 @@ class AchievementTile extends ConsumerWidget {
                               ],
                             ),
                           ),
+                        // Tips badge (shown when comments are cached and > 0)
+                        if (cachedCommentCount != null && cachedCommentCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.lightbulb, size: 10, color: Colors.amber),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '$cachedCommentCount tips',
+                                  style: const TextStyle(color: Colors.amber, fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -363,17 +391,36 @@ class AchievementTile extends ConsumerWidget {
         ? (numAwarded / numDistinctPlayers * 100)
         : 0.0;
     final isMissable = _isMissable(achievement);
+    final achievementId = achievement['ID'] ?? 0;
 
-    // Fetch user profile to get avatar
+    final api = ref.read(apiDataSourceProvider);
+
+    // Fetch user profile and comment count in parallel
     String? fetchedUserPic = userPic;
+    int commentCount = 0;
+
+    final futures = await Future.wait([
+      if (fetchedUserPic == null || fetchedUserPic.isEmpty)
+        api.getUserProfile(username ?? '')
+      else
+        Future.value(null),
+      if (achievementId > 0)
+        api.getAchievementComments(achievementId)
+      else
+        Future.value(<Map<String, dynamic>>[]),
+    ]);
+
     if (fetchedUserPic == null || fetchedUserPic.isEmpty) {
-      final api = ref.read(apiDataSourceProvider);
-      final profile = await api.getUserProfile(username ?? '');
+      final profile = futures[0] as Map<String, dynamic>?;
       fetchedUserPic = profile?['UserPic'] ?? '';
     }
 
+    final comments = futures.length > 1 ? futures.last as List<Map<String, dynamic>> : <Map<String, dynamic>>[];
+    commentCount = comments.length;
+
     if (!context.mounted) return;
 
+    // Show dialog and update cache AFTER it closes so the tile rebuilds
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -736,43 +783,68 @@ class AchievementTile extends ConsumerWidget {
                     const SizedBox(height: 10),
                   ],
 
-                  // Share button (for all achievements)
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ShareCardScreen(
-                              type: ShareCardType.achievement,
-                              data: {
-                                'Title': title,
-                                'Description': description,
-                                'Points': points,
-                                'TrueRatio': achievement['TrueRatio'] ?? 0,
-                                'BadgeName': badgeName,
-                                'GameTitle': gameTitle ?? '',
-                                'GameIcon': gameIcon ?? '',
-                                'ConsoleName': consoleName ?? '',
-                                'Username': username ?? '',
-                                'UserPic': fetchedUserPic ?? '',
-                                'IsEarned': isEarned,
-                                'DateEarned': dateEarned,
-                                'UnlockPercent': unlockPercent,
-                                'RarityLabel': rarityInfo['label'],
-                              },
-                            ),
+                  // Action buttons row
+                  Row(
+                    children: [
+                      // Tips button with comment count
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            if (achievementId > 0) {
+                              _showCommentsSheet(ctx, ref, achievementId, title);
+                            }
+                          },
+                          icon: Icon(
+                            commentCount > 0 ? Icons.lightbulb : Icons.lightbulb_outline,
+                            size: 16,
+                            color: commentCount > 0 ? Colors.amber : null,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.share, size: 16),
-                      label: const Text('Share'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                          label: Text(commentCount > 0 ? 'Tips ($commentCount)' : 'Tips'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            side: commentCount > 0 ? const BorderSide(color: Colors.amber) : null,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Share button
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ShareCardScreen(
+                                  type: ShareCardType.achievement,
+                                  data: {
+                                    'Title': title,
+                                    'Description': description,
+                                    'Points': points,
+                                    'TrueRatio': achievement['TrueRatio'] ?? 0,
+                                    'BadgeName': badgeName,
+                                    'GameTitle': gameTitle ?? '',
+                                    'GameIcon': gameIcon ?? '',
+                                    'ConsoleName': consoleName ?? '',
+                                    'Username': username ?? '',
+                                    'UserPic': fetchedUserPic ?? '',
+                                    'IsEarned': isEarned,
+                                    'DateEarned': dateEarned,
+                                    'UnlockPercent': unlockPercent,
+                                    'RarityLabel': rarityInfo['label'],
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.share, size: 16),
+                          label: const Text('Share'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                     ],
                   ),
@@ -797,7 +869,12 @@ class AchievementTile extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ).then((_) {
+      // Update cache after dialog closes so the tile rebuilds with the badge
+      if (achievementId > 0 && commentCount > 0) {
+        ref.read(commentCountCacheProvider.notifier).setCount(achievementId, commentCount);
+      }
+    });
   }
 
   String _formatDate(String? dateStr) {
@@ -816,6 +893,339 @@ class AchievementTile extends ConsumerWidget {
     } catch (e) {
       return dateStr;
     }
+  }
+
+  void _showCommentsSheet(BuildContext context, WidgetRef ref, int achievementId, String title) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CommentsSheet(
+        achievementId: achievementId,
+        achievementTitle: title,
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for displaying achievement comments/tips
+class _CommentsSheet extends ConsumerStatefulWidget {
+  final int achievementId;
+  final String achievementTitle;
+
+  const _CommentsSheet({
+    required this.achievementId,
+    required this.achievementTitle,
+  });
+
+  @override
+  ConsumerState<_CommentsSheet> createState() => _CommentsSheetState();
+}
+
+class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
+  List<Map<String, dynamic>>? _comments;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  Future<void> _loadComments() async {
+    final api = ref.read(apiDataSourceProvider);
+    final comments = await api.getAchievementComments(widget.achievementId);
+    if (mounted) {
+      setState(() {
+        _comments = comments;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatCommentDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date);
+
+      if (diff.inDays == 0) return 'today';
+      if (diff.inDays == 1) return 'yesterday';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
+      if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
+      return '${(diff.inDays / 365).floor()}y ago';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Future<void> _openCommentsOnWeb() async {
+    final url = Uri.parse('https://retroachievements.org/achievement/${widget.achievementId}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Build text with clickable URLs
+  Widget _buildLinkifiedText(String text, TextStyle baseStyle) {
+    // Regex to match URLs
+    final urlRegex = RegExp(
+      r'https?://[^\s\)\]]+',
+      caseSensitive: false,
+    );
+
+    final matches = urlRegex.allMatches(text);
+    if (matches.isEmpty) {
+      return Text(text, style: baseStyle);
+    }
+
+    final spans = <InlineSpan>[];
+    int lastEnd = 0;
+
+    for (final match in matches) {
+      // Add text before the URL
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: baseStyle,
+        ));
+      }
+
+      // Add the URL as a clickable link
+      final url = match.group(0)!;
+      spans.add(WidgetSpan(
+        alignment: PlaceholderAlignment.baseline,
+        baseline: TextBaseline.alphabetic,
+        child: GestureDetector(
+          onTap: () async {
+            final uri = Uri.tryParse(url);
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Text(
+            url,
+            style: baseStyle.copyWith(
+              color: Colors.blue,
+              decoration: TextDecoration.underline,
+              decorationColor: Colors.blue,
+            ),
+          ),
+        ),
+      ));
+
+      lastEnd = match.end;
+    }
+
+    // Add remaining text after the last URL
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: baseStyle,
+      ));
+    }
+
+    return RichText(
+      text: TextSpan(children: spans),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey[900] : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb, color: Colors.amber, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tips & Comments',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          widget.achievementTitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _comments == null || _comments!.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey[400]),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No tips yet',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Be the first to share a tip!',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _comments!.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final comment = _comments![index];
+                            final user = comment['User'] ?? 'Unknown';
+                            final text = comment['CommentText'] ?? '';
+                            final date = _formatCommentDate(comment['Submitted']);
+
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: CachedNetworkImage(
+                                          imageUrl: 'https://retroachievements.org/UserPic/$user.png',
+                                          width: 24,
+                                          height: 24,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => Container(
+                                            width: 24,
+                                            height: 24,
+                                            color: Colors.grey[700],
+                                            child: Center(
+                                              child: Text(
+                                                user.isNotEmpty ? user[0].toUpperCase() : '?',
+                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        user,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        date,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildLinkifiedText(
+                                    text,
+                                    TextStyle(
+                                      fontSize: 13,
+                                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+            ),
+            // Add comment button
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _openCommentsOnWeb,
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('Add Comment on RetroAchievements'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
