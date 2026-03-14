@@ -245,6 +245,46 @@
           "consoleName": "Neo Geo Pocket"
         }
       ]
+    },
+    {
+      "week": 7,
+      "startDate": "2026-03-14T00:00:00.000Z",
+      "endDate": "2026-03-20T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579141,
+          "achievementTitle": "Raceway Rampage",
+          "achievementDescription": "Achieve victory in every Bacherit arena",
+          "achievementBadgeName": "656615",
+          "gameId": 20743,
+          "gameTitle": "Shin Combat Choro Q",
+          "gameImageIcon": "/Images/123871.png",
+          "consoleID": 21,
+          "consoleName": "PlayStation 2"
+        },
+        {
+          "achievementId": 579142,
+          "achievementTitle": "Birthright",
+          "achievementDescription": "Make your way through the Hand HQ and defeat Lady Deathstrike",
+          "achievementBadgeName": "158622",
+          "gameId": 1329,
+          "gameTitle": "Wolverine: Adamantium Rage",
+          "gameImageIcon": "/Images/105528.png",
+          "consoleID": 3,
+          "consoleName": "SNES/Super Famicom"
+        },
+        {
+          "achievementId": 579143,
+          "achievementTitle": "25k",
+          "achievementDescription": "Get 25.000 points!",
+          "achievementBadgeName": "29020",
+          "gameId": 4788,
+          "gameTitle": "Zippy Race",
+          "gameImageIcon": "/Images/072250.png",
+          "consoleID": 7,
+          "consoleName": "NES/Famicom"
+        }
+      ]
     }
   ]
 }
