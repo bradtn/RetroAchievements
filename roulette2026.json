@@ -283,6 +283,17 @@
           "gameImageIcon": "/Images/072250.png",
           "consoleID": 7,
           "consoleName": "NES/Famicom"
+        },
+        {
+          "achievementId": 579279,
+          "achievementTitle": "Probably Useless",
+          "achievementDescription": "Collect the Key Sword",
+          "achievementBadgeName": "668958",
+          "gameId": 144,
+          "gameTitle": "La-Mulana",
+          "gameImageIcon": "/Images/090149.png",
+          "consoleID": 19,
+          "consoleName": "Wii"
         }
       ]
     }
