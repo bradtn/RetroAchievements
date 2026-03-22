@@ -296,6 +296,46 @@
           "consoleName": "Wii"
         }
       ]
+    },
+    {
+      "week": 8,
+      "startDate": "2026-03-21T00:00:00.000Z",
+      "endDate": "2026-03-27T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579144,
+          "achievementTitle": "The Future Was Wrong",
+          "achievementDescription": "Defeat Sabrina for the Marsh Badge.",
+          "achievementBadgeName": "138758",
+          "gameId": 7212,
+          "gameTitle": "Pokémon HeartGold Version | Pokémon SoulSilver Version",
+          "gameImageIcon": "/Images/063592.png",
+          "consoleID": 18,
+          "consoleName": "Nintendo DS"
+        },
+        {
+          "achievementId": 579145,
+          "achievementTitle": "Bob-omb Blaster",
+          "achievementDescription": "Reach and defeat King Bob-omb in Bob-omb Battlefield without getting grabbed or taking damage.",
+          "achievementBadgeName": "655473",
+          "gameId": 10003,
+          "gameTitle": "Super Mario 64",
+          "gameImageIcon": "/Images/112471.png",
+          "consoleID": 2,
+          "consoleName": "Nintendo 64"
+        },
+        {
+          "achievementId": 579146,
+          "achievementTitle": "Sky Warrior",
+          "achievementDescription": "Beat Bowser in the Sky as Mario without taking damage or using any Caps at any point during the stage",
+          "achievementBadgeName": "100565",
+          "gameId": 9983,
+          "gameTitle": "Super Mario 64 DS",
+          "gameImageIcon": "/Images/070042.png",
+          "consoleID": 18,
+          "consoleName": "Nintendo DS"
+        }
+      ]
     }
   ]
 }
