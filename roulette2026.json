@@ -336,6 +336,46 @@
           "consoleName": "Nintendo DS"
         }
       ]
+    },
+    {
+      "week": 9,
+      "startDate": "2026-03-28T00:00:00.000Z",
+      "endDate": "2026-04-03T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579147,
+          "achievementTitle": "Fifty In 505 Letters",
+          "achievementDescription": "Score a 50+ pointer during a '505 Letters' game.[Hints/Exchanges OFF in Options][1P]",
+          "achievementBadgeName": "342871",
+          "gameId": 6949,
+          "gameTitle": "Scrabble Blast!",
+          "gameImageIcon": "/Images/096559.png",
+          "consoleID": 5,
+          "consoleName": "Game Boy Advance"
+        },
+        {
+          "achievementId": 579148,
+          "achievementTitle": "Sword Laser",
+          "achievementDescription": "Obtain the Sword Laser power up.",
+          "achievementBadgeName": "256859",
+          "gameId": 2367,
+          "gameTitle": "Valis",
+          "gameImageIcon": "/Images/042685.png",
+          "consoleID": 1,
+          "consoleName": "Genesis/Mega Drive"
+        },
+        {
+          "achievementId": 579149,
+          "achievementTitle": "Why Were We Here Again?",
+          "achievementDescription": "Reach 10,000 points without picking up an artifact.",
+          "achievementBadgeName": "232972",
+          "gameId": 16936,
+          "gameTitle": "Bermuda Triangle",
+          "gameImageIcon": "/Images/055590.png",
+          "consoleID": 25,
+          "consoleName": "Atari 2600"
+        }
+      ]
     }
   ]
 }
