@@ -376,6 +376,46 @@
           "consoleName": "Atari 2600"
         }
       ]
+    },
+    {
+      "week": 10,
+      "startDate": "2026-04-04T00:00:00.000Z",
+      "endDate": "2026-04-10T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579150,
+          "achievementTitle": "Royal Rumble",
+          "achievementDescription": "Clear Haena Hills (B)",
+          "achievementBadgeName": "503836",
+          "gameId": 5029,
+          "gameTitle": "Tactics Ogre: The Knight of Lodis",
+          "gameImageIcon": "/Images/066976.png",
+          "consoleID": 5,
+          "consoleName": "Game Boy Advance"
+        },
+        {
+          "achievementId": 579151,
+          "achievementTitle": "With Friends Like These, Who Needs Enemies",
+          "achievementDescription": "Choose one of your friends to sacrifice for the cause",
+          "achievementBadgeName": "252296",
+          "gameId": 450,
+          "gameTitle": "Breath of Fire II",
+          "gameImageIcon": "/Images/008647.png",
+          "consoleID": 3,
+          "consoleName": "SNES/Super Famicom"
+        },
+        {
+          "achievementId": 579152,
+          "achievementTitle": "Demolitionist",
+          "achievementDescription": "Acquire some Bombs",
+          "achievementBadgeName": "129305",
+          "gameId": 580,
+          "gameTitle": "The Legend of Zelda: A Link to the Past & Four Swords",
+          "gameImageIcon": "/Images/063671.png",
+          "consoleID": 5,
+          "consoleName": "Game Boy Advance"
+        }
+      ]
     }
   ]
 }
