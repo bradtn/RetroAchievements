@@ -165,5 +165,24 @@
     "achievementPoints": 1,
     "achievementTrueRatio": 0,
     "swaps": []
+  },
+  {
+    "gameId": 14790,
+    "gameTitle": "Ripened: Tingle's Balloon Trip of Love",
+    "gameImageIcon": "/Images/110050.png",
+    "gameImageTitle": "/Images/114034.png",
+    "gameImageIngame": "/Images/114036.png",
+    "gameImageBoxArt": "/Images/085001.png",
+    "consoleID": 18,
+    "consoleName": "Nintendo DS",
+    "achievementId": 529035,
+    "achievementTitle": "Quick Intermission to Feed the Beast",
+    "achievementDescription": "After learning the power of gifts and pushing some love all over the village, enjoy a meal at the fruit shop to clear Page 6",
+    "achievementBadgeName": "599887",
+    "achievementDateStart": "2026-04-06T00:00:00.000000Z",
+    "achievementDateEnd": "2026-05-03T00:00:00.000000",
+    "achievementPoints": 1,
+    "achievementTrueRatio": 0,
+    "swaps": []
   }
 ]
