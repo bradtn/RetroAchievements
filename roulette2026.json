@@ -416,6 +416,46 @@
           "consoleName": "Game Boy Advance"
         }
       ]
+    },
+    {
+      "week": 11,
+      "startDate": "2026-04-11T00:00:00.000Z",
+      "endDate": "2026-04-17T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579153,
+          "achievementTitle": "Lets Start Digging",
+          "achievementDescription": "Clear Levels 1-5 on easy",
+          "achievementBadgeName": "262998",
+          "gameId": 10790,
+          "gameTitle": "Suleiman's Treasure",
+          "gameImageIcon": "/Images/060642.png",
+          "consoleID": 69,
+          "consoleName": "Mega Duck"
+        },
+        {
+          "achievementId": 579154,
+          "achievementTitle": "Stealing My Weight in Gold",
+          "achievementDescription": "Beat  Underground Gold Bars on any difficulty",
+          "achievementBadgeName": "297250",
+          "gameId": 4123,
+          "gameTitle": "Bonanza Bros.",
+          "gameImageIcon": "/Images/064552.png",
+          "consoleID": 1,
+          "consoleName": "Genesis/Mega Drive"
+        },
+        {
+          "achievementId": 579155,
+          "achievementTitle": "The Science of Picross",
+          "achievementDescription": "Complete Puzzles I, J, K and L in Level 3.",
+          "achievementBadgeName": "30069",
+          "gameId": 3227,
+          "gameTitle": "Mario no Super Picross",
+          "gameImageIcon": "/Images/003359.png",
+          "consoleID": 3,
+          "consoleName": "SNES/Super Famicom"
+        }
+      ]
     }
   ]
 }
