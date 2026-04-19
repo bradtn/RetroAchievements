@@ -451,9 +451,49 @@
           "achievementBadgeName": "30069",
           "gameId": 3227,
           "gameTitle": "Mario no Super Picross",
-          "gameImageIcon": "/Images/003359.png",
+          "gameImageIcon": "/Images/127739.png",
           "consoleID": 3,
           "consoleName": "SNES/Super Famicom"
+        }
+      ]
+    },
+    {
+      "week": 12,
+      "startDate": "2026-04-18T00:00:00.000Z",
+      "endDate": "2026-04-24T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579156,
+          "achievementTitle": "Time in Place",
+          "achievementDescription": "[X5] Acquire the Dark Hold",
+          "achievementBadgeName": "507753",
+          "gameId": 6928,
+          "gameTitle": "Mega Man X Collection",
+          "gameImageIcon": "/Images/089033.png",
+          "consoleID": 16,
+          "consoleName": "GameCube"
+        },
+        {
+          "achievementId": 579157,
+          "achievementTitle": "Human Resource Advisor",
+          "achievementDescription": "Recruit ten swabbies to your cause",
+          "achievementBadgeName": "134104",
+          "gameId": 9284,
+          "gameTitle": "Pirates of the Caribbean: Dead Man's Chest",
+          "gameImageIcon": "/Images/036478.png",
+          "consoleID": 5,
+          "consoleName": "Game Boy Advance"
+        },
+        {
+          "achievementId": 579158,
+          "achievementTitle": "Meddling or Matchmaking?",
+          "achievementDescription": "Complete the \"Meant To Be\" event.",
+          "achievementBadgeName": "589000",
+          "gameId": 3895,
+          "gameTitle": "SaGa 3: Jikuu no Hasha - Shadow or Light",
+          "gameImageIcon": "/Images/111828.png",
+          "consoleID": 18,
+          "consoleName": "Nintendo DS"
         }
       ]
     }
