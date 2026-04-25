@@ -496,6 +496,46 @@
           "consoleName": "Nintendo DS"
         }
       ]
+    },
+    {
+      "week": 13,
+      "startDate": "2026-04-25T00:00:00.000Z",
+      "endDate": "2026-05-01T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579159,
+          "achievementTitle": "Lightning",
+          "achievementDescription": "Found and equipped Lightning",
+          "achievementBadgeName": "41072",
+          "gameId": 207,
+          "gameTitle": "Light Crusader",
+          "gameImageIcon": "/Images/009270.png",
+          "consoleID": 1,
+          "consoleName": "Genesis/Mega Drive"
+        },
+        {
+          "achievementId": 579160,
+          "achievementTitle": "Getaway Wagon",
+          "achievementDescription": "Escape from the sheriff on the wagon",
+          "achievementBadgeName": "579677",
+          "gameId": 15706,
+          "gameTitle": "Wirehead",
+          "gameImageIcon": "/Images/031266.png",
+          "consoleID": 9,
+          "consoleName": "Sega CD"
+        },
+        {
+          "achievementId": 579161,
+          "achievementTitle": "Hey Boy! Come On!",
+          "achievementDescription": "Defeat Search Man and get the Homing Sniper",
+          "achievementBadgeName": "571044",
+          "gameId": 11365,
+          "gameTitle": "Mega Man 8",
+          "gameImageIcon": "/Images/054970.png",
+          "consoleID": 12,
+          "consoleName": "PlayStation"
+        }
+      ]
     }
   ]
 }
