@@ -536,6 +536,46 @@
           "consoleName": "PlayStation"
         }
       ]
+    },
+    {
+      "week": 14,
+      "startDate": "2026-05-02T00:00:00.000Z",
+      "endDate": "2026-05-08T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579162,
+          "achievementTitle": "Frozen Frontier",
+          "achievementDescription": "Free Hamton and clear the Glacier",
+          "achievementBadgeName": "78880",
+          "gameId": 42,
+          "gameTitle": "Tiny Toon Adventures: Buster's Hidden Treasure",
+          "gameImageIcon": "/Images/023861.png",
+          "consoleID": 1,
+          "consoleName": "Genesis/Mega Drive"
+        },
+        {
+          "achievementId": 579163,
+          "achievementTitle": "Slay the Battle Tower",
+          "achievementDescription": "Get the 3rd badge",
+          "achievementBadgeName": "312022",
+          "gameId": 21360,
+          "gameTitle": "~Hack~ Pokémon Emerald Rogue",
+          "gameImageIcon": "/Images/099244.png",
+          "consoleID": 5,
+          "consoleName": "Game Boy Advance"
+        },
+        {
+          "achievementId": 579164,
+          "achievementTitle": "Rupees Before Swine",
+          "achievementDescription": "[WW] Help find Dampa's pig for a reward",
+          "achievementBadgeName": "549121",
+          "gameId": 2198,
+          "gameTitle": "The Legend of Zelda: Collector's Edition",
+          "gameImageIcon": "/Images/103269.png",
+          "consoleID": 16,
+          "consoleName": "GameCube"
+        }
+      ]
     }
   ]
 }
