@@ -184,5 +184,24 @@
     "achievementPoints": 1,
     "achievementTrueRatio": 0,
     "swaps": []
+  },
+  {
+    "gameId": 17633,
+    "gameTitle": "Peggle: Dual Shot",
+    "gameImageIcon": "/Images/108430.png",
+    "gameImageTitle": "/Images/043658.png",
+    "gameImageIngame": "/Images/043659.png",
+    "gameImageBoxArt": "/Images/043657.png",
+    "consoleID": 18,
+    "consoleName": "Nintendo DS",
+    "achievementId": 359335,
+    "achievementTitle": "Undercover Unicorn",
+    "achievementDescription": "Complete Bjorn's night stages in Adventure Mode",
+    "achievementBadgeName": "404800",
+    "achievementDateStart": "2026-05-04T00:00:00.000000Z",
+    "achievementDateEnd": "2026-05-31T00:00:00.000000",
+    "achievementPoints": 1,
+    "achievementTrueRatio": 0,
+    "swaps": []
   }
 ]
