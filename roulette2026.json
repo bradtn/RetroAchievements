@@ -576,6 +576,46 @@
           "consoleName": "GameCube"
         }
       ]
+    },
+    {
+      "week": 15,
+      "startDate": "2026-05-09T00:00:00.000Z",
+      "endDate": "2026-05-15T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579165,
+          "achievementTitle": "Prove the Will of Fire",
+          "achievementDescription": "Complete Heroes Mode on Normal",
+          "achievementBadgeName": "264802",
+          "gameId": 20273,
+          "gameTitle": "Naruto: Ultimate Ninja Heroes 2 - The Phantom Fortress",
+          "gameImageIcon": "/Images/080233.png",
+          "consoleID": 41,
+          "consoleName": "PlayStation Portable"
+        },
+        {
+          "achievementId": 579166,
+          "achievementTitle": "Is That...Your True Face?",
+          "achievementDescription": "[OoT] Talk to Princess Zelda while wearing the Bunny, Spooky, Keaton, or Skull mask",
+          "achievementBadgeName": "549102",
+          "gameId": 2198,
+          "gameTitle": "The Legend of Zelda: Collector's Edition",
+          "gameImageIcon": "/Images/103269.png",
+          "consoleID": 16,
+          "consoleName": "GameCube"
+        },
+        {
+          "achievementId": 579167,
+          "achievementTitle": "Compendium - Tree",
+          "achievementDescription": "Register each Tree type demon in the compendium (password demons do not count)",
+          "achievementBadgeName": "409748",
+          "gameId": 11644,
+          "gameTitle": "Shin Megami Tensei: Strange Journey",
+          "gameImageIcon": "/Images/067523.png",
+          "consoleID": 18,
+          "consoleName": "Nintendo DS"
+        }
+      ]
     }
   ]
 }
