@@ -616,6 +616,46 @@
           "consoleName": "Nintendo DS"
         }
       ]
+    },
+    {
+      "week": 16,
+      "startDate": "2026-05-16T00:00:00.000Z",
+      "endDate": "2026-05-22T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579168,
+          "achievementTitle": "Reaching Greatness on the Shoulders of Weirdos",
+          "achievementDescription": "With the help of your friends, sneak your way through the heavily guarded corridors of the castle and into the ballroom to clear Page 13",
+          "achievementBadgeName": "599894",
+          "gameId": 14790,
+          "gameTitle": "Irozuki Tingle no Koi no Balloon Trip",
+          "gameImageIcon": "/Images/110050.png",
+          "consoleID": 18,
+          "consoleName": "Nintendo DS"
+        },
+        {
+          "achievementId": 579169,
+          "achievementTitle": "At Death's Door",
+          "achievementDescription": "Defeat Death and clear Stage 15",
+          "achievementBadgeName": "678830",
+          "gameId": 36892,
+          "gameTitle": "Akumajou Dracula",
+          "gameImageIcon": "/Images/125281.png",
+          "consoleID": 81,
+          "consoleName": "Famicom Disk System"
+        },
+        {
+          "achievementId": 579170,
+          "achievementTitle": "Home Comforts",
+          "achievementDescription": "Clear the \"Neighbor's House\" area on Normal mode and unlock the \"Sizzlin' Desert\" area",
+          "achievementBadgeName": "671488",
+          "gameId": 34612,
+          "gameTitle": "Marble Saga: Kororinpa",
+          "gameImageIcon": "/Images/125389.png",
+          "consoleID": 19,
+          "consoleName": "Wii"
+        }
+      ]
     }
   ]
 }
