@@ -656,6 +656,57 @@
           "consoleName": "Wii"
         }
       ]
+    },
+    {
+      "week": 17,
+      "startDate": "2026-05-23T00:00:00.000Z",
+      "endDate": "2026-05-29T23:59:59.999Z",
+      "achievements": [
+        {
+          "achievementId": 579171,
+          "achievementTitle": "It's Only a Matter of TIME, Tarzan!",
+          "achievementDescription": "Defeat Clayton and finish the game on any difficulty.",
+          "achievementBadgeName": "53089",
+          "gameId": 10298,
+          "gameTitle": "Tarzan",
+          "gameImageIcon": "/Images/059289.png",
+          "consoleID": 2,
+          "consoleName": "Nintendo 64"
+        },
+        {
+          "achievementId": 579172,
+          "achievementTitle": "Tourist Trap",
+          "achievementDescription": "Complete every Side Quest in Dragon Shores.",
+          "achievementBadgeName": "521698",
+          "gameId": 15336,
+          "gameTitle": "Spyro: Shadow Legacy",
+          "gameImageIcon": "/Images/101662.png",
+          "consoleID": 18,
+          "consoleName": "Nintendo DS"
+        },
+        {
+          "achievementId": 579173,
+          "achievementTitle": "It's No Use",
+          "achievementDescription": "Clear Target Smash level 3 with every character.",
+          "achievementBadgeName": "623588",
+          "gameId": 195,
+          "gameTitle": "Super Smash Bros. Brawl",
+          "gameImageIcon": "/Images/119305.png",
+          "consoleID": 19,
+          "consoleName": "Wii"
+        },
+        {
+          "achievementId": 579280,
+          "achievementTitle": "All I See Is Blue",
+          "achievementDescription": "Succesfully dodge a Blue Shell",
+          "achievementBadgeName": "671884",
+          "gameId": 11071,
+          "gameTitle": "Mario Kart Wii",
+          "gameImageIcon": "/Images/126556.png",
+          "consoleID": 19,
+          "consoleName": "Wii"
+        }
+      ]
     }
   ]
 }
